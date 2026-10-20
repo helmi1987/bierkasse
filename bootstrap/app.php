@@ -1,0 +1,44 @@
+<?php
+
+use App\Http\Middleware\EnsureActiveUser;
+use App\Http\Middleware\EnsureInstalled;
+use App\Http\Middleware\RequireRole;
+use App\Http\Middleware\SecurityHeaders;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware): void {
+        // Only trust proxies listed in TRUSTED_PROXIES (comma separated, "*" for all); default none.
+        $proxies = array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', '')))));
+        if ($proxies !== []) {
+            $middleware->trustProxies(at: $proxies === ['*'] ? '*' : $proxies);
+        }
+        $middleware->append(SecurityHeaders::class);
+        $middleware->alias([
+            'active' => EnsureActiveUser::class,
+            'role' => RequireRole::class,
+        ]);
+        // Guests hitting a protected page go to the login page "/".
+        $middleware->redirectGuestsTo(fn () => route('login'));
+        // Logged-in users hitting guest-only pages go to the dashboard.
+        $middleware->redirectUsersTo(fn () => route('account.dashboard'));
+        // Not installed yet: redirect to the wizard before "auth" touches the database.
+        $middleware->prependToPriorityList(
+            before: AuthenticatesRequests::class,
+            prepend: EnsureInstalled::class,
+        );
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+        );
+    })->create();

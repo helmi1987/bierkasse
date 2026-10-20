@@ -7,8 +7,8 @@
 <div class="no-print">
     @include('partials.backend-nav')
     <div class="row-buttons">
-        <a href="{{ route('backend.registration.qr') }}" @class(['btn', 'primary' => ! $withCode])>{{ __('settings.qr_without_code') }}</a>
-        <a href="{{ route('backend.registration.qr', ['code' => 1]) }}" @class(['btn', 'primary' => $withCode])>{{ __('settings.qr_with_code') }}</a>
+        <a href="{{ route('backend.registration.qr') }}" @class(['btn', 'primary' => $withCode])>{{ __('settings.qr_with_code') }}</a>
+        <a href="{{ route('backend.registration.qr', ['code' => 0]) }}" @class(['btn', 'primary' => ! $withCode])>{{ __('settings.qr_without_code') }}</a>
         <button type="button" class="btn" data-print>{{ __('settings.qr_print') }}</button>
     </div>
     @if ($withCode)

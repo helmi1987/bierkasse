@@ -104,8 +104,8 @@ class RegistrationTest extends TestCase
         $this->actingAs($this->admin());
 
         $this->get('/backend/registrierung-qr')->assertOk()->assertSee('data:image/svg+xml;base64,', false)
-            ->assertDontSee('code=durst');
-        $this->get('/backend/registrierung-qr?code=1')->assertOk()->assertSee('code=durst')
-            ->assertSee('enthält das Registrierungspasswort');
+            ->assertSee('code=durst')->assertSee('enthält das Registrierungspasswort');
+        $this->get('/backend/registrierung-qr?code=0')->assertOk()->assertDontSee('code=durst')
+            ->assertDontSee('enthält das Registrierungspasswort');
     }
 }

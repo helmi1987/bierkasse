@@ -28,6 +28,7 @@ return [
     'password' => 'Gäste-Passwort',
     'password_hint' => 'Eigenes Passwort (nicht das Registrierungspasswort). Ohne Passwort ist kein Gäste-Verkauf möglich. Verschlüsselt gespeichert.',
     'save' => 'Speichern',
+    'password_required' => 'Zum Einschalten ist ein Gäste-Passwort nötig.',
     'qr' => 'Gäste-QR-Code zum Ausdrucken',
     'qr_title' => 'Bier für Gäste',
     'qr_intro' => 'Scannen, Biere erfassen und bar oder per TWINT bezahlen.',

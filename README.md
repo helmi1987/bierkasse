@@ -66,7 +66,9 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Anmelden per SSO kann nur, wer den Anbieter vorher unter Konto > Einstellungen verknüpft hat.
    - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
 8. Steht ein Reverse-Proxy vor PHP, dessen IP in `.env` als `TRUSTED_PROXIES` (kommagetrennt, Standard: keine)
-   eintragen, sonst werden `X-Forwarded-*`-Header ignoriert.
+   eintragen, sonst werden `X-Forwarded-*`-Header ignoriert. Wichtig: Die Rate-Limits (Login, TOTP, Gäste,
+   eigener Anbieter) zählen pro Client-IP; ohne korrekt gesetzte Proxy-IP teilen sich alle Benutzer die IP des
+   Proxys. Nie `*` eintragen, sonst kann jeder Client seine IP per `X-Forwarded-For` fälschen.
 
 Break-glass via SSH: `php artisan user:password <username>` (optional `--generate`),
 `php artisan user:totp-reset <username>`, `php artisan user:admin <username>`.

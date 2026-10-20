@@ -10,6 +10,8 @@
 <form method="post" action="{{ route('backend.guests.update') }}" class="card stack" autocomplete="off">
     @csrf
     @method('PUT')
+    <label class="switch"><input type="checkbox" name="guest_user_booking" value="1" @checked(old('guest_user_booking', $userBooking))> <span>{{ __('guest.user_booking') }}</span></label>
+    <div class="hint">{{ __('guest.user_booking_hint') }}</div>
     <label class="switch"><input type="checkbox" name="guest_enabled" value="1" @checked(old('guest_enabled', $enabled))> <span>{{ __('guest.enabled') }}</span></label>
     <div class="field">
         <label for="guest_password">{{ __('guest.password') }}</label>
@@ -36,7 +38,8 @@
                 <li class="wrap-row">
                     <span>
                         <span class="tx-date">{{ local_time($sale->created_at) }} · {{ __('ledger.method.'.$sale->method) }}</span><br>
-                        {{ $sale->name ?? __('guest.anonymous') }} · {{ trans_choice('stock.beers', $sale->beers, ['count' => $sale->beers]) }}
+                        {{ $sale->name ?? __('guest.anonymous') }} · {{ trans_choice('stock.beers', $sale->beers, ['count' => $sale->beers]) }}<br>
+                        <small class="muted">{{ $sale->booked_by === null ? __('guest.public') : __('guest.booked_by', ['user' => $sale->bookedBy?->username ?? '?']) }}</small>
                     </span>
                     <strong class="amount pos">{{ chf($sale->amount) }}</strong>
                     <form method="post" action="{{ route('backend.guests.destroy', $sale) }}" class="inline" data-confirm="{{ __('guest.cancel_confirm') }}">

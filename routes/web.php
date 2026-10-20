@@ -58,6 +58,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::get('/konto', [AccountController::class, 'dashboard'])->name('account.dashboard');
         Route::post('/konto/bier', [AccountController::class, 'consume'])->middleware('throttle:30,1')->name('account.consume');
         Route::post('/konto/bier/{transaction}/rueckgaengig', [AccountController::class, 'undo'])->whereNumber('transaction')->name('account.undo');
+        Route::post('/konto/gast', [AccountController::class, 'guest'])->middleware('throttle:30,1')->name('account.guest');
+        Route::post('/konto/gast/{sale}/rueckgaengig', [AccountController::class, 'undoGuest'])->whereNumber('sale')->name('account.guest.undo');
         Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
         Route::put('/konto/einzahlung/{transaction}', [AccountController::class, 'updateDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.update');
         Route::delete('/konto/einzahlung/{transaction}', [AccountController::class, 'cancelDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.cancel');

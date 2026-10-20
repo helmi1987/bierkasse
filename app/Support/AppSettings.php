@@ -36,6 +36,9 @@ class AppSettings
 
     public const GUEST_PASSWORD = 'guest_password';
 
+    /** Logged-in users may book beers for guests on their dashboard. */
+    public const GUEST_USER_BOOKING = 'guest_user_booking';
+
     public const STOCK_LOW_WARNED = 'stock_low_warned';
 
     /** Preselected deposit proposal in Rappen; null = first proposal. */
@@ -124,6 +127,12 @@ class AppSettings
     public static function guestOpen(): bool
     {
         return (bool) self::get(self::GUEST_ENABLED, false) && self::guestPassword() !== '';
+    }
+
+    /** Logged-in users may book beers for guests (default on, independent of the public guest page). */
+    public static function guestUserBooking(): bool
+    {
+        return (bool) self::get(self::GUEST_USER_BOOKING, true);
     }
 
     /** Minimum beer stock (low-stock mail and warning); 0 = off. */

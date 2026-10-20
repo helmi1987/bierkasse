@@ -123,7 +123,8 @@ class GuestTest extends TestCase
         $this->assertStringNotContainsString('neues-pw', (string) Setting::query()->find(AppSettings::GUEST_PASSWORD)->getRawOriginal('value'));
         $this->assertNotSame(AppSettings::registrationPassword(), AppSettings::guestPassword());
 
-        $this->get('/backend/gaeste')->assertOk()->assertSee('Gast')->assertSee('CHF 3.00');
+        $this->get('/backend/gaeste')->assertOk()->assertSee('Gast')->assertSee('CHF 3.00')->assertSee('öffentlich');
+        $this->assertFalse(AppSettings::guestUserBooking());
         $this->get('/backend/gaeste/qr')->assertOk()->assertSee(route('guest').'?code=neues-pw');
         $this->get('/backend/gaeste/qr?code=0')->assertOk()->assertDontSee('code=neues-pw');
 

@@ -145,7 +145,8 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
   Bestand im Backend-Dashboard und im Kassenbuch. Mindestbestand (Standard 20, 0 = aus): fällt der Bestand durch
   Abstreichen darunter, geht einmal eine Mail an Kassiers/Admins (Benachrichtigungs-Schalter gilt); erneut erst,
   nachdem der Bestand wieder ≥ Mindestbestand war. Warnung im Backend, solange er darunter ist.
-  **Annahme:** Abstreichen wird bei Bestand 0 nicht blockiert; negativer Bestand wird so angezeigt.
+  Abstreichen durch Benutzer wird bei Bestand 0 nicht blockiert; negativer Bestand wird so angezeigt.
+  Gäste-Verkäufe dagegen nie über den Bestand hinaus (Meldung "Nur noch X Biere an Lager").
 - Statistik `/statistik`: Biere total, pro Monat, pro Wochentag, Rangliste (Diagramme als SVG vom Server).
   **Annahme:** Wer "In Statistik anzeigen" ausschaltet, wird für andere nirgends namentlich gezeigt
   (auch nicht in der Rangliste im Backend); die Biere zählen nur in den anonymen Totals.

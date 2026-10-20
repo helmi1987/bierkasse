@@ -77,6 +77,7 @@ class GuestTest extends TestCase
 
     public function test_double_submit_and_limits(): void
     {
+        $this->stock(20);
         $data = $this->sale();
         $this->post('/gast', $data)->assertRedirect(route('guest.thanks'));
         $this->post('/gast', $data)->assertSessionHas('warning');
@@ -151,6 +152,25 @@ class GuestTest extends TestCase
 
         $this->post('/gast', $data)->assertSessionHas('warning');
         $this->assertSame(0, GuestSale::query()->count());
+    }
+
+    public function test_guests_cannot_take_more_than_the_stock(): void
+    {
+        $this->stock(3);
+        $this->get('/gast')->assertOk()->assertSee('max="3"', false);
+
+        $this->post('/gast', $this->sale(['quantity' => 4]))->assertSessionHasErrors(['quantity' => 'Nur noch 3 Biere an Lager.']);
+        $this->post('/gast', $this->sale(['quantity' => 3]))->assertRedirect(route('guest.thanks'));
+        $this->post('/gast', $this->sale(['quantity' => 1]))->assertSessionHasErrors(['quantity' => 'Zurzeit ist kein Bier an Lager.']);
+        $this->get('/gast')->assertOk()->assertSee('Zurzeit ist kein Bier an Lager.');
+
+        $this->assertSame(3, (int) GuestSale::query()->sum('beers'));
+        $this->assertSame(0, BeerStock::current());
+    }
+
+    private function stock(int $beers): void
+    {
+        CashEntry::query()->create(['type' => 'expense_beer', 'date' => '2026-10-01', 'amount' => -100 * $beers, 'beers' => $beers, 'method' => 'cash', 'note' => 'Kauf']);
     }
 
     private function sale(array $overrides = []): array

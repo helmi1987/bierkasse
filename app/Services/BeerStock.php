@@ -12,7 +12,7 @@ use App\Support\AppSettings;
 
 /**
  * Beer stock = purchased beers (cash book) + inventory corrections - confirmed consumption - guest sales.
- * Consumption is never blocked by the stock (it may become negative).
+ * User consumption is never blocked by the stock (it may become negative); guest sales are (GuestSales).
  *
  * Low-stock mail: once when a consumption takes the stock from >= minimum to below it.
  * A flag in the settings suppresses further mails until the stock is back >= minimum.

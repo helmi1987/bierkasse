@@ -254,6 +254,15 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 
 /* Printable registration QR */
 [hidden] { display: none !important; }
+.label { font-weight: 600; font-size: .925rem; }
+.suggestions { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: .5rem; }
+.suggestion { min-height: var(--tap); padding: .5rem; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); cursor: pointer; font: inherit; }
+.suggestion.active { border-color: var(--accent); background: var(--accent-soft); }
+@media (hover: hover) { .suggestion:hover { border-color: var(--accent); } }
+.beer-amount { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.beer-amount strong { font-size: 1.15rem; }
+.beer-amount small { color: var(--muted); font-size: .8rem; }
+.twint .beer-amount { align-items: flex-start; }
 .install-hint { display: flex; gap: .75rem; align-items: center; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: var(--radius-sm); padding: .75rem .9rem; margin-bottom: 1rem; }
 .install-hint img { border-radius: 10px; flex: none; }
 .install-text { flex: 1; display: flex; flex-direction: column; gap: .15rem; font-size: .925rem; }

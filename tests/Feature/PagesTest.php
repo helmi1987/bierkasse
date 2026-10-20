@@ -30,6 +30,16 @@ class PagesTest extends TestCase
         $this->get('/konto')->assertOk()->assertSee('data-install-hint', false);
     }
 
+    public function test_dashboard_shows_deposit_suggestions_in_beers_and_no_limit(): void
+    {
+        $this->setDefaultLimit(1000);
+        $this->actingAs($this->user());
+
+        $this->get('/konto')->assertOk()
+            ->assertSee('14 Biere')->assertSee('CHF 21.00')->assertSee('value="21.00"', false)
+            ->assertDontSee('Limit:')->assertDontSee('Kein Minus erlaubt');
+    }
+
     public function test_all_pages_render_for_admin_with_data(): void
     {
         $this->setDefaultLimit(10000);

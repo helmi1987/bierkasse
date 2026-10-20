@@ -7,6 +7,7 @@ use App\Services\Ledger;
 use App\Services\LedgerException;
 use App\Services\Stats;
 use App\Support\AppSettings;
+use App\Support\DepositSuggestions;
 use App\Support\BarChart;
 use App\Support\FormToken;
 use App\Support\Money;
@@ -35,18 +36,19 @@ class AccountController extends Controller
             ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
             ->latest('id')->get();
 
-        $suggested = $balance < 0 ? (int) (ceil(-$balance / 1000) * 1000) : 2000;
+        $suggestions = DepositSuggestions::for($balance, $price);
+        $suggested = $suggestions[DepositSuggestions::defaultIndex($suggestions)] ?? null;
 
         return view('account.dashboard', [
             'user' => $user,
             'balance' => $balance,
-            'limit' => $user->effectiveLimit(),
             'price' => $price,
             'open' => Ledger::openItems($user),
             'undoable' => $undoable,
             'pending' => Transaction::query()->where('user_id', $user->id)->pending()->latest('id')->get(),
             'twintPhone' => AppSettings::twintPhone(),
             'twintName' => AppSettings::twintName(),
+            'suggestions' => $suggestions,
             'suggested' => $suggested,
             'recent' => Transaction::query()->where('user_id', $user->id)->latest('id')->limit(5)->get(),
             'stats' => $stats,

@@ -81,6 +81,33 @@
         });
     });
 
+    // Deposit: proposal buttons fill the amount; below the field the amount is shown as beers.
+    document.querySelectorAll('[data-beers]').forEach(function (input) {
+        var out = document.querySelector(input.dataset.beers);
+        var price = parseInt(input.dataset.price || '0', 10);
+        var debt = parseInt(input.dataset.debt || '0', 10);
+        var buttons = document.querySelectorAll('[data-fill="#' + input.id + '"]');
+        var render = function () {
+            var value = input.value.replace(/[\s']/g, '').replace(',', '.');
+            var rappen = /^\d{1,6}(\.\d{1,2})?$/.test(value) ? Math.round(parseFloat(value) * 100) : NaN;
+            buttons.forEach(function (btn) { btn.classList.toggle('active', btn.dataset.value === input.value.trim()); });
+            if (!out || !price || isNaN(rappen) || rappen <= debt) {
+                if (out) { out.textContent = ''; }
+                return;
+            }
+            var beers = Math.floor((rappen - debt) / price);
+            out.textContent = (debt > 0 ? input.dataset.textDebt : input.dataset.text).replace(':count', String(beers));
+        };
+        buttons.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                input.value = btn.dataset.value;
+                render();
+            });
+        });
+        input.addEventListener('input', render);
+        render();
+    });
+
     // Checkboxes that save immediately; their fallback submit button is hidden.
     document.querySelectorAll('[data-autosubmit]').forEach(function (el) {
         el.addEventListener('change', function () { el.form.requestSubmit(); });

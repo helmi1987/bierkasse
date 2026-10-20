@@ -9,7 +9,6 @@
     @if ($balance < 0)
         @include('partials.open-items', ['open' => $open])
     @endif
-    <div class="balance-sub">{{ $limit > 0 ? __('account.limit_info', ['limit' => chf($limit)]) : __('account.limit_none') }}</div>
 </section>
 
 @if ($pending->where('type', 'payout')->isNotEmpty())
@@ -62,7 +61,10 @@
             @if ($twintName !== '')
                 <p>{{ $twintName }}</p>
             @endif
-            <p class="muted">{{ __('account.twint_suggested', ['amount' => chf($suggested)]) }}</p>
+            @if ($suggested)
+                <p class="muted">{{ __('account.twint_suggested') }}</p>
+                @include('partials.beer-amount', ['s' => $suggested])
+            @endif
         </section>
     @endif
 
@@ -72,9 +74,24 @@
         <form method="post" action="{{ route('account.deposit') }}" class="stack">
             @csrf
             {!! \App\Support\FormToken::field('deposit') !!}
+            @if ($suggestions)
+                <div class="field">
+                    <span class="label">{{ __('account.suggestions') }}</span>
+                    <div class="suggestions">
+                        @foreach ($suggestions as $s)
+                            <button type="button" class="suggestion" data-fill="#amount" data-value="{{ \App\Support\Money::plain($s['amount']) }}">
+                                @include('partials.beer-amount', ['s' => $s])
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
             <div class="field">
                 <label for="amount">{{ __('account.amount') }}</label>
-                <input type="text" id="amount" name="amount" inputmode="decimal" value="{{ old('amount', \App\Support\Money::plain($suggested)) }}" required>
+                <input type="text" id="amount" name="amount" inputmode="decimal" value="{{ old('amount', $suggested ? \App\Support\Money::plain($suggested['amount']) : '') }}" required
+                    data-beers="#amount-beers" data-price="{{ $price }}" data-debt="{{ max(0, -$balance) }}"
+                    data-text="{{ __('account.amount_beers') }}" data-text-debt="{{ __('account.amount_beers_debt') }}">
+                <small class="muted" id="amount-beers" aria-live="polite"></small>
             </div>
             <fieldset class="segmented">
                 <legend>{{ __('account.method') }}</legend>

@@ -1,11 +1,10 @@
-# Test suite with PHP 8.4 on every push to Claude's working branches (claude/**) and on pull requests.
+# Test suite with PHP 8.4 on every push to Claude's working branches (claude/**); the auto-merge PRs need no second run.
 # Does not deploy anything.
 name: Tests
 
 on:
   push:
     branches: ['claude/**']
-  pull_request:
   workflow_dispatch:
 
 permissions:

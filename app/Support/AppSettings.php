@@ -26,6 +26,8 @@ class AppSettings
 
     public const NOTIFY_KASSIER = 'notify_kassier';
 
+    public const PERSONAL_SSO = 'personal_sso_enabled';
+
     public const MAIL = 'mail';
 
     public const MAIL_TRANSPORTS = ['sendmail', 'smtp'];
@@ -78,6 +80,12 @@ class AppSettings
     public static function registrationOpen(): bool
     {
         return (bool) self::get(self::REGISTRATION_ENABLED, true) && self::registrationPassword() !== '';
+    }
+
+    /** Users may add their own OAuth2/OIDC provider (default on). */
+    public static function personalSsoAllowed(): bool
+    {
+        return (bool) self::get(self::PERSONAL_SSO, true);
     }
 
     public static function notifyKassier(): bool

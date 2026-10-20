@@ -40,6 +40,8 @@ class AccountSettingsController extends Controller
 
         $uri = $secret ? Totp::uri($secret, $user->username, AppSettings::appName()) : null;
         $identities = $user->identities()->with('provider')->get();
+        $personal = $user->personalSsoProvider()->first();
+        $personalIdentity = $personal ? $identities->firstWhere('sso_provider_id', $personal->id) : null;
 
         return view('account.settings', [
             'user' => $user,
@@ -47,7 +49,12 @@ class AccountSettingsController extends Controller
             'qr' => $uri ? Qr::dataUri($uri, 220) : null,
             'recoveryLeft' => $user->hasTotp() ? Totp::remainingRecoveryCodes($user) : 0,
             'newCodes' => $request->session()->get('totp.recovery_codes'),
-            'identities' => $identities,
+            'identities' => $identities->reject(fn ($i) => $i->provider?->isPersonal())->values(),
+            'personalAllowed' => AppSettings::personalSsoAllowed(),
+            'personal' => $personal,
+            'personalIdentity' => $personalIdentity,
+            'personalRedirectUri' => PersonalSsoController::redirectUriFor($request, $personal),
+            'personalLoginUrl' => route('login.personal.user', $user->username),
             'providers' => SsoProvider::usable()->reject(fn ($p) => $identities->contains('sso_provider_id', $p->id))->values(),
         ]);
     }
@@ -153,7 +160,7 @@ class AccountSettingsController extends Controller
     public function linkSso(Request $request, string $provider, Sso $sso): RedirectResponse
     {
         $p = SsoProvider::query()->where('slug', $provider)->first();
-        abort_unless($p && $p->isUsable(), 404);
+        abort_unless($p && $p->isUsable() && ! $p->isPersonal(), 404);
 
         try {
             return redirect()->away($sso->redirect($p, $request, Sso::MODE_LINK));

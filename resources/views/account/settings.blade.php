@@ -169,4 +169,131 @@
         </div>
     @endif
 </section>
+
+<section class="card" id="eigener-anbieter">
+    <h2>{{ __('sso.personal.heading') }}
+        @if ($personal)
+            @if ($personalIdentity)
+                <span class="pill ok">{{ __('sso.personal.connected') }}</span>
+            @else
+                <span class="pill">{{ __('sso.personal.not_connected') }}</span>
+            @endif
+        @endif
+    </h2>
+    @if (! $personalAllowed)
+        <p class="muted">{{ __('sso.personal.disabled') }}</p>
+    @else
+        <p class="muted">{{ __('sso.personal.intro') }}</p>
+        <p><strong>{{ __('sso.personal.redirect_uri') }}:</strong> <code id="personal-redirect-uri">{{ $personalRedirectUri }}</code>
+            <button type="button" class="btn small" data-copy="#personal-redirect-uri" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button></p>
+
+        @if ($personal)
+            <div class="row-buttons">
+                @if ($personal->isUsable())
+                    <a class="btn primary" href="{{ route('account.personal-sso.connect') }}">{{ $personalIdentity ? __('sso.personal.reconnect') : __('sso.personal.connect') }}</a>
+                @endif
+                @if ($personalIdentity)
+                    <form method="post" action="{{ route('account.sso.unlink', $personalIdentity) }}" class="inline" data-confirm="{{ __('account.identity_unlink_confirm') }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn ghost">{{ __('sso.personal.disconnect') }}</button>
+                    </form>
+                @endif
+            </div>
+            @if ($personalIdentity)
+                <p class="muted">{{ $personalIdentity->label }}
+                    @if ($personalIdentity->last_login_at)
+                        · {{ __('account.last_login', ['date' => local_time($personalIdentity->last_login_at)]) }}
+                    @endif
+                </p>
+                <p><strong>{{ __('sso.personal.login_link') }}:</strong> <code id="personal-login-url">{{ $personalLoginUrl }}</code>
+                    <button type="button" class="btn small" data-copy="#personal-login-url" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button></p>
+            @endif
+        @endif
+
+        <form method="post" action="{{ route('account.personal-sso.save') }}" class="stack" autocomplete="off">
+            @csrf
+            @method('PUT')
+            <div class="grid-2">
+                <div class="field">
+                    <label for="ps-name">{{ __('sso.personal.name') }}</label>
+                    <input type="text" id="ps-name" name="name" value="{{ old('name', $personal?->name) }}" maxlength="100" required>
+                </div>
+                <div class="field">
+                    <label for="ps-discovery">{{ __('sso.discovery_url') }}</label>
+                    <input type="url" id="ps-discovery" name="discovery_url" value="{{ old('discovery_url', $personal?->discovery_url) }}" maxlength="500" placeholder="https://">
+                    <div class="hint">{{ __('sso.personal.discovery_hint') }}</div>
+                </div>
+                <div class="field">
+                    <label for="ps-client-id">{{ __('sso.client_id') }}</label>
+                    <input type="text" id="ps-client-id" name="client_id" value="{{ old('client_id', $personal?->client_id) }}" maxlength="255" required>
+                </div>
+                <div class="field">
+                    <label for="ps-client-secret">{{ __('sso.client_secret') }}</label>
+                    <input type="password" id="ps-client-secret" name="client_secret" autocomplete="new-password" placeholder="{{ $personal?->client_secret ? __('sso.secret_stored') : '' }}" @required(! $personal)>
+                    <div class="hint">{{ __('sso.secret_hint') }}</div>
+                </div>
+            </div>
+            @if ($personal?->discovered_at)
+                <p class="hint">{{ __('sso.discovered_at', ['date' => local_time($personal->discovered_at)]) }}</p>
+            @endif
+            <details>
+                <summary>{{ __('sso.advanced') }}</summary>
+                <p class="hint">{{ __('sso.personal.manual_hint') }}</p>
+                <div class="grid-2">
+                    <div class="field">
+                        <label for="ps-issuer">{{ __('sso.issuer') }}</label>
+                        <input type="text" id="ps-issuer" name="issuer" value="{{ old('issuer', $personal?->issuer) }}" maxlength="500">
+                    </div>
+                    <div class="field">
+                        <label for="ps-scopes">{{ __('sso.scopes') }}</label>
+                        <input type="text" id="ps-scopes" name="scopes" value="{{ old('scopes', $personal?->scopes ?? 'openid profile email') }}" maxlength="255">
+                    </div>
+                    <div class="field">
+                        <label for="ps-authorize">{{ __('sso.authorize_url') }}</label>
+                        <input type="url" id="ps-authorize" name="authorize_url" value="{{ old('authorize_url', $personal?->authorize_url) }}" maxlength="500">
+                    </div>
+                    <div class="field">
+                        <label for="ps-token">{{ __('sso.token_url') }}</label>
+                        <input type="url" id="ps-token" name="token_url" value="{{ old('token_url', $personal?->token_url) }}" maxlength="500">
+                    </div>
+                    <div class="field">
+                        <label for="ps-userinfo">{{ __('sso.userinfo_url') }}</label>
+                        <input type="url" id="ps-userinfo" name="userinfo_url" value="{{ old('userinfo_url', $personal?->userinfo_url) }}" maxlength="500">
+                    </div>
+                    <div class="field">
+                        <label for="ps-token-auth">{{ __('sso.token_auth') }}</label>
+                        <select id="ps-token-auth" name="token_auth">
+                            <option value="post" @selected(old('token_auth', $personal?->token_auth ?? 'post') === 'post')>client_secret_post</option>
+                            <option value="basic" @selected(old('token_auth', $personal?->token_auth) === 'basic')>client_secret_basic</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="ps-subject">{{ __('sso.claim_subject') }}</label>
+                        <input type="text" id="ps-subject" name="subject_claim" value="{{ old('subject_claim', $personal?->subject_claim ?? 'sub') }}" maxlength="64">
+                    </div>
+                    <div class="field">
+                        <label for="ps-label">{{ __('sso.claim_label') }}</label>
+                        <input type="text" id="ps-label" name="label_claim" value="{{ old('label_claim', $personal?->label_claim ?? 'preferred_username') }}" maxlength="64">
+                    </div>
+                </div>
+                <input type="hidden" name="use_pkce" value="0">
+                <label class="check"><input type="checkbox" name="use_pkce" value="1" @checked(old('use_pkce', $personal?->use_pkce ?? true))> {{ __('sso.use_pkce') }}</label>
+            </details>
+            <div class="row-buttons">
+                <button type="submit" class="btn primary">{{ __('sso.personal.save') }}</button>
+                @if ($personal?->discovery_url)
+                    <button type="submit" name="rediscover" value="1" class="btn">{{ __('sso.save_rediscover') }}</button>
+                @endif
+            </div>
+        </form>
+    @endif
+    @if ($personal)
+        <form method="post" action="{{ route('account.personal-sso.destroy') }}" data-confirm="{{ __('sso.personal.delete_confirm') }}">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn danger small">{{ __('sso.personal.delete') }}</button>
+        </form>
+    @endif
+</section>
 @endsection

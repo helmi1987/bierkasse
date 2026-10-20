@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Support\AppSettings;
 use App\Support\FormToken;
+use App\Support\OutboundUrl;
 use App\Support\Totp;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -21,6 +22,8 @@ abstract class TestCase extends BaseTestCase
 
         // The settings cache is static; start every test with an empty one.
         Setting::flushCache();
+        // No real DNS lookups from a previous test's resolver.
+        OutboundUrl::resolveUsing(null);
 
         $this->testStorage = sys_get_temp_dir().'/bierkasse-test-'.uniqid();
         File::ensureDirectoryExists($this->testStorage.'/app');

@@ -20,7 +20,7 @@ class SsoProviderController extends Controller
     public function index(): View
     {
         return view('backend.sso.index', [
-            'providers' => SsoProvider::query()->withCount('identities')->orderBy('sort')->orderBy('name')->get(),
+            'providers' => SsoProvider::query()->globalOnly()->withCount('identities')->orderBy('sort')->orderBy('name')->get(),
         ]);
     }
 
@@ -59,11 +59,14 @@ class SsoProviderController extends Controller
 
     public function edit(SsoProvider $ssoProvider): View
     {
+        $this->guardGlobal($ssoProvider);
+
         return $this->form($ssoProvider);
     }
 
     public function update(Request $request, SsoProvider $ssoProvider): RedirectResponse
     {
+        $this->guardGlobal($ssoProvider);
         $error = $this->save($request, $ssoProvider);
 
         return back()->with($error ? 'error' : 'status', $error ?? __('settings.saved'));
@@ -71,9 +74,18 @@ class SsoProviderController extends Controller
 
     public function destroy(SsoProvider $ssoProvider): RedirectResponse
     {
+        $this->guardGlobal($ssoProvider);
         $ssoProvider->delete();
 
         return redirect()->route('backend.sso.index')->with('status', __('sso.deleted'));
+    }
+
+    /**
+     * Personal providers belong to their owner and are not managed here.
+     */
+    private function guardGlobal(SsoProvider $provider): void
+    {
+        abort_if($provider->isPersonal(), 404);
     }
 
     private function form(SsoProvider $provider): View

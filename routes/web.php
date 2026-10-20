@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Backend;
 use App\Http\Controllers\ManifestController;
+use App\Http\Controllers\PersonalSsoController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\StatsController;
 use App\Http\Middleware\EnsureInstalled;
@@ -30,6 +31,11 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     Route::post('/abmelden', [LoginController::class, 'logout'])->name('logout');
     Route::get('/login/sso/{provider}', [LoginController::class, 'ssoRedirect'])->name('login.sso')->where('provider', '[a-z0-9-]+');
     Route::get('/login/sso/{provider}/callback', [LoginController::class, 'ssoCallback'])->name('login.sso.callback')->where('provider', '[a-z0-9-]+');
+    // Personal provider of a user (rate limited in the controller, plus a coarse route throttle).
+    Route::get('/login/eigener', [PersonalSsoController::class, 'loginForm'])->name('login.personal');
+    Route::post('/login/eigener', [PersonalSsoController::class, 'loginPost'])->middleware('throttle:30,1')->name('login.personal.post');
+    Route::get('/login/eigener/{username}', [PersonalSsoController::class, 'confirm'])->middleware('throttle:30,1')->where('username', '[A-Za-z0-9._-]{1,64}')->name('login.personal.user');
+    Route::post('/login/eigener/{username}', [PersonalSsoController::class, 'start'])->middleware('throttle:30,1')->where('username', '[A-Za-z0-9._-]{1,64}')->name('login.personal.start');
 
     // Registration and password reset (guests only)
     Route::middleware('guest')->group(function () {
@@ -62,6 +68,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::post('/konto/totp/wiederherstellung', [AccountSettingsController::class, 'regenerateRecovery'])->name('account.totp.recovery');
         Route::get('/konto/sso/{provider}/verknuepfen', [AccountSettingsController::class, 'linkSso'])->where('provider', '[a-z0-9-]+')->name('account.sso.link');
         Route::delete('/konto/sso/{identity}', [AccountSettingsController::class, 'unlinkSso'])->whereNumber('identity')->name('account.sso.unlink');
+        Route::put('/konto/eigener-anbieter', [PersonalSsoController::class, 'save'])->middleware('throttle:10,1')->name('account.personal-sso.save');
+        Route::delete('/konto/eigener-anbieter', [PersonalSsoController::class, 'destroy'])->name('account.personal-sso.destroy');
+        Route::get('/konto/eigener-anbieter/verbinden', [PersonalSsoController::class, 'connect'])->middleware('throttle:10,1')->name('account.personal-sso.connect');
 
         Route::get('/statistik', [StatsController::class, 'index'])->name('stats');
 

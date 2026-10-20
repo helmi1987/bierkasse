@@ -7,7 +7,7 @@
 @php($me = auth()->user())
 @php($protected = $user->isAdmin() && ! $me->isAdmin())
 <h1>{{ $user->displayName() }} <span class="pill">{{ __('users.roles.'.$user->role) }}</span> <span @class(['pill', 'bad' => ! $user->isActive()])>{{ __('users.status.'.$user->status) }}</span></h1>
-<p class="muted">{{ $user->username }}@if ($user->email) · {{ $user->email }}@endif · {{ __('users.totp') }}: {{ $user->hasTotp() ? __('account.totp_active') : '–' }}@if ($user->stats_opt_out) · {{ __('users.stats_opt_out') }}@endif · {{ __('users.last_login') }}: {{ local_time($user->last_login_at) }}</p>
+<p class="muted">{{ $user->username }}@if ($user->email) · {{ $user->email }}@endif · {{ __('users.totp') }}: {{ $user->hasTotp() ? __('account.totp_active') : '–' }}@if ($user->stats_opt_out) · {{ __('users.stats_opt_out') }}@endif · {{ __('users.last_login') }}: {{ local_time($user->last_login_at) }}@if ($personalSso) · {{ __('users.personal_sso', ['name' => $personalSso->name, 'host' => parse_url((string) $personalSso->authorize_url, PHP_URL_HOST) ?: '–']) }} ({{ $personalSso->identities_count > 0 ? __('sso.personal.connected') : __('sso.personal.not_connected') }})@endif</p>
 
 <section @class(['balance-card', 'small', 'negative' => $balance < 0])>
     <div class="balance-label">{{ __('users.balance') }}</div>

@@ -6,8 +6,8 @@ use App\Models\SsoProvider;
 use App\Models\User;
 use App\Models\UserIdentity;
 use App\Support\AppSettings;
+use App\Support\OutboundUrl;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -20,6 +20,10 @@ use RuntimeException;
  * The ID token is received directly from the token endpoint over TLS
  * (https enforced by assertSafeUrl), so per OIDC Core 3.1.3.7 its
  * issuer/audience/expiry/nonce are validated without a signature check.
+ *
+ * Personal providers (owned by a user) are untrusted input: every server-side
+ * request to them goes through OutboundUrl in strict mode (SSRF protection),
+ * and their identities can only log in / link their owner.
  */
 class Sso
 {
@@ -86,15 +90,17 @@ class Sso
 
     /**
      * Fetches the discovery document and returns the endpoint fields.
+     * Strict (personal providers): SSRF checks on the URL and on all returned endpoints.
      *
      * @return array{issuer:?string,authorize_url:string,token_url:string,userinfo_url:?string}
      */
-    public static function discover(string $url): array
+    public static function discover(string $url, bool $strict = false): array
     {
         $url = self::normalizeDiscoveryUrl($url);
         self::assertSafeUrl($url);
 
-        $response = Http::timeout(10)->acceptJson()->get($url);
+        $response = OutboundUrl::client($url, $strict, 10, true)->get($url);
+        OutboundUrl::assertSize($response);
         if (! $response->successful()) {
             throw new RuntimeException(__('sso.error_discovery_http', ['status' => $response->status()]));
         }
@@ -115,7 +121,7 @@ class Sso
 
         foreach (['authorize_url', 'token_url', 'userinfo_url'] as $key) {
             if ($fields[$key] !== null) {
-                self::assertSafeUrl($fields[$key]);
+                $strict ? OutboundUrl::assertPublic($fields[$key]) : self::assertSafeUrl($fields[$key]);
             }
         }
 
@@ -250,6 +256,10 @@ class Sso
     public function findUser(SsoProvider $provider, string $subject): ?User
     {
         $identity = UserIdentity::query()->where('sso_provider_id', $provider->id)->where('subject', $subject)->first();
+        // A personal provider only ever logs in its owner.
+        if ($identity && $provider->isPersonal() && $identity->user_id !== $provider->owner_user_id) {
+            return null;
+        }
         $identity?->forceFill(['last_login_at' => now()])->save();
 
         return $identity?->user;
@@ -261,6 +271,9 @@ class Sso
      */
     public function link(SsoProvider $provider, User $user, string $subject, ?string $label): UserIdentity
     {
+        if ($provider->isPersonal() && $provider->owner_user_id !== $user->id) {
+            throw new RuntimeException(__('sso.error_state'));
+        }
         $existing = UserIdentity::query()->where('sso_provider_id', $provider->id)->where('subject', $subject)->first();
         if ($existing && $existing->user_id !== $user->id) {
             throw new RuntimeException(__('sso.error_linked_elsewhere'));
@@ -288,7 +301,7 @@ class Sso
             $form['code_verifier'] = $verifier;
         }
 
-        $http = Http::timeout(15)->withoutRedirecting()->acceptJson()->asForm();
+        $http = OutboundUrl::client((string) $provider->token_url, $provider->isPersonal(), 15)->asForm();
         if ($provider->token_auth === 'basic') {
             $http = $http->withBasicAuth(rawurlencode((string) $provider->client_id), rawurlencode((string) $provider->client_secret));
         } else {
@@ -297,6 +310,7 @@ class Sso
         }
 
         $response = $http->post((string) $provider->token_url, $form);
+        OutboundUrl::assertSize($response);
         $data = (array) $response->json();
 
         if (! $response->successful() || ! isset($data['access_token'])) {
@@ -316,9 +330,10 @@ class Sso
     {
         self::assertSafeUrl($url);
 
-        $response = Http::timeout(15)->withoutRedirecting()->acceptJson()
+        $response = OutboundUrl::client($url, $provider->isPersonal(), 15)
             ->withHeaders(['User-Agent' => self::userAgent()])
             ->withToken($accessToken)->get($url);
+        OutboundUrl::assertSize($response);
 
         if (! $response->successful()) {
             throw new RuntimeException(__('sso.error_userinfo', ['status' => $response->status()]));

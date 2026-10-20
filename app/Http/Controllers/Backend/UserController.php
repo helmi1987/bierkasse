@@ -37,6 +37,7 @@ class UserController extends Controller
         return view('backend.users.show', [
             'user' => $user,
             'balance' => $user->balance(),
+            'personalSso' => $user->personalSsoProvider()->withCount('identities')->first(),
             'open' => Ledger::openItems($user),
             'transactions' => Transaction::query()->with(['creator', 'confirmer'])->where('user_id', $user->id)->latest('id')->paginate(25),
         ]);

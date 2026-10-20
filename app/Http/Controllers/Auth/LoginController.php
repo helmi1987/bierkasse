@@ -38,6 +38,7 @@ class LoginController extends Controller
         return view('auth.login', [
             'providers' => SsoProvider::usable(),
             'registration' => AppSettings::registrationOpen(),
+            'personalSso' => AppSettings::personalSsoAllowed(),
         ]);
     }
 
@@ -144,6 +145,8 @@ class LoginController extends Controller
     public function ssoRedirect(Request $request, string $provider, Sso $sso): RedirectResponse
     {
         $p = $this->provider($provider);
+        // Personal providers are started via /login/eigener (username) only.
+        abort_if($p->isPersonal(), 404);
 
         try {
             return redirect()->away($sso->redirect($p, $request, Sso::MODE_LOGIN));

@@ -27,6 +27,9 @@
             <a href="{{ route('register') }}">{{ __('auth.login.register') }}</a>
         @endif
         <a href="{{ route('password.request') }}">{{ __('auth.login.forgot') }}</a>
+        @if ($personalSso)
+            <a href="{{ route('login.personal') }}">{{ __('sso.personal.login_link_text') }}</a>
+        @endif
     </div>
 </form>
 

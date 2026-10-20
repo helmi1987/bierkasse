@@ -57,6 +57,12 @@
     </section>
 
     <section class="card stack">
+        <h2>{{ __('settings.login') }}</h2>
+        <label class="switch"><input type="checkbox" name="personal_sso" value="1" @checked(old('personal_sso', $personalSso))> <span>{{ __('settings.personal_sso') }}</span></label>
+        <p class="hint">{{ __('settings.personal_sso_hint') }}</p>
+    </section>
+
+    <section class="card stack">
         <h2>{{ __('settings.notify') }}</h2>
         <label class="switch"><input type="checkbox" name="notify_kassier" value="1" @checked(old('notify_kassier', $notifyKassier))> <span>{{ __('settings.notify_kassier') }}</span></label>
         <p class="hint">{{ __('settings.notify_hint') }}</p>

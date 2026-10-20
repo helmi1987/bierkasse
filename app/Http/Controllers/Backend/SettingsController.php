@@ -30,6 +30,7 @@ class SettingsController extends Controller
             'registrationEnabled' => (bool) AppSettings::get(AppSettings::REGISTRATION_ENABLED, true),
             'registrationPassword' => AppSettings::registrationPassword(),
             'notifyKassier' => AppSettings::notifyKassier(),
+            'personalSso' => AppSettings::personalSsoAllowed(),
             'mail' => AppSettings::mail(),
         ]);
     }
@@ -77,6 +78,7 @@ class SettingsController extends Controller
             AppSettings::REGISTRATION_ENABLED => $request->boolean('registration_enabled'),
             AppSettings::REGISTRATION_PASSWORD => (string) ($data['registration_password'] ?? ''),
             AppSettings::NOTIFY_KASSIER => $request->boolean('notify_kassier'),
+            AppSettings::PERSONAL_SSO => $request->boolean('personal_sso'),
             AppSettings::MAIL => [
                 'transport' => $data['mail_transport'],
                 'from_address' => (string) ($data['mail_from_address'] ?? ''),

@@ -18,6 +18,7 @@ return [
     'totp' => 'TOTP',
     'stats_opt_out' => 'Nicht in Statistik',
     'last_login' => 'Letzte Anmeldung',
+    'personal_sso' => 'Eigener Anbieter: :name (:host)',
 
     'limit_heading' => 'Limit',
     'limit_label' => 'Wie weit unter null (CHF)',

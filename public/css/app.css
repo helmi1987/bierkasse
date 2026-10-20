@@ -132,6 +132,7 @@ legend { font-weight: 600; font-size: .925rem; margin-bottom: .35rem; }
 .segmented input:checked + span { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
 .segmented input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); }
 details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.guest-card summary h2 { margin: 0; }
 .inline-form { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: 1rem; }
 .inline-form select { width: auto; }
 

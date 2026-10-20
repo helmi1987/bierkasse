@@ -115,7 +115,7 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
   Anfragen an eigene Anbieter gehen nie über einen Proxy (auch nicht `HTTPS_PROXY`): der Server braucht dafür
   direkten ausgehenden HTTPS-Zugang.
 - Geld immer in Rappen (Integer), Anzeige `CHF 1.50`. Saldo = Summe der bestätigten Buchungen (`transactions`).
-  - Doppeltes Abschicken (Doppeltipp) wird verhindert: Einmal-Token pro Formular (Bier, Einzahlung melden)
+  - Doppeltes Abschicken (Doppeltipp) wird verhindert: Einmal-Token pro Formular (Bier, Bier für Gast, Einzahlung melden)
     und Sperre des Knopfs nach dem Absenden.
   - Bier: Preis im Moment des Abstreichens wird pro Buchung gespeichert; Preisänderungen ändern alte Buchungen nie.
     Limit: neuer Saldo darf nicht unter `-Limit` fallen (individuell oder Standard). Eigene Striche 10 Minuten
@@ -132,13 +132,21 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
   - Korrektur durch Kassier/Admin mit Pflicht-Bemerkung.
 - Kasse (`/backend/kasse`): Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen ±
   Korrekturen, getrennt nach Bar und TWINT. Überschuss = Kassenstand − Guthaben aller Benutzer.
-- Gäste (`/backend/gaeste`, Kassier und Admin): Schalter "Gäste erlaubt" + eigenes Gäste-Passwort (verschlüsselt,
-  nicht das Registrierungspasswort), druckbarer Gäste-QR-Code (mit/ohne Passwort), Liste der Gäste-Verkäufe mit Storno.
-  Öffentliche Seite `/gast` (Passwort per `?code=` vorausgefüllt oder eingeben): Name freiwillig, 1–10 Biere,
-  Bar oder TWINT (TWINT-Nummer mit Kopier-Knopf). Wird sofort gebucht (Tabelle `guest_sales`, Preis zum Zeitpunkt):
-  zählt als Einnahme in der Kasse (Bar/TWINT), reduziert das Lager (kann die Lager-Mail auslösen) und erscheint in
-  der Statistik als "Gäste" (nie als Benutzer). Passwort wird zuerst geprüft; 10 Versuche/Minute pro IP (auch falsche
-  Passwörter), Einmal-Token gegen Doppelbuchung.
+- Gäste (`/backend/gaeste`, Kassier und Admin): zwei Schalter, Liste aller Gäste-Verkäufe ("gebucht von <Benutzer>"
+  bzw. "öffentlich") mit Storno. Alle Gäste-Verkäufe werden sofort gebucht (Tabelle `guest_sales`, Preis zum
+  Zeitpunkt): zählen als Einnahme in der Kasse (Bar/TWINT), reduzieren das Lager (können die Lager-Mail auslösen)
+  und erscheinen in der Statistik als "Gäste" (nie als Benutzer).
+  - "Gäste durch Benutzer buchen" (Standard an; **Annahme:** an, damit Gäste ohne öffentliche Seite bedient werden
+    können): angemeldete Benutzer erfassen im Konto unter "Bier für Gast" 1–10 Biere, Bar oder TWINT (TWINT nur mit
+    hinterlegter Nummer, Nummer mit Kopier-Knopf), Name freiwillig. Guthaben und Limit des Benutzers bleiben
+    unverändert; gespeichert wird, wer gebucht hat (`guest_sales.booked_by`). Meldung z. B. "3 Biere für Gast
+    erfasst – bitte CHF 4.50 bar in die Kasse legen". Eigene Gäste-Buchungen 10 Minuten rückgängig machbar,
+    Einmal-Token gegen Doppelbuchung.
+  - "Öffentliche Gäste-Seite (QR + Gäste-Passwort)" (Standard aus): eigenes Gäste-Passwort (verschlüsselt, nicht das
+    Registrierungspasswort; zum Einschalten Pflicht), druckbarer Gäste-QR-Code (mit/ohne Passwort).
+    Öffentliche Seite `/gast` (Passwort per `?code=` vorausgefüllt oder eingeben): Name freiwillig, 1–10 Biere,
+    Bar oder TWINT (TWINT-Nummer mit Kopier-Knopf). Passwort wird zuerst geprüft; 10 Versuche/Minute pro IP (auch
+    falsche Passwörter), Einmal-Token gegen Doppelbuchung.
 - Lager (`/backend/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
   Pflicht; alte Einträge ohne Anzahl zählen 0) + Inventur-Korrekturen (gezählter Bestand, gespeichert als Differenz
   mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere (Rückgängig erhöht den Bestand wieder).

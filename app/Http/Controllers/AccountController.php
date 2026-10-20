@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GuestSale;
 use App\Models\Transaction;
+use App\Services\BeerStock;
+use App\Services\GuestSales;
 use App\Services\Ledger;
 use App\Services\LedgerException;
 use App\Services\Stats;
@@ -43,8 +46,17 @@ class AccountController extends Controller
         $pendingDeposit = (int) Transaction::query()->where('user_id', $user->id)->pending()
             ->where('type', Transaction::TYPE_DEPOSIT)->sum('amount');
 
+        // Booking for guests (own guest sales within the undo window can be undone).
+        $guestBooking = AppSettings::guestUserBooking();
+        $guestUndoable = GuestSale::query()->where('booked_by', $user->id)
+            ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
+            ->latest('id')->get();
+
         return view('account.dashboard', [
             'user' => $user,
+            'guestBooking' => $guestBooking,
+            'guestAvailable' => $guestBooking ? min(GuestSales::MAX_BEERS, max(0, BeerStock::current())) : 0,
+            'guestUndoable' => $guestUndoable,
             'pendingDeposit' => $pendingDeposit,
             'balance' => $balance,
             'price' => $price,
@@ -90,6 +102,46 @@ class AccountController extends Controller
         }
 
         return back()->with('status', __('ledger.undone'));
+    }
+
+    /**
+     * Beers for a guest, booked by the logged-in user: paid immediately by the guest
+     * (cash or TWINT), never touches the user's balance or limit.
+     */
+    public function guest(Request $request): RedirectResponse
+    {
+        abort_unless(AppSettings::guestUserBooking(), 404);
+        $twintPhone = AppSettings::twintPhone();
+        $methods = $twintPhone !== '' ? Transaction::METHODS : array_values(array_diff(Transaction::METHODS, ['twint']));
+        $data = $request->validate([
+            'guest_quantity' => ['required', 'integer', 'between:1,'.GuestSales::MAX_BEERS],
+            'guest_method' => ['required', Rule::in($methods)],
+            'guest_name' => ['nullable', 'string', 'max:100'],
+        ]);
+        if (! FormToken::consume($request, 'guest-booking')) {
+            return back()->with('warning', __('ledger.duplicate'));
+        }
+
+        try {
+            $sale = GuestSales::book((int) $data['guest_quantity'], $data['guest_method'], $data['guest_name'] ?? null, $request->user());
+        } catch (LedgerException $e) {
+            return back()->withInput($request->only(['guest_quantity', 'guest_method', 'guest_name']))->with('error', $e->getMessage());
+        }
+
+        $replace = ['count' => $sale->beers, 'amount' => chf($sale->amount), 'phone' => $twintPhone];
+
+        return back()->with('status', trans_choice($sale->method === 'twint' ? 'guest.booked_twint' : 'guest.booked_cash', $sale->beers, $replace));
+    }
+
+    public function undoGuest(Request $request, GuestSale $sale): RedirectResponse
+    {
+        try {
+            GuestSales::undo($sale, $request->user());
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', __('guest.undone'));
     }
 
     public function deposit(Request $request): RedirectResponse

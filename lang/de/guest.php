@@ -1,6 +1,6 @@
 <?php
 
-// Guest sale (public page and backend).
+// Guest sale (public page, user dashboard and backend).
 return [
     'title' => 'Bier für Gäste',
     'intro' => 'Bier nehmen, hier erfassen und bezahlen. Kein Konto nötig.',
@@ -22,10 +22,23 @@ return [
     'stock_short' => '{0} Zurzeit ist kein Bier an Lager.|{1} Nur noch 1 Bier an Lager.|[2,*] Nur noch :count Biere an Lager.',
     'disabled' => 'Gäste-Verkauf ist zurzeit nicht möglich.',
 
+    // Dashboard: booking for a guest by a logged-in user
+    'book_heading' => 'Bier für Gast',
+    'book_intro' => 'Für einen Gast abstreichen: der Gast bezahlt sofort bar oder per TWINT, dein Guthaben bleibt gleich.',
+    'book_submit' => 'Für Gast abstreichen',
+    'booked_cash' => '{1} :count Bier für Gast erfasst – bitte :amount bar in die Kasse legen.|[2,*] :count Biere für Gast erfasst – bitte :amount bar in die Kasse legen.',
+    'booked_twint' => '{1} :count Bier für Gast erfasst – bitte :amount per TWINT an :phone senden.|[2,*] :count Biere für Gast erfasst – bitte :amount per TWINT an :phone senden.',
+    'undone' => 'Gäste-Verkauf zurückgenommen.',
+    'undo_hint' => 'Eigene Gäste-Buchungen können :minutes Minuten lang zurückgenommen werden.',
+
     // Backend
     'backend_title' => 'Gäste',
-    'backend_intro' => 'Gäste erfassen Biere über den Gäste-QR-Code ohne Konto. Die Beträge zählen sofort als Einnahme in der Kasse und reduzieren das Lager; in der Statistik als «Gäste».',
-    'enabled' => 'Gäste erlaubt',
+    'backend_intro' => 'Biere für Gäste erfassen angemeldete Benutzer im Konto oder Gäste selbst über den Gäste-QR-Code (ohne Konto). Die Beträge zählen sofort als Einnahme in der Kasse und reduzieren das Lager; in der Statistik als «Gäste».',
+    'enabled' => 'Öffentliche Gäste-Seite (QR + Gäste-Passwort)',
+    'user_booking' => 'Gäste durch Benutzer buchen',
+    'user_booking_hint' => 'Angemeldete Benutzer erfassen im Konto Biere für Gäste (Bar oder TWINT). Ihr eigenes Guthaben ändert sich dabei nicht.',
+    'public' => 'öffentlich',
+    'booked_by' => 'gebucht von :user',
     'password' => 'Gäste-Passwort',
     'password_hint' => 'Eigenes Passwort (nicht das Registrierungspasswort). Ohne Passwort ist kein Gäste-Verkauf möglich. Verschlüsselt gespeichert.',
     'save' => 'Speichern',

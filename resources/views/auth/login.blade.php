@@ -35,9 +35,9 @@
 
 @if ($providers->isNotEmpty())
     <div class="divider"><span>{{ __('auth.login.or') }}</span></div>
-    <div class="stack">
+    <div class="sso-buttons">
         @foreach ($providers as $provider)
-            <a class="btn sso big" href="{{ route('login.sso', $provider->slug) }}">{{ __('auth.login.with_provider', ['provider' => $provider->name]) }}</a>
+            @include('partials.sso-button', ['provider' => $provider, 'href' => route('login.sso', $provider->slug), 'label' => __('auth.login.with_provider', ['provider' => $provider->name]), 'big' => true])
         @endforeach
         <p class="hint center">{{ __('auth.login.sso_hint') }}</p>
     </div>

@@ -179,6 +179,83 @@ class SsoTest extends TestCase
         Http::assertSent(fn (HttpRequest $r) => $r->url() === 'https://api.github.com/user/emails' && $r->hasHeader('Authorization', 'Bearer gh-token'));
     }
 
+    public function test_facebook_link_and_login_use_graph_api(): void
+    {
+        $facebook = SsoProvider::query()->create(array_merge(Sso::preset('facebook'), [
+            'name' => 'Facebook', 'slug' => 'facebook', 'type' => 'facebook', 'enabled' => true,
+            'client_id' => 'fb-app', 'client_secret' => 'fb-secret', 'use_pkce' => true,
+        ]));
+        $this->assertTrue($facebook->isUsable());
+        $this->assertFalse($facebook->isOidc());
+
+        Http::fake([
+            'https://graph.facebook.com/v19.0/oauth/access_token' => Http::response(['access_token' => 'fb-token', 'token_type' => 'bearer', 'expires_in' => 5000]),
+            'https://graph.facebook.com/v19.0/me*' => Http::response(['id' => '10223344', 'name' => 'Hans Muster', 'email' => 'hans@example.org']),
+        ]);
+
+        $user = $this->user();
+        $this->actingAs($user);
+        $this->get('/konto/einstellungen')->assertOk()->assertSee('Mit Facebook verknüpfen')->assertSee('sso-facebook');
+        $query = $this->startFlow('/konto/sso/facebook/verknuepfen', 'https://www.facebook.com/v19.0/dialog/oauth?');
+        $this->assertSame('fb-app', $query['client_id']);
+        $this->assertSame('email public_profile', $query['scope']);
+        $this->assertSame(route('login.sso.callback', 'facebook'), $query['redirect_uri']);
+        $this->assertArrayNotHasKey('nonce', $query);
+
+        $this->get('/login/sso/facebook/callback?code=abc&state='.$query['state'])->assertRedirect(route('account.settings'));
+        $this->assertDatabaseHas('user_identities', ['user_id' => $user->id, 'sso_provider_id' => $facebook->id, 'subject' => '10223344', 'label' => 'Hans Muster']);
+        Http::assertSent(fn (HttpRequest $r) => $r->url() === 'https://graph.facebook.com/v19.0/oauth/access_token'
+            && $r['code'] === 'abc' && $r['client_id'] === 'fb-app' && $r['client_secret'] === 'fb-secret');
+        Http::assertSent(fn (HttpRequest $r) => str_starts_with($r->url(), 'https://graph.facebook.com/v19.0/me?fields=id')
+            && $r->hasHeader('Authorization', 'Bearer fb-token'));
+
+        // Login with the linked Facebook identity.
+        $this->post('/abmelden');
+        $this->assertGuest();
+        $this->get('/')->assertOk()->assertSee('Mit Facebook anmelden')->assertSee('sso-facebook');
+        $query = $this->startFlow('/login/sso/facebook', 'https://www.facebook.com/v19.0/dialog/oauth?');
+        $this->get('/login/sso/facebook/callback?code=abc&state='.$query['state'])->assertRedirect(route('account.dashboard'));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_admin_creates_facebook_provider_with_preset(): void
+    {
+        $this->actingAs($this->admin())->get('/backend/sso/create?type=facebook')->assertOk()
+            ->assertSee('developers.facebook.com')->assertSee('/login/sso/', false);
+
+        $this->post('/backend/sso', [
+            'type' => 'facebook', 'name' => 'Facebook', 'client_id' => 'fb-app', 'client_secret' => 'fb-secret',
+            'enabled' => '1', 'use_pkce' => '1', 'scopes' => 'x', 'token_auth' => 'post',
+            'subject_claim' => 'sub', 'email_claim' => 'email', 'label_claim' => 'email',
+        ])->assertSessionHas('status');
+
+        $p = SsoProvider::query()->where('slug', 'facebook')->firstOrFail();
+        $this->assertTrue($p->isUsable());
+        $this->assertSame('email public_profile', $p->scopes);
+        $this->assertSame('id', $p->subject_claim);
+        $this->assertSame('https://www.facebook.com/v19.0/dialog/oauth', $p->authorize_url);
+    }
+
+    public function test_account_hint_without_active_provider(): void
+    {
+        $this->provider->forceFill(['enabled' => false])->save();
+
+        $this->actingAs($this->user())->get('/konto/einstellungen')->assertOk()
+            ->assertSee('Keine Verknüpfung.')->assertSee('Der Admin kann Anmeldung mit Google, GitHub usw. aktivieren.')
+            ->assertDontSee('Noch kein Anbieter aktiv.');
+
+        $this->actingAs($this->admin())->get('/konto/einstellungen')->assertOk()
+            ->assertSee('Noch kein Anbieter aktiv. Google, Microsoft, GitHub oder Facebook im Backend unter SSO einrichten.')
+            ->assertSee(route('backend.sso.index'));
+    }
+
+    public function test_active_provider_hides_no_provider_hint(): void
+    {
+        $this->actingAs($this->admin())->get('/konto/einstellungen')->assertOk()
+            ->assertSee('Mit Firmen-SSO verknüpfen')->assertSee('sso-oidc')
+            ->assertDontSee('Noch kein Anbieter aktiv.');
+    }
+
     public function test_microsoft_common_tenant_issuer(): void
     {
         $tid = '9188040d-6c67-4c5b-b112-36a304b66dad';

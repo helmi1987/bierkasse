@@ -143,7 +143,16 @@
     @enderror
     @if ($identities->isEmpty())
         <p class="muted">{{ __('account.identities_none') }}</p>
-    @else
+    @endif
+    @if (! $ssoActive)
+        @if ($user->isAdmin())
+            <p class="muted">{{ __('account.identities_admin_hint') }}</p>
+            <p><a class="btn" href="{{ route('backend.sso.index') }}">{{ __('account.identities_admin_link') }}</a></p>
+        @else
+            <p class="muted">{{ __('account.identities_user_hint') }}</p>
+        @endif
+    @endif
+    @if ($identities->isNotEmpty())
         <ul class="list">
             @foreach ($identities as $identity)
                 <li>
@@ -162,9 +171,9 @@
         </ul>
     @endif
     @if ($providers->isNotEmpty())
-        <div class="row-buttons">
+        <div class="sso-buttons">
             @foreach ($providers as $provider)
-                <a class="btn sso" href="{{ route('account.sso.link', $provider->slug) }}">{{ __('account.identity_link', ['provider' => $provider->name]) }}</a>
+                @include('partials.sso-button', ['provider' => $provider, 'href' => route('account.sso.link', $provider->slug), 'label' => __('account.identity_link', ['provider' => $provider->name])])
             @endforeach
         </div>
     @endif

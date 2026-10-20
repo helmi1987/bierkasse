@@ -1,0 +1,58 @@
+# Merges a claude/** branch into main once the Tests workflow succeeded on it.
+# Plesk deploys main via its Git webhook.
+name: Auto-merge Claude branches
+
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-merge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  auto-merge:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      startsWith(github.event.workflow_run.head_branch, 'claude/')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      BRANCH: ${{ github.event.workflow_run.head_branch }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+      BASE: main
+    steps:
+      - name: Create or find pull request
+        id: pr
+        run: |
+          set -euo pipefail
+          ahead=$(gh api "repos/$GH_REPO/compare/$BASE...$SHA" --jq '.ahead_by')
+          if [ "$ahead" = "0" ]; then
+            echo "Commit $SHA has no commits ahead of $BASE, nothing to merge."
+            exit 0
+          fi
+          pr=$(gh pr list --head "$BRANCH" --base "$BASE" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            title=$(gh api "repos/$GH_REPO/commits/$SHA" --jq '.commit.message' | head -n1)
+            url=$(gh pr create --head "$BRANCH" --base "$BASE" --title "$title" \
+              --body "Automatically created from branch \`$BRANCH\` after green tests and merged by the auto-merge workflow.")
+            pr=${url##*/}
+            echo "Created pull request #$pr"
+          else
+            echo "Found open pull request #$pr"
+          fi
+          echo "number=$pr" >> "$GITHUB_OUTPUT"
+
+      - name: Merge pull request
+        if: steps.pr.outputs.number != ''
+        run: |
+          set -euo pipefail
+          gh pr merge "${{ steps.pr.outputs.number }}" --merge --match-head-commit "$SHA"
+          echo "Merged pull request #${{ steps.pr.outputs.number }} into $BASE"

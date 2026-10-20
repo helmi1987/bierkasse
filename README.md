@@ -68,7 +68,9 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
 ## Branch-Modell
 
 - Gearbeitet wird auf `claude/**`-Branches. Die CI (`.github/workflows/tests.yml`) führt dort die Tests aus.
-- Erst nach grüner CI wird in `main` gemerged; `main` wird von Plesk deployt.
+- Nach grüner CI merged `.github/workflows/auto-merge.yml` den Branch automatisch in `main`; `main` wird von Plesk deployt.
+  Repository-Einstellung nötig: Settings > Actions > General > Workflow permissions "Read and write" und
+  "Allow GitHub Actions to create and approve pull requests".
 
 ## Funktionen
 

@@ -120,37 +120,51 @@ class Ledger
         return $tx;
     }
 
-    /** Kassier books a deposit directly (confirmed). */
+    /** Kassier books a deposit directly (confirmed). Not for accounts that left. */
     public static function bookDeposit(User $user, int $amount, string $method, User $by, ?string $note = null): Transaction
     {
         self::assertAmount($amount);
 
-        return Transaction::query()->create([
-            'user_id' => $user->id,
-            'type' => Transaction::TYPE_DEPOSIT,
-            'status' => Transaction::STATUS_CONFIRMED,
-            'method' => $method,
-            'amount' => $amount,
-            'note' => $note,
-            'created_by' => $by->id,
-            'confirmed_by' => $by->id,
-            'confirmed_at' => now(),
-        ]);
+        return DB::transaction(function () use ($user, $amount, $method, $by, $note) {
+            self::lock($user);
+            self::assertActive($user);
+
+            return Transaction::query()->create([
+                'user_id' => $user->id,
+                'type' => Transaction::TYPE_DEPOSIT,
+                'status' => Transaction::STATUS_CONFIRMED,
+                'method' => $method,
+                'amount' => $amount,
+                'note' => $note,
+                'created_by' => $by->id,
+                'confirmed_by' => $by->id,
+                'confirmed_at' => now(),
+            ]);
+        });
     }
 
     public static function confirmDeposit(Transaction $tx, User $by): void
     {
-        self::assertPending($tx, Transaction::TYPE_DEPOSIT);
-        $tx->forceFill(['status' => Transaction::STATUS_CONFIRMED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+        DB::transaction(function () use ($tx, $by) {
+            $user = User::query()->findOrFail($tx->user_id);
+            self::lock($user);
+            $locked = self::lockPending($tx, Transaction::TYPE_DEPOSIT);
+            self::assertActive($user);
+            $locked->forceFill(['status' => Transaction::STATUS_CONFIRMED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+            $tx->setRawAttributes($locked->getAttributes(), true);
+        });
     }
 
     public static function rejectDeposit(Transaction $tx, User $by): void
     {
-        self::assertPending($tx, Transaction::TYPE_DEPOSIT);
-        $tx->forceFill(['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+        DB::transaction(function () use ($tx, $by) {
+            $locked = self::lockPending($tx, Transaction::TYPE_DEPOSIT);
+            $locked->forceFill(['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+            $tx->setRawAttributes($locked->getAttributes(), true);
+        });
     }
 
-    /** Signed correction by kassier/admin; note is mandatory. */
+    /** Signed correction by kassier/admin; note is mandatory. Not for accounts that left. */
     public static function correction(User $user, int $amount, string $note, User $by): Transaction
     {
         if ($amount === 0) {
@@ -160,16 +174,21 @@ class Ledger
             throw new LedgerException(__('ledger.note_required'));
         }
 
-        return Transaction::query()->create([
-            'user_id' => $user->id,
-            'type' => Transaction::TYPE_CORRECTION,
-            'status' => Transaction::STATUS_CONFIRMED,
-            'amount' => $amount,
-            'note' => $note,
-            'created_by' => $by->id,
-            'confirmed_by' => $by->id,
-            'confirmed_at' => now(),
-        ]);
+        return DB::transaction(function () use ($user, $amount, $note, $by) {
+            self::lock($user);
+            self::assertActive($user);
+
+            return Transaction::query()->create([
+                'user_id' => $user->id,
+                'type' => Transaction::TYPE_CORRECTION,
+                'status' => Transaction::STATUS_CONFIRMED,
+                'amount' => $amount,
+                'note' => $note,
+                'created_by' => $by->id,
+                'confirmed_by' => $by->id,
+                'confirmed_at' => now(),
+            ]);
+        });
     }
 
     /**
@@ -200,15 +219,17 @@ class Ledger
         return $tx;
     }
 
-    /** Payout handed over: amount = -balance, the account becomes "left". */
+    /**
+     * Payout handed over: amount = -balance, the account becomes "left".
+     * The status is re-checked under a row lock, so a second confirmation fails.
+     */
     public static function confirmPayout(Transaction $tx, User $by, string $method = 'cash'): void
     {
-        self::assertPending($tx, Transaction::TYPE_PAYOUT);
-
         DB::transaction(function () use ($tx, $by, $method) {
-            $user = $tx->user;
+            $user = User::query()->findOrFail($tx->user_id);
             self::lock($user);
-            $tx->forceFill([
+            $locked = self::lockPending($tx, Transaction::TYPE_PAYOUT);
+            $locked->forceFill([
                 'status' => Transaction::STATUS_CONFIRMED,
                 'method' => $method,
                 'amount' => -self::balance($user),
@@ -216,13 +237,17 @@ class Ledger
                 'confirmed_at' => now(),
             ])->save();
             self::markLeft($user);
+            $tx->setRawAttributes($locked->getAttributes(), true);
         });
     }
 
     public static function cancelPayout(Transaction $tx, User $by): void
     {
-        self::assertPending($tx, Transaction::TYPE_PAYOUT);
-        $tx->forceFill(['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+        DB::transaction(function () use ($tx, $by) {
+            $locked = self::lockPending($tx, Transaction::TYPE_PAYOUT);
+            $locked->forceFill(['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+            $tx->setRawAttributes($locked->getAttributes(), true);
+        });
     }
 
     /** Leaving: the balance is donated to the cash box; the account becomes "left". */
@@ -252,46 +277,65 @@ class Ledger
     }
 
     /**
-     * Open (unpaid) beers, oldest first paid: credits are allocated to the debits in
-     * chronological order. Returns the open beers grouped by their original price.
+     * Open (unpaid) items, oldest first paid: credits are allocated to the debits in
+     * chronological order. The lines always add up to the total (= -balance):
+     *  - beers: fully open beers grouped by their original price;
+     *  - partial: the unpaid rest of a partly paid beer (original price);
+     *  - other: uncovered non-beer debits (negative corrections etc.).
      *
-     * @return array{total:int, beers: list<array{unit_price:int, quantity:int, amount:int}>}
+     * @return array{total:int, beers: list<array{unit_price:int, quantity:int, amount:int}>, partial: list<array{unit_price:int, amount:int}>, other:int}
      */
     public static function openItems(User $user): array
     {
         $balance = self::balance($user);
         if ($balance >= 0) {
-            return ['total' => 0, 'beers' => []];
+            return ['total' => 0, 'beers' => [], 'partial' => [], 'other' => 0];
         }
 
         $rows = Transaction::query()->where('user_id', $user->id)->confirmed()->orderBy('created_at')->orderBy('id')->get();
         $credit = (int) $rows->where('amount', '>', 0)->sum('amount');
-        $open = [];
+        $beers = [];
+        $partial = [];
+        $other = 0;
 
         foreach ($rows->where('amount', '<', 0) as $row) {
             $debit = -$row->amount;
             $covered = min($credit, $debit);
             $credit -= $covered;
-            if ($covered === $debit || $row->type !== Transaction::TYPE_CONSUMPTION || ! $row->unit_price) {
+            if ($covered === $debit) {
                 continue;
             }
-            // Partly paid consumption: the unpaid beers keep their original price.
-            $paidBeers = intdiv($covered, $row->unit_price);
-            $qty = (int) $row->quantity - $paidBeers;
-            if ($qty > 0) {
-                $open[$row->unit_price] = ($open[$row->unit_price] ?? 0) + $qty;
+
+            $price = (int) $row->unit_price;
+            if ($row->type !== Transaction::TYPE_CONSUMPTION || $price <= 0 || (int) $row->quantity * $price !== $debit) {
+                $other += $debit - $covered;
+
+                continue;
+            }
+
+            // Beers paid in full, then possibly one beer paid in part, the rest is fully open.
+            $paidBeers = intdiv($covered, $price);
+            $rest = $covered % $price;
+            if ($rest > 0) {
+                $partial[] = ['unit_price' => $price, 'amount' => $price - $rest];
+            }
+            $open = (int) $row->quantity - $paidBeers - ($rest > 0 ? 1 : 0);
+            if ($open > 0) {
+                $beers[$price] = ($beers[$price] ?? 0) + $open;
             }
         }
 
-        ksort($open);
+        ksort($beers);
 
         return [
             'total' => -$balance,
             'beers' => array_values(array_map(
                 fn ($price, $qty) => ['unit_price' => (int) $price, 'quantity' => $qty, 'amount' => $price * $qty],
-                array_keys($open),
-                $open,
+                array_keys($beers),
+                $beers,
             )),
+            'partial' => $partial,
+            'other' => $other,
         ];
     }
 
@@ -344,16 +388,28 @@ class Ledger
         }
     }
 
-    private static function assertPending(Transaction $tx, string $type): void
+    /**
+     * Locks the transaction row and re-reads it; it must still be pending and of the given type.
+     */
+    private static function lockPending(Transaction $tx, string $type): Transaction
     {
-        if ($tx->type !== $type || ! $tx->isPending()) {
+        $locked = Transaction::query()->whereKey($tx->id)->lockForUpdate()->first();
+        if (! $locked || $locked->type !== $type || ! $locked->isPending()) {
             throw new LedgerException(__('ledger.not_pending'));
         }
+
+        return $locked;
     }
 
-    /** Serialises bookings of one user (row lock on MySQL/MariaDB/PostgreSQL). */
-    private static function lock(User $user): void
+    /**
+     * Serialises bookings of one user (row lock on MySQL/MariaDB/PostgreSQL) and
+     * refreshes the status, so checks inside the lock see the current value.
+     */
+    private static function lock(User $user): User
     {
-        User::query()->whereKey($user->id)->lockForUpdate()->first();
+        $fresh = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+        $user->forceFill(['status' => $fresh->status])->syncOriginalAttribute('status');
+
+        return $user;
     }
 }

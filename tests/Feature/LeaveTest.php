@@ -27,7 +27,7 @@ class LeaveTest extends TestCase
         $this->assertTrue($user->fresh()->isActive());
 
         // While the payout is pending no further beers.
-        $this->post('/konto/bier', ['quantity' => 1])->assertSessionHas('error');
+        $this->post('/konto/bier', $this->tokened('consume', ['quantity' => 1]))->assertSessionHas('error');
 
         $this->actingAs($kassier)->post("/backend/auszahlungen/{$payout->id}/bestaetigen", ['method' => 'cash'])->assertSessionHas('status');
 

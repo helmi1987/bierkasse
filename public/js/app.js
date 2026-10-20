@@ -12,6 +12,33 @@
         }
     }, true);
 
+    // Against double submits: a form is sent only once; its buttons are disabled afterwards
+    // (asynchronously, so the clicked button's name/value is still submitted).
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (e.defaultPrevented) {
+            return;
+        }
+        if (form.dataset.submitted === '1') {
+            e.preventDefault();
+            return;
+        }
+        form.dataset.submitted = '1';
+        window.setTimeout(function () {
+            form.querySelectorAll('button[type=submit], button:not([type])').forEach(function (btn) {
+                btn.disabled = true;
+            });
+        }, 0);
+    });
+
+    // Back/forward cache: re-enable forms that were submitted before.
+    window.addEventListener('pageshow', function () {
+        document.querySelectorAll('form[data-submitted]').forEach(function (form) {
+            delete form.dataset.submitted;
+            form.querySelectorAll('button[disabled]').forEach(function (btn) { btn.disabled = false; });
+        });
+    });
+
     // Quantity stepper for "Bier abstreichen" (works without JS as a number input).
     document.querySelectorAll('[data-stepper]').forEach(function (stepper) {
         var input = stepper.querySelector('input[type=number]');

@@ -7,16 +7,7 @@
     <div class="balance-label">{{ $balance < 0 ? __('account.balance_negative') : __('account.balance') }}</div>
     <div class="balance-amount" data-testid="balance">{{ chf($balance) }}</div>
     @if ($balance < 0)
-        <div class="open-box">
-            <strong>{{ __('account.open', ['amount' => chf($open['total'])]) }}</strong>
-            @if ($open['beers'])
-                <ul class="plain">
-                    @foreach ($open['beers'] as $item)
-                        <li>{{ __('account.open_beers', ['count' => $item['quantity'], 'price' => chf($item['unit_price'])]) }}</li>
-                    @endforeach
-                </ul>
-            @endif
-        </div>
+        @include('partials.open-items', ['open' => $open])
     @endif
     <div class="balance-sub">{{ $limit > 0 ? __('account.limit_info', ['limit' => chf($limit)]) : __('account.limit_none') }}</div>
 </section>
@@ -28,6 +19,7 @@
         <h2>{{ __('account.beer') }}</h2>
         <form method="post" action="{{ route('account.consume') }}" class="beer-form">
             @csrf
+            {!! \App\Support\FormToken::field('consume') !!}
             <div class="stepper" data-stepper>
                 <button type="button" class="btn round" data-step="-1" aria-label="{{ __('account.less') }}">−</button>
                 <label class="sr-only" for="quantity">{{ __('account.quantity') }}</label>
@@ -79,6 +71,7 @@
         <p class="muted">{{ __('account.deposit_intro') }}</p>
         <form method="post" action="{{ route('account.deposit') }}" class="stack">
             @csrf
+            {!! \App\Support\FormToken::field('deposit') !!}
             <div class="field">
                 <label for="amount">{{ __('account.amount') }}</label>
                 <input type="text" id="amount" name="amount" inputmode="decimal" value="{{ old('amount', \App\Support\Money::plain($suggested)) }}" required>

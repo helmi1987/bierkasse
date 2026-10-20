@@ -87,6 +87,19 @@ class UserController extends Controller
         abort_if($user->id === $request->user()->id, 403);
 
         $active = $request->boolean('active');
+
+        if (! $active) {
+            // Money first: an account with a balance or open items leaves via the leave flow
+            // or after a correction, never silently.
+            $pending = Transaction::query()->where('user_id', $user->id)->pending()->exists();
+            if ($user->balance() !== 0 || $pending) {
+                return back()->with('error', __('users.deactivate_blocked'));
+            }
+            if ($user->isAdmin() && User::query()->where('role', User::ROLE_ADMIN)->where('status', User::STATUS_ACTIVE)->count() <= 1) {
+                return back()->with('error', __('users.last_admin_active'));
+            }
+        }
+
         $user->forceFill([
             'status' => $active ? User::STATUS_ACTIVE : User::STATUS_LEFT,
             'left_at' => $active ? null : now(),

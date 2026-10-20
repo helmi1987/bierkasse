@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -31,24 +32,35 @@ class RegisterController extends Controller
     {
         abort_unless(AppSettings::registrationOpen(), 403);
 
-        $request->merge(['username' => Str::lower(trim((string) $request->input('username')))]);
-        $data = $request->validate([
-            'code' => ['required', 'string', 'max:255'],
-            'username' => UserRules::username(),
-            'password' => UserRules::password(),
-        ] + UserRules::profile());
-
         $key = 'register:'.$request->ip();
+        $back = fn (string $field, string $message) => back()
+            ->withInput($request->except(['password', 'password_confirmation', 'code']))
+            ->withErrors([$field => $message]);
+
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            return back()->withInput($request->except(['password', 'password_confirmation', 'code']))
-                ->withErrors(['code' => __('auth.throttle', ['seconds' => RateLimiter::availableIn($key)])]);
+            return $back('code', __('auth.throttle', ['seconds' => RateLimiter::availableIn($key)]));
         }
 
-        if (! hash_equals(AppSettings::registrationPassword(), (string) $data['code'])) {
+        // The registration password is checked first: without it nothing else is validated,
+        // so user names cannot be probed for existence.
+        $code = $request->input('code');
+        if (! is_string($code) || $code === '' || ! hash_equals(AppSettings::registrationPassword(), $code)) {
             RateLimiter::hit($key, 900);
 
-            return back()->withInput($request->except(['password', 'password_confirmation', 'code']))
-                ->withErrors(['code' => __('register.code_wrong')]);
+            return $back('code', __('register.code_wrong'));
+        }
+
+        $request->merge(['username' => Str::lower(trim((string) $request->input('username')))]);
+        try {
+            $data = $request->validate([
+                'username' => UserRules::username(),
+                'password' => UserRules::password(),
+            ] + UserRules::profile());
+        } catch (ValidationException $e) {
+            // Failed attempts (e.g. taken user names) count towards the limit as well.
+            RateLimiter::hit($key, 900);
+
+            throw $e;
         }
 
         $user = User::query()->create([

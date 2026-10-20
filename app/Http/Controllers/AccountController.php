@@ -8,6 +8,7 @@ use App\Services\LedgerException;
 use App\Services\Stats;
 use App\Support\AppSettings;
 use App\Support\BarChart;
+use App\Support\FormToken;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,6 +61,9 @@ class AccountController extends Controller
     public function consume(Request $request): RedirectResponse
     {
         $data = $request->validate(['quantity' => ['required', 'integer', 'between:1,'.Ledger::MAX_QUANTITY]]);
+        if (! FormToken::consume($request, 'consume')) {
+            return back()->with('warning', __('ledger.duplicate'));
+        }
 
         try {
             $tx = Ledger::consume($request->user(), (int) $data['quantity']);
@@ -91,6 +95,9 @@ class AccountController extends Controller
         $amount = Money::parse($data['amount']);
         if ($amount === null || $amount <= 0 || $amount > 100000) {
             throw ValidationException::withMessages(['amount' => __('ledger.amount_invalid')]);
+        }
+        if (! FormToken::consume($request, 'deposit')) {
+            return back()->with('warning', __('ledger.duplicate'));
         }
 
         try {

@@ -13,15 +13,7 @@
     <div class="balance-label">{{ __('users.balance') }}</div>
     <div class="balance-amount">{{ chf($balance) }}</div>
     @if ($balance < 0)
-        <div class="open-box"><strong>{{ __('account.open', ['amount' => chf($open['total'])]) }}</strong>
-            @if ($open['beers'])
-                <ul class="plain">
-                    @foreach ($open['beers'] as $item)
-                        <li>{{ __('account.open_beers', ['count' => $item['quantity'], 'price' => chf($item['unit_price'])]) }}</li>
-                    @endforeach
-                </ul>
-            @endif
-        </div>
+        @include('partials.open-items', ['open' => $open])
     @endif
 </section>
 

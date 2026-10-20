@@ -22,6 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
         if ($proxies !== []) {
             $middleware->trustProxies(at: $proxies === ['*'] ? '*' : $proxies);
         }
+        // Once installed only the host of APP_URL is accepted (against Host header injection).
+        // Before the setup any host is allowed, so the wizard works on any domain.
+        $middleware->trustHosts(at: function () {
+            $host = (string) parse_url((string) config('app.url'), PHP_URL_HOST);
+
+            return config('app.installed') && $host !== '' ? ['^'.preg_quote($host).'$'] : [];
+        }, subdomains: false);
         $middleware->append(SecurityHeaders::class);
         $middleware->alias([
             'active' => EnsureActiveUser::class,

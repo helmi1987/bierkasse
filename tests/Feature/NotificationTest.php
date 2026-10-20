@@ -28,7 +28,7 @@ class NotificationTest extends TestCase
         $this->user(['email' => 'user@example.org']);
         $user = $this->user();
 
-        $this->actingAs($user)->post('/konto/einzahlung', ['amount' => '10', 'method' => 'cash']);
+        $this->actingAs($user)->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => '10', 'method' => 'cash']));
         Mail::assertSent(KassierNotice::class, 2);
         Mail::assertSent(KassierNotice::class, fn ($m) => $m->hasTo('kassier@example.org'));
         Mail::assertNotSent(KassierNotice::class, fn ($m) => $m->hasTo('user@example.org'));

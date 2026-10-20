@@ -21,6 +21,7 @@ return [
     'beers' => '{1} :count Bier à :price|[2,*] :count Biere à :price',
 
     'consumed' => '{1} :count Bier abgestrichen (:amount). Prost!|[2,*] :count Biere abgestrichen (:amount). Prost!',
+    'duplicate' => 'Schon gebucht (doppelt abgeschickt?). Bitte Kontostand prüfen.',
     'undone' => 'Strich zurückgenommen.',
     'limit_reached' => 'Bitte zuerst einzahlen',
     'quantity_invalid' => 'Anzahl ungültig.',

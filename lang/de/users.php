@@ -40,6 +40,8 @@ return [
     'deactivate' => 'Deaktivieren',
     'deactivate_confirm' => 'Konto deaktivieren? Die Anmeldung ist danach nicht mehr möglich.',
     'reactivate' => 'Reaktivieren',
+    'deactivate_blocked' => 'Deaktivieren nicht möglich: Saldo ist nicht 0 oder es gibt offene Posten. Bitte zuerst über «Haus verlassen» abrechnen oder eine Korrektur buchen.',
+    'last_admin_active' => 'Der letzte aktive Admin kann nicht deaktiviert werden.',
     'deactivated' => 'Konto deaktiviert.',
     'reactivated' => 'Konto reaktiviert.',
     'role_heading' => 'Rolle',

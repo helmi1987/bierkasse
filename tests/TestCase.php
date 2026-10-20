@@ -5,6 +5,7 @@ namespace Tests;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\AppSettings;
+use App\Support\FormToken;
 use App\Support\Totp;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -44,6 +45,16 @@ abstract class TestCase extends BaseTestCase
         $this->flushSession();
 
         return parent::actingAs($user, $guard);
+    }
+
+    /**
+     * Adds a fresh single-use form token (FormToken) to the posted data.
+     */
+    protected function tokened(string $form, array $data = []): array
+    {
+        $this->startSession();
+
+        return $data + [FormToken::FIELD => FormToken::issue($form)];
     }
 
     protected function user(array $attributes = []): User

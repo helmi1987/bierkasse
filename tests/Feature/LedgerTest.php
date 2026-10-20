@@ -19,9 +19,9 @@ class LedgerTest extends TestCase
         $this->setDefaultLimit(1000);
         $user = $this->user();
 
-        $this->actingAs($user)->post('/konto/bier', ['quantity' => 2])->assertSessionHas('status');
+        $this->actingAs($user)->post('/konto/bier', $this->tokened('consume', ['quantity' => 2]))->assertSessionHas('status');
         $this->setPrice(200);
-        $this->post('/konto/bier', ['quantity' => 1]);
+        $this->post('/konto/bier', $this->tokened('consume', ['quantity' => 1]));
 
         $rows = Transaction::query()->where('user_id', $user->id)->orderBy('id')->get();
         $this->assertSame([150, 200], $rows->pluck('unit_price')->all());
@@ -62,12 +62,12 @@ class LedgerTest extends TestCase
         $user = $this->user();
 
         // Default limit 0: no minus allowed.
-        $this->actingAs($user)->post('/konto/bier', ['quantity' => 1])->assertSessionHas('error', 'Bitte zuerst einzahlen');
+        $this->actingAs($user)->post('/konto/bier', $this->tokened('consume', ['quantity' => 1]))->assertSessionHas('error', 'Bitte zuerst einzahlen');
         $this->assertSame(0, Transaction::query()->count());
 
         $this->setDefaultLimit(300);
-        $this->post('/konto/bier', ['quantity' => 2])->assertSessionHas('status');
-        $this->post('/konto/bier', ['quantity' => 1])->assertSessionHas('error', 'Bitte zuerst einzahlen');
+        $this->post('/konto/bier', $this->tokened('consume', ['quantity' => 2]))->assertSessionHas('status');
+        $this->post('/konto/bier', $this->tokened('consume', ['quantity' => 1]))->assertSessionHas('error', 'Bitte zuerst einzahlen');
         $this->assertSame(-300, $user->balance());
     }
 
@@ -78,8 +78,8 @@ class LedgerTest extends TestCase
         $user = $this->user(['overdraft_limit' => 0]);
         Ledger::bookDeposit($user, 150, 'cash', $this->kassier());
 
-        $this->actingAs($user)->post('/konto/bier', ['quantity' => 1])->assertSessionHas('status');
-        $this->post('/konto/bier', ['quantity' => 1])->assertSessionHas('error', 'Bitte zuerst einzahlen');
+        $this->actingAs($user)->post('/konto/bier', $this->tokened('consume', ['quantity' => 1]))->assertSessionHas('status');
+        $this->post('/konto/bier', $this->tokened('consume', ['quantity' => 1]))->assertSessionHas('error', 'Bitte zuerst einzahlen');
         $this->assertSame(0, $user->balance());
     }
 
@@ -97,8 +97,8 @@ class LedgerTest extends TestCase
     public function test_quantity_is_limited(): void
     {
         $this->setDefaultLimit(100000);
-        $this->actingAs($this->user())->post('/konto/bier', ['quantity' => 11])->assertSessionHasErrors('quantity');
-        $this->post('/konto/bier', ['quantity' => 0])->assertSessionHasErrors('quantity');
+        $this->actingAs($this->user())->post('/konto/bier', $this->tokened('consume', ['quantity' => 11]))->assertSessionHasErrors('quantity');
+        $this->post('/konto/bier', $this->tokened('consume', ['quantity' => 0]))->assertSessionHasErrors('quantity');
     }
 
     public function test_undo_within_ten_minutes_only(): void
@@ -132,7 +132,7 @@ class LedgerTest extends TestCase
         $user = $this->user();
         $kassier = $this->kassier();
 
-        $this->actingAs($user)->post('/konto/einzahlung', ['amount' => '20.50', 'method' => 'twint'])->assertSessionHas('status');
+        $this->actingAs($user)->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => '20.50', 'method' => 'twint']))->assertSessionHas('status');
         $tx = Transaction::query()->where('type', 'deposit')->firstOrFail();
         $this->assertSame('pending', $tx->status);
         $this->assertSame(2050, $tx->amount);
@@ -165,9 +165,9 @@ class LedgerTest extends TestCase
     {
         $this->actingAs($this->user());
         foreach (['0', '-5', 'abc', '1.234'] as $amount) {
-            $this->post('/konto/einzahlung', ['amount' => $amount, 'method' => 'cash'])->assertSessionHasErrors('amount');
+            $this->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => $amount, 'method' => 'cash']))->assertSessionHasErrors('amount');
         }
-        $this->post('/konto/einzahlung', ['amount' => '5', 'method' => 'bitcoin'])->assertSessionHasErrors('method');
+        $this->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => '5', 'method' => 'bitcoin']))->assertSessionHasErrors('method');
     }
 
     public function test_kassier_books_deposit_and_correction(): void

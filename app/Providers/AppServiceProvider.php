@@ -21,7 +21,13 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (str_starts_with((string) config('app.url'), 'https://')) {
+        // Links in mails (password reset) must not depend on the Host header of the request:
+        // once installed, the root URL is always APP_URL (set by the setup wizard).
+        $appUrl = rtrim((string) config('app.url'), '/');
+        if (config('app.installed') && $appUrl !== '') {
+            URL::forceRootUrl($appUrl);
+        }
+        if (str_starts_with($appUrl, 'https://')) {
             URL::forceScheme('https');
         }
 

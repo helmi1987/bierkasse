@@ -93,11 +93,11 @@ class SettingsController extends Controller
     }
 
     /**
-     * Printable page with the QR code of the registration URL (optionally incl. the password).
+     * Printable page with the QR code of the registration URL; includes the password unless ?code=0.
      */
     public function registrationQr(Request $request): View
     {
-        $withCode = $request->boolean('code') && AppSettings::registrationPassword() !== '';
+        $withCode = $request->boolean('code', true) && AppSettings::registrationPassword() !== '';
         $url = route('register');
         if ($withCode) {
             $url .= '?'.http_build_query(['code' => AppSettings::registrationPassword()]);

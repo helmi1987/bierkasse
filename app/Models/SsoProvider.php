@@ -11,14 +11,17 @@ use Illuminate\Support\Collection;
 
 /**
  * An OAuth2 / OpenID Connect login provider. Types: generic OIDC (discovery URL),
- * Google, Microsoft (Entra, tenant configurable) and GitHub (plain OAuth2).
+ * Google, Microsoft (Entra, tenant configurable), GitHub and Facebook (both plain OAuth2).
  *
  * owner_user_id null = global provider (admin); otherwise a personal provider
  * of that user (never listed for others, only logs in / links its owner).
  */
 class SsoProvider extends Model
 {
-    public const TYPES = ['oidc', 'google', 'microsoft', 'github'];
+    public const TYPES = ['oidc', 'google', 'microsoft', 'github', 'facebook'];
+
+    /** Types with fixed endpoints (no discovery URL to edit). */
+    public const PRESET_TYPES = ['google', 'microsoft', 'github', 'facebook'];
 
     protected $fillable = [
         'name', 'slug', 'type', 'tenant', 'enabled', 'discovery_url', 'issuer', 'authorize_url', 'token_url',
@@ -85,6 +88,14 @@ class SsoProvider extends Model
     public function isGithub(): bool
     {
         return $this->type === 'github';
+    }
+
+    /**
+     * Button style key: the fixed provider types get their brand look, everything else the generic one.
+     */
+    public function brand(): string
+    {
+        return in_array($this->type, self::PRESET_TYPES, true) ? $this->type : 'oidc';
     }
 
     /**

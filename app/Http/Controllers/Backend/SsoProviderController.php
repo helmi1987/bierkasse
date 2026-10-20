@@ -13,7 +13,7 @@ use Illuminate\View\View;
 use Throwable;
 
 /**
- * SSO providers (admin): generic OIDC, Google, Microsoft (tenant), GitHub.
+ * SSO providers (admin): generic OIDC, Google, Microsoft (tenant), GitHub, Facebook.
  */
 class SsoProviderController extends Controller
 {
@@ -31,7 +31,7 @@ class SsoProviderController extends Controller
         return $this->form(new SsoProvider([
             'type' => $type,
             'name' => match ($type) {
-                'google' => 'Google', 'microsoft' => 'Microsoft', 'github' => 'GitHub', default => '',
+                'google' => 'Google', 'microsoft' => 'Microsoft', 'github' => 'GitHub', 'facebook' => 'Facebook', default => '',
             },
             'tenant' => $type === 'microsoft' ? 'common' : null,
             'enabled' => true,

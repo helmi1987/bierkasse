@@ -61,9 +61,10 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      QR-Code zum Aushängen unter `/backend/registrierung-qr` (füllt das Registrierungspasswort automatisch aus; Variante ohne Passwort wählbar).
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag) an alle Kassiers/Admins mit E-Mail.
-   - SSO (`/backend/sso`): Google, Microsoft (Tenant, Standard `common`), GitHub oder generisches OIDC
+   - SSO (`/backend/sso`): Google, Microsoft (Tenant, Standard `common`), GitHub, Facebook oder generisches OIDC
      (Discovery-URL). Redirect-URI beim Anbieter: `https://<domain>/login/sso/{kuerzel}/callback`.
      Anmelden per SSO kann nur, wer den Anbieter vorher unter Konto > Einstellungen verknüpft hat.
+     Einrichtung pro Anbieter: siehe "SSO-Anbieter einrichten".
    - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
 8. Steht ein Reverse-Proxy vor PHP, dessen IP in `.env` als `TRUSTED_PROXIES` (kommagetrennt, Standard: keine)
    eintragen, sonst werden `X-Forwarded-*`-Header ignoriert. Wichtig: Die Rate-Limits (Login, TOTP, Gäste,
@@ -72,6 +73,31 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
 
 Break-glass via SSH: `php artisan user:password <username>` (optional `--generate`),
 `php artisan user:totp-reset <username>`, `php artisan user:admin <username>`.
+
+## SSO-Anbieter einrichten
+
+Im Backend unter SSO "Neu: <Anbieter>" wählen; das Formular zeigt die Redirect-URI
+`https://<domain>/login/sso/{kuerzel}/callback` (Kürzel = Standard der Name, z. B. `google`). Diese URI exakt beim
+Anbieter eintragen, Client-ID und Client-Secret ins Formular kopieren, "Aktiv" anhaken. Endpunkte und Scopes sind
+vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter Konto > Einstellungen
+("Verknüpfte Anmeldungen").
+
+- Google: [console.cloud.google.com](https://console.cloud.google.com) > APIs & Dienste > OAuth-Zustimmungsbildschirm
+  einrichten, dann Anmeldedaten > OAuth-Client-ID, Typ "Webanwendung", Redirect-URI als "Autorisierte
+  Weiterleitungs-URI". Scopes: `openid profile email`.
+- Microsoft: [entra.microsoft.com](https://entra.microsoft.com) > App-Registrierungen > Neue Registrierung,
+  Plattform "Web", Redirect-URI eintragen; unter "Zertifikate & Geheimnisse" ein Client-Secret erstellen (Wert, nicht
+  ID). Tenant im Formular: `common` (alle Konten), `organizations`, `consumers` oder Tenant-ID. Scopes:
+  `openid profile email`.
+- GitHub: Settings > Developer settings > OAuth Apps > New OAuth App, Redirect-URI als "Authorization callback URL",
+  dann "Generate a new client secret". Scopes: `read:user user:email` (Subjekt = numerische GitHub-ID).
+- Facebook: [developers.facebook.com](https://developers.facebook.com) > Meine Apps > App erstellen (Anwendungsfall
+  "Facebook Login"), unter Facebook Login > Einstellungen die Redirect-URI bei "Gültige OAuth Redirect URIs"
+  eintragen. App-ID = Client-ID, App-Secret (App-Einstellungen > Allgemein) = Client-Secret; App live schalten.
+  Scopes: `email public_profile`; Benutzerdaten über Graph API v19.0 `/me?fields=id,name,email`
+  (Subjekt = app-spezifische Facebook-ID).
+  **Annahme:** Facebook akzeptiert die PKCE-Parameter (bzw. ignoriert sie); falls die Anmeldung daran scheitert,
+  unter Erweitert "PKCE" abschalten. "Require App Secret" (appsecret_proof) wird nicht unterstützt.
 
 ## Branch-Modell
 

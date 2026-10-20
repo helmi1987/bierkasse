@@ -5,13 +5,16 @@
 @section('content')
 @include('partials.backend-nav')
 @php($type = old('type', $provider->type ?: 'oidc'))
-@php($preset = in_array($type, ['google', 'microsoft', 'github'], true))
+@php($preset = in_array($type, \App\Models\SsoProvider::PRESET_TYPES, true))
 <h1>{{ $provider->exists ? __('sso.edit_title', ['name' => $provider->name]) : __('sso.new_type', ['type' => __('sso.types.'.$type)]) }}</h1>
 
 <div class="card">
     <p><strong>{{ __('sso.redirect_uri') }}:</strong> <code id="redirect-uri">{{ $redirectUri }}</code>
         <button type="button" class="btn small" data-copy="#redirect-uri" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button></p>
     <p class="hint">{{ __('sso.client_hint') }}</p>
+    @if (\Illuminate\Support\Facades\Lang::has('sso.setup_help.'.$type))
+        <p class="hint">{{ __('sso.setup_help.'.$type) }}</p>
+    @endif
 </div>
 
 <form method="post" action="{{ $provider->exists ? route('backend.sso.update', $provider) : route('backend.sso.store') }}" class="card stack" autocomplete="off">
@@ -115,7 +118,7 @@
 
     <div class="row-buttons">
         <button type="submit" class="btn primary">{{ __('sso.save') }}</button>
-        @if ($type !== 'github')
+        @if (! in_array($type, ['github', 'facebook'], true))
             <button type="submit" name="rediscover" value="1" class="btn">{{ __('sso.save_rediscover') }}</button>
         @endif
     </div>

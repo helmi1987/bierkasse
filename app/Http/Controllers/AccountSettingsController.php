@@ -42,6 +42,7 @@ class AccountSettingsController extends Controller
         $identities = $user->identities()->with('provider')->get();
         $personal = $user->personalSsoProvider()->first();
         $personalIdentity = $personal ? $identities->firstWhere('sso_provider_id', $personal->id) : null;
+        $usable = SsoProvider::usable();
 
         return view('account.settings', [
             'user' => $user,
@@ -55,7 +56,8 @@ class AccountSettingsController extends Controller
             'personalIdentity' => $personalIdentity,
             'personalRedirectUri' => PersonalSsoController::redirectUriFor($request, $personal),
             'personalLoginUrl' => route('login.personal.user', $user->username),
-            'providers' => SsoProvider::usable()->reject(fn ($p) => $identities->contains('sso_provider_id', $p->id))->values(),
+            'ssoActive' => $usable->isNotEmpty(),
+            'providers' => $usable->reject(fn ($p) => $identities->contains('sso_provider_id', $p->id))->values(),
         ]);
     }
 

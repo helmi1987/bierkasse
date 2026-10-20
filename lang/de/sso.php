@@ -3,7 +3,7 @@
 // SSO (OAuth2 / OpenID Connect): backend and login messages.
 return [
     'title' => 'SSO-Anbieter',
-    'intro' => 'Anmeldung mit Google, Microsoft, GitHub oder einem beliebigen OpenID-Connect-Anbieter. Anmelden kann sich nur, wer den Anbieter vorher im eigenen Konto verknüpft hat.',
+    'intro' => 'Anmeldung mit Google, Microsoft, GitHub, Facebook oder einem beliebigen OpenID-Connect-Anbieter. Anmelden kann sich nur, wer den Anbieter vorher im eigenen Konto verknüpft hat.',
     'new' => 'Neuer Anbieter',
     'new_type' => 'Neu: :type',
     'edit_title' => 'SSO-Anbieter: :name',
@@ -13,6 +13,14 @@ return [
         'google' => 'Google',
         'microsoft' => 'Microsoft (Entra ID)',
         'github' => 'GitHub',
+        'facebook' => 'Facebook',
+    ],
+    // Where to create the OAuth app per fixed provider type (backend form).
+    'setup_help' => [
+        'google' => 'Google Cloud Console (console.cloud.google.com) > APIs & Dienste > Anmeldedaten > OAuth-Client-ID, Typ «Webanwendung». Die Redirect-URI oben als «Autorisierte Weiterleitungs-URI» eintragen. Vorher den OAuth-Zustimmungsbildschirm einrichten.',
+        'microsoft' => 'Entra Admin Center (entra.microsoft.com) > App-Registrierungen > Neue Registrierung, Plattform «Web», Redirect-URI oben eintragen. Unter «Zertifikate & Geheimnisse» ein Client-Secret erstellen (den Wert kopieren, nicht die ID).',
+        'github' => 'GitHub > Settings > Developer settings > OAuth Apps > New OAuth App. Die Redirect-URI oben als «Authorization callback URL» eintragen, dann ein Client-Secret erzeugen.',
+        'facebook' => 'developers.facebook.com > Meine Apps > App erstellen (Anwendungsfall «Facebook Login»). Unter Facebook Login > Einstellungen die Redirect-URI oben bei «Gültige OAuth Redirect URIs» eintragen. App-ID = Client-ID, App-Secret (App-Einstellungen > Allgemein) = Client-Secret. Danach die App live schalten.',
     ],
     'name' => 'Name (Knopf-Text)',
     'users' => 'Verknüpft',

@@ -71,6 +71,18 @@ class Sso
                 'email_claim' => 'email',
                 'label_claim' => 'login',
             ],
+            // Facebook Login: plain OAuth2, user data from the Graph API (subject = app-scoped id).
+            'facebook' => [
+                'discovery_url' => null,
+                'issuer' => null,
+                'authorize_url' => 'https://www.facebook.com/v19.0/dialog/oauth',
+                'token_url' => 'https://graph.facebook.com/v19.0/oauth/access_token',
+                'userinfo_url' => 'https://graph.facebook.com/v19.0/me?fields=id,name,email',
+                'scopes' => 'email public_profile',
+                'subject_claim' => 'id',
+                'email_claim' => 'email',
+                'label_claim' => 'name',
+            ],
             default => [],
         };
     }

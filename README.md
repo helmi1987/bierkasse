@@ -127,6 +127,13 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
   - Korrektur durch Kassier/Admin mit Pflicht-Bemerkung.
 - Kasse (`/backend/kasse`): Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen ±
   Korrekturen, getrennt nach Bar und TWINT. Überschuss = Kassenstand − Guthaben aller Benutzer.
+- Gäste (`/backend/gaeste`, Kassier und Admin): Schalter "Gäste erlaubt" + eigenes Gäste-Passwort (verschlüsselt,
+  nicht das Registrierungspasswort), druckbarer Gäste-QR-Code (mit/ohne Passwort), Liste der Gäste-Verkäufe mit Storno.
+  Öffentliche Seite `/gast` (Passwort per `?code=` vorausgefüllt oder eingeben): Name freiwillig, 1–10 Biere,
+  Bar oder TWINT (TWINT-Nummer mit Kopier-Knopf). Wird sofort gebucht (Tabelle `guest_sales`, Preis zum Zeitpunkt):
+  zählt als Einnahme in der Kasse (Bar/TWINT), reduziert das Lager (kann die Lager-Mail auslösen) und erscheint in
+  der Statistik als "Gäste" (nie als Benutzer). Passwort wird zuerst geprüft; 10 Versuche/Minute pro IP (auch falsche
+  Passwörter), Einmal-Token gegen Doppelbuchung.
 - Lager (`/backend/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
   Pflicht; alte Einträge ohne Anzahl zählen 0) + Inventur-Korrekturen (gezählter Bestand, gespeichert als Differenz
   mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere (Rückgängig erhöht den Bestand wieder).

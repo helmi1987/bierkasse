@@ -3,10 +3,11 @@
 namespace App\Services;
 
 use App\Models\CashEntry;
+use App\Models\GuestSale;
 use App\Models\Transaction;
 
 /**
- * Cash box balance: confirmed deposits - confirmed payouts - expenses + income +/- adjustments,
+ * Cash box balance: confirmed deposits - confirmed payouts - expenses + income + guest sales +/- adjustments,
  * split by method (cash / TWINT).
  */
 class CashBook
@@ -22,8 +23,9 @@ class CashBook
             ->whereIn('type', [Transaction::TYPE_DEPOSIT, Transaction::TYPE_PAYOUT])
             ->selectRaw('method, SUM(amount) as total')->groupBy('method')->pluck('total', 'method');
         $book = CashEntry::query()->selectRaw('method, SUM(amount) as total')->groupBy('method')->pluck('total', 'method');
+        $guests = GuestSale::query()->selectRaw('method, SUM(amount) as total')->groupBy('method')->pluck('total', 'method');
 
-        foreach ([$ledger, $book] as $rows) {
+        foreach ([$ledger, $book, $guests] as $rows) {
             foreach ($rows as $method => $total) {
                 $key = $method === 'twint' ? 'twint' : 'cash';
                 $sums[$key] += (int) $total;

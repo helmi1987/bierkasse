@@ -1,0 +1,43 @@
+<?php
+
+// Guest sale (public page and backend).
+return [
+    'title' => 'Bier für Gäste',
+    'intro' => 'Bier nehmen, hier erfassen und bezahlen. Kein Konto nötig.',
+    'code' => 'Gäste-Passwort',
+    'code_wrong' => 'Gäste-Passwort falsch.',
+    'name' => 'Name (freiwillig)',
+    'quantity' => 'Anzahl Biere',
+    'price' => 'Preis pro Bier :price',
+    'method' => 'Bezahlung',
+    'twint_to' => 'TWINT an',
+    'twint_hint' => 'Nur bei Bezahlung mit TWINT: Betrag an diese Nummer senden.',
+    'submit' => 'Bier erfassen',
+    'thanks_title' => 'Danke!',
+    'thanks_cash' => 'Bitte :amount bar in die Kasse legen.',
+    'thanks_twint' => 'Bitte :amount per TWINT an :phone senden.',
+    'thanks_twint_noname' => 'Bitte :amount per TWINT senden.',
+    'thanks_beers' => '{1} :count Bier erfasst.|[*] :count Biere erfasst.',
+    'again' => 'Weitere Biere erfassen',
+    'disabled' => 'Gäste-Verkauf ist zurzeit nicht möglich.',
+
+    // Backend
+    'backend_title' => 'Gäste',
+    'backend_intro' => 'Gäste erfassen Biere über den Gäste-QR-Code ohne Konto. Die Beträge zählen sofort als Einnahme in der Kasse und reduzieren das Lager; in der Statistik als «Gäste».',
+    'enabled' => 'Gäste erlaubt',
+    'password' => 'Gäste-Passwort',
+    'password_hint' => 'Eigenes Passwort (nicht das Registrierungspasswort). Ohne Passwort ist kein Gäste-Verkauf möglich. Verschlüsselt gespeichert.',
+    'save' => 'Speichern',
+    'qr' => 'Gäste-QR-Code zum Ausdrucken',
+    'qr_title' => 'Bier für Gäste',
+    'qr_intro' => 'Scannen, Biere erfassen und bar oder per TWINT bezahlen.',
+    'qr_warning' => 'Achtung: Dieser QR-Code enthält das Gäste-Passwort.',
+    'qr_closed' => 'Gäste-Verkauf ist ausgeschaltet oder es ist kein Gäste-Passwort gesetzt.',
+    'sales' => 'Gäste-Verkäufe',
+    'sales_total' => 'Total: :beers Biere · :amount',
+    'sales_none' => 'Noch keine Gäste-Verkäufe.',
+    'anonymous' => 'Gast',
+    'cancel' => 'Storno',
+    'cancel_confirm' => 'Gäste-Verkauf stornieren (löschen)?',
+    'cancelled' => 'Gäste-Verkauf storniert.',
+];

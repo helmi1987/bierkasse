@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\GuestSale;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -39,6 +40,10 @@ class Stats
     public static function global(int $top = 10): array
     {
         $rows = self::consumptions()->get(['user_id', 'quantity', 'amount', 'created_at']);
+        // Guest sales as pseudo rows (user_id 0, shown as "Gäste"), never as a user.
+        $guests = GuestSale::query()->get(['beers', 'amount', 'created_at'])
+            ->map(fn (GuestSale $g) => (object) ['user_id' => 0, 'quantity' => $g->beers, 'amount' => -$g->amount, 'created_at' => $g->created_at]);
+        $rows = $rows->toBase()->concat($guests);
 
         return [
             'total_beers' => (int) $rows->sum('quantity'),
@@ -104,10 +109,11 @@ class Stats
     {
         $sums = $rows->groupBy('user_id')->map(fn ($g) => (int) $g->sum('quantity'));
         $users = User::query()->whereIn('id', $sums->keys())->where('stats_opt_out', false)->get()->keyBy('id');
+        $name = fn ($id) => (int) $id === 0 ? __('stats.guests') : $users[$id]->displayName();
 
-        return $sums->filter(fn ($beers, $id) => $users->has($id) && $beers > 0)
+        return $sums->filter(fn ($beers, $id) => ((int) $id === 0 || $users->has($id)) && $beers > 0)
             ->sortDesc()->take($top)
-            ->map(fn ($beers, $id) => ['user_id' => (int) $id, 'name' => $users[$id]->displayName(), 'beers' => $beers])
+            ->map(fn ($beers, $id) => ['user_id' => (int) $id, 'name' => $name($id), 'beers' => $beers])
             ->values()->all();
     }
 }

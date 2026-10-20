@@ -32,6 +32,10 @@ class AppSettings
 
     public const STOCK_MINIMUM = 'stock_minimum';
 
+    public const GUEST_ENABLED = 'guest_enabled';
+
+    public const GUEST_PASSWORD = 'guest_password';
+
     public const STOCK_LOW_WARNED = 'stock_low_warned';
 
     /** Preselected deposit proposal in Rappen; null = first proposal. */
@@ -109,6 +113,17 @@ class AppSettings
         $amount = (int) self::get(self::DEPOSIT_DEFAULT, 0);
 
         return $amount > 0 ? $amount : null;
+    }
+
+    public static function guestPassword(): string
+    {
+        return (string) self::get(self::GUEST_PASSWORD, '');
+    }
+
+    /** Guest sales are possible when switched on and a guest password is set. */
+    public static function guestOpen(): bool
+    {
+        return (bool) self::get(self::GUEST_ENABLED, false) && self::guestPassword() !== '';
     }
 
     /** Minimum beer stock (low-stock mail and warning); 0 = off. */

@@ -39,8 +39,13 @@ class AccountController extends Controller
         $suggestions = DepositSuggestions::for($balance, $price, AppSettings::depositSuggestions());
         $suggested = $suggestions[DepositSuggestions::defaultIndex($suggestions, AppSettings::depositDefault(), $price)] ?? null;
 
+        // Reported deposits waiting for the kassier: shown only, never part of balance or limit.
+        $pendingDeposit = (int) Transaction::query()->where('user_id', $user->id)->pending()
+            ->where('type', Transaction::TYPE_DEPOSIT)->sum('amount');
+
         return view('account.dashboard', [
             'user' => $user,
+            'pendingDeposit' => $pendingDeposit,
             'balance' => $balance,
             'price' => $price,
             'open' => Ledger::openItems($user),

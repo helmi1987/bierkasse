@@ -1,0 +1,140 @@
+@extends('layouts.app')
+
+@section('title', $user->displayName())
+
+@section('content')
+@include('partials.backend-nav')
+@php($me = auth()->user())
+@php($protected = $user->isAdmin() && ! $me->isAdmin())
+<h1>{{ $user->displayName() }} <span class="pill">{{ __('users.roles.'.$user->role) }}</span> <span @class(['pill', 'bad' => ! $user->isActive()])>{{ __('users.status.'.$user->status) }}</span></h1>
+<p class="muted">{{ $user->username }}@if ($user->email) · {{ $user->email }}@endif · {{ __('users.totp') }}: {{ $user->hasTotp() ? __('account.totp_active') : '–' }}@if ($user->stats_opt_out) · {{ __('users.stats_opt_out') }}@endif · {{ __('users.last_login') }}: {{ local_time($user->last_login_at) }}</p>
+
+<section @class(['balance-card', 'small', 'negative' => $balance < 0])>
+    <div class="balance-label">{{ __('users.balance') }}</div>
+    <div class="balance-amount">{{ chf($balance) }}</div>
+    @if ($balance < 0)
+        <div class="open-box"><strong>{{ __('account.open', ['amount' => chf($open['total'])]) }}</strong>
+            @if ($open['beers'])
+                <ul class="plain">
+                    @foreach ($open['beers'] as $item)
+                        <li>{{ __('account.open_beers', ['count' => $item['quantity'], 'price' => chf($item['unit_price'])]) }}</li>
+                    @endforeach
+                </ul>
+            @endif
+        </div>
+    @endif
+</section>
+
+<div class="grid-2">
+    <section class="card">
+        <h2>{{ __('users.deposit_heading') }}</h2>
+        <form method="post" action="{{ route('backend.users.deposit', $user) }}" class="stack">
+            @csrf
+            <div class="field">
+                <label for="dep-amount">{{ __('account.amount') }}</label>
+                <input type="text" id="dep-amount" name="amount" inputmode="decimal" required>
+            </div>
+            <fieldset class="segmented">
+                <legend>{{ __('account.method') }}</legend>
+                @foreach (\App\Models\Transaction::METHODS as $method)
+                    <label><input type="radio" name="method" value="{{ $method }}" @checked($loop->first)> <span>{{ __('ledger.method.'.$method) }}</span></label>
+                @endforeach
+            </fieldset>
+            <div class="field">
+                <label for="dep-note">{{ __('account.note') }}</label>
+                <input type="text" id="dep-note" name="note" maxlength="500">
+            </div>
+            <button type="submit" class="btn primary">{{ __('users.deposit_submit') }}</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>{{ __('users.correction_heading') }}</h2>
+        <form method="post" action="{{ route('backend.users.correction', $user) }}" class="stack">
+            @csrf
+            <div class="field">
+                <label for="cor-amount">{{ __('account.amount') }}</label>
+                <input type="text" id="cor-amount" name="amount" inputmode="decimal" required>
+                <div class="hint">{{ __('users.correction_hint') }}</div>
+            </div>
+            <div class="field">
+                <label for="cor-note">{{ __('ledger.what') }}</label>
+                <input type="text" id="cor-note" name="note" maxlength="500" required>
+            </div>
+            <button type="submit" class="btn">{{ __('users.correction_submit') }}</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>{{ __('users.limit_heading') }}</h2>
+        <form method="post" action="{{ route('backend.users.limit', $user) }}" class="stack">
+            @csrf
+            @method('PUT')
+            <div class="field">
+                <label for="overdraft_limit">{{ __('users.limit_label') }}</label>
+                <input type="text" id="overdraft_limit" name="overdraft_limit" inputmode="decimal" value="{{ $user->overdraft_limit === null ? '' : \App\Support\Money::plain($user->overdraft_limit) }}" placeholder="{{ \App\Support\Money::plain(\App\Support\AppSettings::defaultLimit()) }}">
+                <div class="hint">{{ __('users.limit_hint') }}</div>
+            </div>
+            <button type="submit" class="btn">{{ __('account.save') }}</button>
+        </form>
+    </section>
+
+    @unless ($protected)
+        <section class="card">
+            <h2>{{ __('users.password_heading') }}</h2>
+            <form method="post" action="{{ route('backend.users.password', $user) }}" class="stack" autocomplete="off">
+                @csrf
+                @method('PUT')
+                <div class="field">
+                    <label for="pw">{{ __('users.password_new') }}</label>
+                    <input type="password" id="pw" name="password" autocomplete="new-password" minlength="8" required>
+                </div>
+                <div class="field">
+                    <label for="pw2">{{ __('users.password_repeat') }}</label>
+                    <input type="password" id="pw2" name="password_confirmation" autocomplete="new-password" minlength="8" required>
+                </div>
+                <label class="check"><input type="checkbox" name="must_change" value="1" checked> {{ __('users.must_change') }}</label>
+                <button type="submit" class="btn">{{ __('users.password_submit') }}</button>
+            </form>
+        </section>
+    @endunless
+</div>
+
+<section class="card">
+    <h2>{{ __('users.actions') }}</h2>
+    <div class="row-buttons">
+        @if (! $protected && $user->hasTotp())
+            <form method="post" action="{{ route('backend.users.totp', $user) }}" class="inline" data-confirm="{{ __('users.totp_reset_confirm') }}">
+                @csrf
+                <button type="submit" class="btn">{{ __('users.totp_reset') }}</button>
+            </form>
+        @endif
+        @if (! $protected && $user->id !== $me->id)
+            <form method="post" action="{{ route('backend.users.status', $user) }}" class="inline" @if ($user->isActive()) data-confirm="{{ __('users.deactivate_confirm') }}" @endif>
+                @csrf
+                <input type="hidden" name="active" value="{{ $user->isActive() ? 0 : 1 }}">
+                <button type="submit" @class(['btn', 'danger' => $user->isActive()])>{{ $user->isActive() ? __('users.deactivate') : __('users.reactivate') }}</button>
+            </form>
+        @endif
+    </div>
+    @if ($me->isAdmin())
+        <form method="post" action="{{ route('backend.users.role', $user) }}" class="inline-form">
+            @csrf
+            @method('PUT')
+            <label for="role">{{ __('users.role_heading') }}</label>
+            <select id="role" name="role">
+                @foreach (\App\Models\User::ROLES as $role)
+                    <option value="{{ $role }}" @selected($user->role === $role)>{{ __('users.roles.'.$role) }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="btn small">{{ __('users.role_save') }}</button>
+        </form>
+    @endif
+</section>
+
+<section class="card">
+    <h2>{{ __('users.history') }}</h2>
+    @include('account.tx-list', ['transactions' => $transactions])
+    {{ $transactions->links('partials.pagination') }}
+</section>
+@endsection

@@ -1,0 +1,51 @@
+<?php
+
+// Bookings (user ledger).
+return [
+    'type' => [
+        'consumption' => 'Bier',
+        'deposit' => 'Einzahlung',
+        'payout' => 'Auszahlung',
+        'donation' => 'Spende an die Kasse',
+        'correction' => 'Korrektur',
+    ],
+    'status' => [
+        'pending' => 'offen',
+        'confirmed' => 'bestätigt',
+        'rejected' => 'abgelehnt',
+    ],
+    'method' => [
+        'cash' => 'Bar',
+        'twint' => 'TWINT',
+    ],
+    'beers' => '{1} :count Bier à :price|[2,*] :count Biere à :price',
+
+    'consumed' => '{1} :count Bier abgestrichen (:amount). Prost!|[2,*] :count Biere abgestrichen (:amount). Prost!',
+    'undone' => 'Strich zurückgenommen.',
+    'limit_reached' => 'Bitte zuerst einzahlen',
+    'quantity_invalid' => 'Anzahl ungültig.',
+    'undo_expired' => 'Das kann nicht mehr zurückgenommen werden.',
+    'amount_invalid' => 'Betrag ungültig.',
+    'note_required' => 'Bemerkung ist Pflicht.',
+    'not_pending' => 'Diese Buchung ist nicht mehr offen.',
+    'payout_pending' => 'Eine Auszahlung ist beantragt – keine weiteren Buchungen möglich.',
+    'deposit_pending' => 'Es gibt noch unbestätigte Einzahlungen.',
+    'leave_negative' => 'Das Konto ist im Minus. Bitte zuerst einzahlen.',
+    'user_left' => 'Dieses Konto ist geschlossen.',
+    'deposit_reported' => 'Einzahlung gemeldet. Sie zählt, sobald der Kassier bestätigt.',
+    'deposit_confirmed' => 'Einzahlung bestätigt.',
+    'deposit_rejected' => 'Einzahlung abgelehnt.',
+    'deposit_booked' => 'Einzahlung gebucht.',
+    'correction_booked' => 'Korrektur gebucht.',
+    'payout_requested' => 'Auszahlung beantragt. Der Kassier meldet sich.',
+    'payout_confirmed' => 'Auszahlung bestätigt, Konto geschlossen.',
+    'payout_cancelled' => 'Auszahlung abgelehnt; das Konto bleibt aktiv.',
+    'left_thanks' => 'Danke und alles Gute! Das Konto ist geschlossen.',
+
+    'date' => 'Datum',
+    'what' => 'Buchung',
+    'amount' => 'Betrag',
+    'status_label' => 'Status',
+    'by' => 'Erfasst von',
+    'none' => 'Noch keine Buchungen.',
+];

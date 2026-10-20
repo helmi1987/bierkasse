@@ -1,0 +1,31 @@
+<?php
+
+return [
+    'title' => 'Backend',
+    'nav' => [
+        'dashboard' => 'Übersicht',
+        'cash' => 'Kasse',
+        'users' => 'Benutzer',
+        'stats' => 'Statistik',
+        'settings' => 'Einstellungen',
+        'sso' => 'SSO',
+        'qr' => 'Registrierungs-QR',
+    ],
+    'open_items' => 'Offene Posten',
+    'deposits' => 'Offene Einzahlungen',
+    'deposits_none' => 'Keine offenen Einzahlungen.',
+    'payouts' => 'Auszahlungsanträge',
+    'payouts_none' => 'Keine offenen Auszahlungen.',
+    'payout_amount' => 'Auszuzahlen: :amount',
+    'confirm' => 'Bestätigen',
+    'reject' => 'Ablehnen',
+    'paid_out' => 'Ausbezahlt',
+    'reject_confirm' => 'Wirklich ablehnen?',
+    'minus' => 'Im Minus',
+    'minus_none' => 'Niemand im Minus.',
+    'cash_balance' => 'Kassenstand',
+    'cash_split' => 'Bar :cash · TWINT :twint',
+    'credit_total' => 'Guthaben aller Benutzer',
+    'surplus' => 'Überschuss',
+    'surplus_hint' => 'Kassenstand minus Guthaben aller Benutzer.',
+];

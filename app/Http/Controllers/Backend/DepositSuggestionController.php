@@ -27,6 +27,8 @@ class DepositSuggestionController extends Controller
             'price' => $price,
             'automatic' => $configured === null,
             'input' => implode(', ', array_map([Money::class, 'plain'], $configured ?? DepositSuggestions::defaults($price))),
+            'default' => ($default = AppSettings::depositDefault()) ? Money::plain($default) : '',
+            'defaultBeers' => $default ? DepositSuggestions::beers($default, $price) : null,
             'preview' => array_map(fn (int $a) => ['beers' => DepositSuggestions::beers($a, $price), 'amount' => $a],
                 DepositSuggestions::amounts($price, $configured)),
         ]);
@@ -37,17 +39,33 @@ class DepositSuggestionController extends Controller
         $data = $request->validate([
             'mode' => ['required', Rule::in(['auto', 'manual'])],
             'amounts' => ['nullable', 'required_if:mode,manual', 'string', 'max:200'],
+            'default' => ['nullable', 'string', 'max:20'],
         ]);
 
-        if ($data['mode'] === 'auto') {
-            Setting::put(AppSettings::DEPOSIT_SUGGESTIONS, []);
+        $price = AppSettings::beerPrice();
+        $amounts = $data['mode'] === 'auto' ? [] : $this->parse((string) $data['amounts'], $price);
+        $default = $this->parseDefault((string) ($data['default'] ?? ''), DepositSuggestions::amounts($price, $amounts));
 
-            return back()->with('status', __('settings.saved'));
-        }
-
-        Setting::put(AppSettings::DEPOSIT_SUGGESTIONS, $this->parse((string) $data['amounts'], AppSettings::beerPrice()));
+        Setting::put(AppSettings::DEPOSIT_SUGGESTIONS, $amounts);
+        Setting::put(AppSettings::DEPOSIT_DEFAULT, $default);
 
         return back()->with('status', __('settings.saved'));
+    }
+
+    /** Preselected amount: empty = first proposal (0), else one of the proposals. */
+    private function parseDefault(string $input, array $amounts): int
+    {
+        if (trim($input) === '') {
+            return 0;
+        }
+        $amount = Money::parse($input);
+        if ($amount === null || ! in_array($amount, $amounts, true)) {
+            throw ValidationException::withMessages(['default' => __('deposit_suggestions.error_default', [
+                'amounts' => implode(', ', array_map([Money::class, 'plain'], $amounts)),
+            ])]);
+        }
+
+        return $amount;
     }
 
     /**

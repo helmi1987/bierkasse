@@ -73,9 +73,22 @@ class DepositSuggestions
         return array_map(fn (int $f) => $base * $f, self::FACTORS);
     }
 
-    /** The first proposal is the default amount. */
-    public static function defaultIndex(array $suggestions): int
+    /**
+     * Index of the preselected proposal: the one with as many beers as the configured default amount,
+     * else the first.
+     */
+    public static function defaultIndex(array $suggestions, ?int $default = null, int $price = 0): int
     {
+        if ($default === null || $price <= 0) {
+            return 0;
+        }
+        $beers = self::beers($default, $price);
+        foreach ($suggestions as $i => $suggestion) {
+            if ($suggestion['beers'] === $beers) {
+                return $i;
+            }
+        }
+
         return 0;
     }
 

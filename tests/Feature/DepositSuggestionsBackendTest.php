@@ -25,6 +25,24 @@ class DepositSuggestionsBackendTest extends TestCase
         $this->get('/backend/einzahlungsvorschlaege')->assertSee('10 Biere · CHF 15.00')->assertSee('value="15.00, 30.00, 45.00"', false);
     }
 
+    public function test_preselected_suggestion_can_be_chosen(): void
+    {
+        $this->actingAs($this->kassier())->put('/backend/einzahlungsvorschlaege', ['mode' => 'manual', 'amounts' => '21, 30, 51, 60', 'default' => '30'])
+            ->assertSessionHas('status');
+        $this->assertSame(3000, AppSettings::depositDefault());
+        $this->get('/backend/einzahlungsvorschlaege')->assertSee('value="30.00"', false)->assertSee('vorausgewählt');
+
+        $this->actingAs($this->user())->get('/konto')->assertOk()
+            ->assertSee('value="30.00"', false)->assertSee('14 Biere')->assertSee('34 Biere');
+
+        $this->actingAs($this->kassier())->put('/backend/einzahlungsvorschlaege', ['mode' => 'manual', 'amounts' => '21, 30', 'default' => '45'])
+            ->assertSessionHasErrors('default');
+        $this->assertSame(3000, AppSettings::depositDefault());
+
+        $this->put('/backend/einzahlungsvorschlaege', ['mode' => 'auto', 'default' => ''])->assertSessionHas('status');
+        $this->assertNull(AppSettings::depositDefault());
+    }
+
     public function test_admin_can_edit_and_switch_back_to_automatic(): void
     {
         $this->actingAs($this->admin())->put('/backend/einzahlungsvorschlaege', ['mode' => 'manual', 'amounts' => '15'])->assertSessionHas('status');

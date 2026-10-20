@@ -30,6 +30,9 @@ class AppSettings
 
     public const DEPOSIT_SUGGESTIONS = 'deposit_suggestions';
 
+    /** Preselected deposit proposal in Rappen; null = first proposal. */
+    public const DEPOSIT_DEFAULT = 'deposit_suggestion_default';
+
     public const MAIL = 'mail';
 
     public const MAIL_TRANSPORTS = ['sendmail', 'smtp'];
@@ -94,6 +97,14 @@ class AppSettings
         $list = array_values(array_filter(array_map('intval', (array) self::get(self::DEPOSIT_SUGGESTIONS, [])), fn (int $a) => $a > 0));
 
         return $list === [] ? null : $list;
+    }
+
+    /** Preselected deposit proposal (amount without debt) in Rappen; null = first proposal. */
+    public static function depositDefault(): ?int
+    {
+        $amount = (int) self::get(self::DEPOSIT_DEFAULT, 0);
+
+        return $amount > 0 ? $amount : null;
     }
 
     /** Users may add their own OAuth2/OIDC provider (default on). */

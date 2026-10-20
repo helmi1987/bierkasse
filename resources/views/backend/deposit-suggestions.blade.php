@@ -19,6 +19,11 @@
         <input type="text" id="amounts" name="amounts" value="{{ old('amounts', $input) }}" maxlength="200" inputmode="decimal">
         <div class="hint">{{ __('deposit_suggestions.amounts_hint', ['max' => \App\Support\DepositSuggestions::MAX, 'price' => chf($price)]) }}</div>
     </div>
+    <div class="field">
+        <label for="default">{{ __('deposit_suggestions.default') }}</label>
+        <input type="text" id="default" name="default" value="{{ old('default', $default) }}" maxlength="20" inputmode="decimal">
+        <div class="hint">{{ __('deposit_suggestions.default_hint') }}</div>
+    </div>
     <button type="submit" class="btn primary">{{ __('deposit_suggestions.save') }}</button>
 </form>
 
@@ -26,7 +31,11 @@
     <h2>{{ __('deposit_suggestions.preview') }} ({{ chf($price) }})</h2>
     <ul class="list">
         @foreach ($preview as $p)
-            <li><span>{{ trans_choice('account.suggestion_beers', $p['beers'], ['count' => $p['beers']]) }} · {{ chf($p['amount']) }}</span></li>
+            <li><span>{{ trans_choice('account.suggestion_beers', $p['beers'], ['count' => $p['beers']]) }} · {{ chf($p['amount']) }}</span>
+                @if ($p['beers'] === ($defaultBeers ?? $preview[0]['beers']))
+                    <span class="badge">{{ __('deposit_suggestions.preselected') }}</span>
+                @endif
+            </li>
         @endforeach
     </ul>
 </section>

@@ -37,7 +37,7 @@ class AccountController extends Controller
             ->latest('id')->get();
 
         $suggestions = DepositSuggestions::for($balance, $price, AppSettings::depositSuggestions());
-        $suggested = $suggestions[DepositSuggestions::defaultIndex($suggestions)] ?? null;
+        $suggested = $suggestions[DepositSuggestions::defaultIndex($suggestions, AppSettings::depositDefault(), $price)] ?? null;
 
         return view('account.dashboard', [
             'user' => $user,

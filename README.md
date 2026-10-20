@@ -76,6 +76,8 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
 - Nach grüner CI merged `.github/workflows/auto-merge.yml` den Branch automatisch in `main`; `main` wird von Plesk deployt.
   Repository-Einstellung nötig: Settings > Actions > General > Workflow permissions "Read and write" und
   "Allow GitHub Actions to create and approve pull requests".
+- Manuell: Actions > "Promote to main" > Run workflow (Branch wählen). Legt `main` an, falls es fehlt, sonst Merge per PR.
+  Danach einmalig Settings > General > Default branch = `main`.
 
 ## Funktionen
 

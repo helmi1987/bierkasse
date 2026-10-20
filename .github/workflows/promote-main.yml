@@ -1,0 +1,54 @@
+# Manual button (Actions > "Promote to main" > Run workflow): brings a branch into main.
+# Creates main from the branch if main does not exist yet, otherwise merges it via a pull request.
+# Plesk deploys main via its Git webhook.
+name: Promote to main
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to bring into main
+        required: true
+        default: claude/keen-lamport-fds3dk
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: promote-main
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      BRANCH: ${{ inputs.branch }}
+      BASE: main
+    steps:
+      - name: Create main or merge branch into it
+        run: |
+          set -euo pipefail
+          sha=$(gh api "repos/$GH_REPO/git/ref/heads/$BRANCH" --jq '.object.sha')
+          if ! gh api "repos/$GH_REPO/git/ref/heads/$BASE" >/dev/null 2>&1; then
+            gh api "repos/$GH_REPO/git/refs" -f ref="refs/heads/$BASE" -f sha="$sha" >/dev/null
+            echo "Created $BASE at $sha from $BRANCH."
+            echo "Next: Settings > General > Default branch = $BASE."
+            exit 0
+          fi
+          ahead=$(gh api "repos/$GH_REPO/compare/$BASE...$sha" --jq '.ahead_by')
+          if [ "$ahead" = "0" ]; then
+            echo "$BRANCH has no commits ahead of $BASE, nothing to do."
+            exit 0
+          fi
+          pr=$(gh pr list --head "$BRANCH" --base "$BASE" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            title=$(gh api "repos/$GH_REPO/commits/$sha" --jq '.commit.message' | head -n1)
+            url=$(gh pr create --head "$BRANCH" --base "$BASE" --title "$title" \
+              --body "Created by the manual \"Promote to main\" workflow from branch \`$BRANCH\`.")
+            pr=${url##*/}
+          fi
+          gh pr merge "$pr" --merge --match-head-commit "$sha"
+          echo "Merged pull request #$pr ($BRANCH) into $BASE."

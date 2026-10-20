@@ -46,6 +46,7 @@ class Transaction extends Model
             'unit_price' => 'integer',
             'amount' => 'integer',
             'confirmed_at' => 'datetime',
+            'edited_at' => 'datetime',
         ];
     }
 

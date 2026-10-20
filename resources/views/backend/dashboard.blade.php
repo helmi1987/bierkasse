@@ -32,6 +32,7 @@
                     <span>
                         <a href="{{ route('backend.users.show', $tx->user) }}"><strong>{{ $tx->user->displayName() }}</strong></a>
                         <span class="muted">· {{ local_time($tx->created_at) }} · {{ __('ledger.method.'.$tx->method) }}</span>
+                        @if ($tx->edited_at)<span class="pill warn">{{ __('backend.deposit_edited', ['time' => local_time($tx->edited_at, 'd.m. H:i')]) }}</span>@endif
                         @if ($tx->note)<br><span class="tx-note">{{ $tx->note }}</span>@endif
                     </span>
                     <strong>{{ chf($tx->amount) }}</strong>

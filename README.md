@@ -124,6 +124,9 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
     angezeigt (Einzahlungen decken die ältesten Biere zuerst). Die Positionen ergeben immer das Total:
     volle offene Biere, Rest eines teilweise bezahlten Biers, übrige Beträge (negative Korrekturen).
   - Einzahlung: Benutzer meldet (offen), Kassier bestätigt/lehnt ab; Kassier kann direkt buchen.
+    Solange offen, kann der Benutzer die eigene Meldung im Dashboard antippen und ändern (Betrag, Bar/TWINT) oder
+    zurückziehen ("Nicht bezahlt", Meldung wird gelöscht); der Kassier sieht "geändert". Bereits bestätigte oder
+    abgelehnte Meldungen sind gesperrt. **Annahme:** keine neue Kassier-Mail bei Änderung/Rückzug.
   - Haus verlassen (nur mit Saldo ≥ 0): Auszahlung beantragen (Kassier bestätigt die Auszahlung, Betrag = Saldo)
     oder Guthaben spenden. Danach ist das Konto `left` (keine Anmeldung, Verlauf bleibt).
   - Korrektur durch Kassier/Admin mit Pflicht-Bemerkung.

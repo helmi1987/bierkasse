@@ -97,6 +97,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::put('/benutzer/{user}/rolle', [Backend\UserController::class, 'role'])->whereNumber('user')->middleware('role:admin')->name('users.role');
 
             Route::get('/statistik', [Backend\DashboardController::class, 'stats'])->name('stats');
+            Route::get('/einzahlungsvorschlaege', [Backend\DepositSuggestionController::class, 'edit'])->name('deposit-suggestions');
+            Route::put('/einzahlungsvorschlaege', [Backend\DepositSuggestionController::class, 'update'])->name('deposit-suggestions.update');
 
             // Admin only
             Route::middleware('role:admin')->group(function () {

@@ -131,6 +131,11 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
   **Annahme:** Wer "In Statistik anzeigen" ausschaltet, wird für andere nirgends namentlich gezeigt
   (auch nicht in der Rangliste im Backend); die Biere zählen nur in den anonymen Totals.
   Kassiers sehen in der Benutzerverwaltung trotzdem Saldo und Buchungen aller Konten.
+- Einzahlungsvorschläge (`/backend/einzahlungsvorschlaege`, Kassier und Admin): eigene CHF-Beträge
+  (z. B. "30, 60, 90", max. 6, aufsteigend, je durch den Bierpreis teilbar) oder automatisch: kleinstes
+  Vielfaches des Bierpreises, das durch CHF 10 teilbar ist, dann 2×, 3×, 5× (bei CHF 1.50: 30/60/90/150).
+  Passt ein gespeicherter Betrag nach einer Preisänderung nicht mehr, wird er auf ganze Biere aufgerundet.
+  Bei Minus: Vorschlag = offener Betrag + Betrag ("inkl. Minus"). Der erste Vorschlag ist vorausgewählt.
 - TWINT: Nummer mit Kopier-Knopf und Betragsvorschlag; es gibt keinen öffentlichen TWINT-Deep-Link für
   Zahlungen an Privatpersonen.
 - Sicherheit: CSRF, CSP mit Nonce (keine Inline-Styles/-Handler), Rollen-Middleware, verschlüsselte

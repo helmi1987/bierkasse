@@ -7,6 +7,7 @@ return [
         'cash' => 'Kasse',
         'users' => 'Benutzer',
         'stats' => 'Statistik',
+        'deposit_suggestions' => 'Vorschläge',
         'settings' => 'Einstellungen',
         'sso' => 'SSO',
         'qr' => 'Registrierungs-QR',

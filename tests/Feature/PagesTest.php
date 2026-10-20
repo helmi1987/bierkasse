@@ -36,7 +36,7 @@ class PagesTest extends TestCase
         $this->actingAs($this->user());
 
         $this->get('/konto')->assertOk()
-            ->assertSee('14 Biere')->assertSee('CHF 21.00')->assertSee('value="21.00"', false)
+            ->assertSee('20 Biere')->assertSee('CHF 30.00')->assertSee('value="30.00"', false)
             ->assertDontSee('Limit:')->assertDontSee('Kein Minus erlaubt');
     }
 

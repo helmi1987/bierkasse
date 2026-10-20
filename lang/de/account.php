@@ -25,6 +25,8 @@ return [
     'note' => 'Bemerkung (optional)',
     'deposit_submit' => 'Einzahlung melden',
     'pending_heading' => 'Wartet auf Bestätigung',
+    'pending_beers' => '{1} +:count Bier ausstehend ·|[*] +:count Biere ausstehend ·',
+    'pending_waiting' => 'wartet auf Kassier',
     'twint_heading' => 'TWINT',
     'twint_intro' => 'An diese Nummer senden und danach die Einzahlung melden:',
     'twint_suggested' => 'Vorschlag:',

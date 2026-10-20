@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Transaction;
 use App\Services\Ledger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -38,6 +39,27 @@ class PagesTest extends TestCase
         $this->get('/konto')->assertOk()
             ->assertSee('20 Biere')->assertSee('CHF 30.00')->assertSee('value="30.00"', false)
             ->assertDontSee('Limit:')->assertDontSee('Kein Minus erlaubt');
+    }
+
+    public function test_pending_deposit_is_shown_as_beers_but_not_counted(): void
+    {
+        $this->setDefaultLimit(0);
+        $user = $this->user();
+        Ledger::reportDeposit($user, 3000, 'twint');
+        Ledger::reportDeposit($user, 100, 'cash');
+        $this->actingAs($user);
+
+        $this->get('/konto')->assertOk()
+            ->assertSee('+20 Biere ausstehend')->assertSee('CHF 31.00 – wartet auf Kassier', false)
+            ->assertSee('data-testid="pending-deposit"', false);
+        $this->assertSame(0, $user->balance());
+
+        // The pending amount does not allow consumption beyond the limit.
+        $this->post('/konto/bier', $this->tokened('consume', ['quantity' => 1]))->assertSessionHas('error');
+
+        // Below one beer only the amount is shown.
+        Transaction::query()->where('amount', 3000)->delete();
+        $this->get('/konto')->assertOk()->assertDontSee('ausstehend ·')->assertSee('CHF 1.00 – wartet auf Kassier', false);
     }
 
     public function test_balance_is_shown_in_beers_with_amount_below(): void

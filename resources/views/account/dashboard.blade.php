@@ -15,6 +15,15 @@
     @else
         <div class="balance-amount" data-testid="balance">{{ chf($balance) }}</div>
     @endif
+    @if ($pendingDeposit > 0)
+        @php($pendingBeers = intdiv($pendingDeposit, max(1, $price)))
+        <div class="pending-pill" data-testid="pending-deposit">
+            @if ($pendingBeers > 0)
+                <strong>{{ trans_choice('account.pending_beers', $pendingBeers, ['count' => $pendingBeers]) }}</strong>
+            @endif
+            <span>{{ chf($pendingDeposit) }} – {{ __('account.pending_waiting') }}</span>
+        </div>
+    @endif
     @if ($balance < 0)
         @include('partials.open-items', ['open' => $open])
     @endif

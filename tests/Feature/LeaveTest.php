@@ -12,6 +12,15 @@ class LeaveTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_leave_link_is_in_settings_not_on_dashboard(): void
+    {
+        $user = $this->user();
+        $link = 'href="'.route('account.leave').'"';
+
+        $this->actingAs($user)->get('/konto')->assertOk()->assertDontSee($link, false);
+        $this->actingAs($user)->get('/konto/einstellungen')->assertOk()->assertSee($link, false);
+    }
+
     public function test_payout_request_and_confirmation_closes_account(): void
     {
         $this->setDefaultLimit(1000);

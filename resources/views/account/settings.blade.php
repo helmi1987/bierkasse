@@ -305,4 +305,10 @@
         </form>
     @endif
 </section>
+
+<section class="card">
+    <h2>{{ __('account.leave') }}</h2>
+    <p class="muted">{{ __('account.leave_settings_hint') }}</p>
+    <p><a class="btn danger" href="{{ route('account.leave') }}">{{ __('account.leave') }} …</a></p>
+</section>
 @endsection

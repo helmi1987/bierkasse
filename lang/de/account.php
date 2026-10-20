@@ -52,6 +52,7 @@ return [
     'leave' => 'Haus verlassen',
     'payout_pending' => 'Auszahlung beantragt – der Kassier meldet sich.',
 
+    'leave_settings_hint' => 'Konto schliessen, wenn du das Büro verlässt: Guthaben auszahlen lassen oder der Kasse spenden.',
     'leave_title' => 'Haus verlassen',
     'leave_intro' => 'Beim Verlassen wird das Konto geschlossen (keine Anmeldung mehr, der Verlauf bleibt erhalten).',
     'leave_balance' => 'Aktuelles Guthaben: :amount',

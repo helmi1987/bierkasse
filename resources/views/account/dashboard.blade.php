@@ -261,6 +261,4 @@
     @include('account.tx-list', ['transactions' => $recent])
     <p><a href="{{ route('account.history') }}">{{ __('account.history') }} →</a></p>
 </section>
-
-<p class="center"><a class="btn ghost" href="{{ route('account.leave') }}">{{ __('account.leave') }}</a></p>
 @endsection

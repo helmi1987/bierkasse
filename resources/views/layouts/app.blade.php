@@ -34,7 +34,7 @@
                 <span>{{ $appName }}</span>
             </a>
             <nav class="nav" aria-label="Hauptnavigation">
-                <a href="{{ route('account.dashboard') }}" @class(['active' => request()->routeIs('account.dashboard', 'account.history', 'account.leave')])>{{ __('site.nav.account') }}</a>
+                <a href="{{ route('account.dashboard') }}" @class(['active' => request()->routeIs('account.dashboard', 'account.history')])>{{ __('site.nav.account') }}</a>
                 <a href="{{ route('stats') }}" @class(['active' => request()->routeIs('stats')])>{{ __('site.nav.stats') }}</a>
                 @if ($authUser->isKassier())
                     <a href="{{ route('backend.dashboard') }}" @class(['active' => request()->routeIs('backend.*')])>
@@ -44,7 +44,7 @@
                         @endif
                     </a>
                 @endif
-                <a href="{{ route('account.settings') }}" @class(['active' => request()->routeIs('account.settings')]) aria-label="{{ __('site.nav.settings') }}" title="{{ __('site.nav.settings') }}">
+                <a href="{{ route('account.settings') }}" @class(['active' => request()->routeIs('account.settings', 'account.leave')]) aria-label="{{ __('site.nav.settings') }}" title="{{ __('site.nav.settings') }}">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg>
                     <span class="nav-user">{{ $authUser->username }}</span>
                 </a>

@@ -1,15 +1,11 @@
-# Manual button (Actions > "Promote to main" > Run workflow): brings a branch into main.
+# Manual button (Actions > "Promote to main" > Run workflow): brings the branch selected under
+# "Use workflow from" (default: the default branch) into main.
 # Creates main from the branch if main does not exist yet, otherwise merges it via a pull request.
 # Plesk deploys main via its Git webhook.
 name: Promote to main
 
 on:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: Branch to bring into main
-        required: true
-        default: claude/keen-lamport-fds3dk
 
 permissions:
   contents: write
@@ -25,12 +21,16 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
-      BRANCH: ${{ inputs.branch }}
+      BRANCH: ${{ github.ref_name }}
       BASE: main
     steps:
       - name: Create main or merge branch into it
         run: |
           set -euo pipefail
+          if [ "$BRANCH" = "$BASE" ]; then
+            echo "::error::Select the branch to promote under 'Use workflow from', not $BASE."
+            exit 1
+          fi
           sha=$(gh api "repos/$GH_REPO/git/ref/heads/$BRANCH" --jq '.object.sha')
           if ! gh api "repos/$GH_REPO/git/ref/heads/$BASE" >/dev/null 2>&1; then
             gh api "repos/$GH_REPO/git/refs" -f ref="refs/heads/$BASE" -f sha="$sha" >/dev/null

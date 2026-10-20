@@ -23,6 +23,13 @@ class PagesTest extends TestCase
         $this->assertSame([512, 512], array_slice(getimagesize(public_path('icon-512.png')), 0, 2));
     }
 
+    public function test_install_hint_is_on_login_and_account_pages(): void
+    {
+        $this->get('/')->assertOk()->assertSee('data-install-hint', false)->assertSee('als App installieren');
+        $this->actingAs($this->user());
+        $this->get('/konto')->assertOk()->assertSee('data-install-hint', false);
+    }
+
     public function test_all_pages_render_for_admin_with_data(): void
     {
         $this->setDefaultLimit(10000);

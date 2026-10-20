@@ -253,6 +253,13 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .steps { padding-left: 1.2rem; }
 
 /* Printable registration QR */
+[hidden] { display: none !important; }
+.install-hint { display: flex; gap: .75rem; align-items: center; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: var(--radius-sm); padding: .75rem .9rem; margin-bottom: 1rem; }
+.install-hint img { border-radius: 10px; flex: none; }
+.install-text { flex: 1; display: flex; flex-direction: column; gap: .15rem; font-size: .925rem; }
+.install-text span:not([hidden]) { color: var(--muted); }
+.install-actions { display: flex; gap: .35rem; align-items: center; flex: none; }
+.inline-icon { width: 1.1em; height: 1.1em; vertical-align: -.2em; fill: currentColor; }
 .print-sheet { text-align: center; background: #fff; color: #1f1a14; border-radius: var(--radius); padding: 2rem 1rem; border: 1px solid var(--border); }
 .print-sheet .qr.big { width: 320px; max-width: 100%; }
 .print-sheet .url { word-break: break-all; font-size: .9rem; color: #6b6152; }

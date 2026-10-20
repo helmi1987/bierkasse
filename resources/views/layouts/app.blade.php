@@ -59,6 +59,7 @@
     </header>
 @endif
 <main id="main" class="wrap main @yield('main_class')">
+    @include('partials.install-hint')
     @include('partials.alerts')
     @yield('content')
 </main>

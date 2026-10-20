@@ -7,13 +7,16 @@ use App\Models\User;
 use App\Services\Sso;
 use App\Support\AppSettings;
 use App\Support\OutboundUrl;
+use App\Support\UserRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -26,7 +29,7 @@ class PersonalSsoController extends Controller
     /** Slug reserved for a provider not saved yet (shown as redirect URI before saving). */
     private const PENDING_SLUG = 'personal_sso.slug';
 
-    /** Login attempts per IP per minute and per user name per 10 minutes. */
+    /** Lookups per IP per minute; failed lookups per user name per 10 minutes. */
     private const MAX_PER_IP = 10;
 
     private const MAX_PER_USER = 10;
@@ -99,12 +102,14 @@ class PersonalSsoController extends Controller
                 $discovered = array_filter(Sso::discover((string) $provider->discovery_url, true), fn ($v) => is_string($v) && $v !== '');
                 $provider->fill($discovered + ['discovered_at' => now()]);
             }
-            // Every endpoint is checked again (manual values, discovery results).
-            foreach (['authorize_url', 'token_url', 'userinfo_url'] as $field) {
+            // Every endpoint is normalized (ASCII host) and checked again (manual values, discovery results).
+            foreach (['discovery_url', 'authorize_url', 'token_url', 'userinfo_url'] as $field) {
                 if ((string) $provider->{$field} !== '') {
+                    $provider->{$field} = OutboundUrl::normalizeUrl((string) $provider->{$field});
                     OutboundUrl::assertPublic((string) $provider->{$field});
                 }
             }
+            self::assertAuthorizeHost($provider);
         } catch (Throwable $e) {
             return back()->withInput($request->except('client_secret'))
                 ->withErrors(['personal_sso' => __('sso.personal.save_failed', ['error' => Str::limit($e->getMessage(), 200)])]);
@@ -112,10 +117,12 @@ class PersonalSsoController extends Controller
 
         // Another issuer/client means another account namespace: the link has to be made again.
         $relink = ! $isNew && $provider->isDirty(['discovery_url', 'issuer', 'authorize_url', 'token_url', 'userinfo_url', 'client_id', 'subject_claim']);
-        $provider->save();
-        if ($relink) {
-            $provider->identities()->delete();
-        }
+        DB::transaction(function () use ($provider, $relink) {
+            $provider->save();
+            if ($relink) {
+                $provider->identities()->delete();
+            }
+        });
         $request->session()->forget(self::PENDING_SLUG);
 
         $redirect = redirect()->to(route('account.settings').'#eigener-anbieter');
@@ -129,8 +136,10 @@ class PersonalSsoController extends Controller
     {
         $provider = $request->user()->personalSsoProvider()->first();
         if ($provider) {
-            $provider->identities()->delete();
-            $provider->delete();
+            DB::transaction(function () use ($provider) {
+                $provider->identities()->delete();
+                $provider->delete();
+            });
         }
 
         return redirect()->to(route('account.settings').'#eigener-anbieter')->with('status', __('sso.personal.deleted'));
@@ -168,22 +177,67 @@ class PersonalSsoController extends Controller
         return view('auth.personal-sso');
     }
 
-    public function loginPost(Request $request, Sso $sso): RedirectResponse
+    /**
+     * Form: only normalizes the user name and shows the confirmation page (no lookup here).
+     */
+    public function loginPost(Request $request): RedirectResponse
     {
+        abort_unless(AppSettings::personalSsoAllowed(), 404);
         $data = $request->validate(['username' => ['required', 'string', 'max:255']]);
+        $username = Str::lower(trim($data['username']));
 
-        return $this->start($request, $sso, $data['username']);
+        if (! preg_match(UserRules::USERNAME_PATTERN, $username)) {
+            return $this->fail($username, __('sso.personal.login_unavailable'));
+        }
+
+        return redirect()->route('login.personal.user', $username);
     }
 
     /**
-     * Bookmarkable login link /login/eigener/{username}.
+     * Bookmarkable link /login/eigener/{username}: confirmation page with the
+     * provider host ("Weiter zu <host>?"), never a direct redirect to an external site.
      */
-    public function loginUser(Request $request, Sso $sso, string $username): RedirectResponse
+    public function confirm(Request $request, string $username): View|RedirectResponse
     {
-        return $this->start($request, $sso, $username);
+        $found = $this->lookup($request, $username);
+        if ($found instanceof RedirectResponse) {
+            return $found;
+        }
+
+        return view('auth.personal-sso-confirm', [
+            'username' => $found[0]->username,
+            'host' => (string) parse_url((string) $found[1]->authorize_url, PHP_URL_HOST),
+            'name' => $found[1]->name,
+        ]);
     }
 
-    private function start(Request $request, Sso $sso, string $username): RedirectResponse
+    /**
+     * Button on the confirmation page (POST): starts the OAuth flow.
+     */
+    public function start(Request $request, Sso $sso, string $username): RedirectResponse
+    {
+        $found = $this->lookup($request, $username);
+        if ($found instanceof RedirectResponse) {
+            return $found;
+        }
+
+        try {
+            return redirect()->away($sso->redirect($found[1], $request, Sso::MODE_LOGIN));
+        } catch (Throwable $e) {
+            report($e);
+
+            return $this->fail($found[0]->username, __('sso.personal.login_unavailable'));
+        }
+    }
+
+    /**
+     * Finds the linked personal provider of an active user. Rate limits: every lookup
+     * counts per IP; per user name only failed lookups count, so third parties cannot
+     * lock out a user whose provider works.
+     *
+     * @return array{0: User, 1: SsoProvider}|RedirectResponse
+     */
+    private function lookup(Request $request, string $username): array|RedirectResponse
     {
         abort_unless(AppSettings::personalSsoAllowed(), 404);
         if (Auth::check()) {
@@ -191,34 +245,57 @@ class PersonalSsoController extends Controller
         }
 
         $username = Str::lower(trim($username));
-        $fail = fn (string $message) => redirect()->route('login.personal')
-            ->withInput(['username' => $username])->withErrors(['username' => $message]);
-
-        // Every attempt counts (also successful ones): the answer tells whether a provider exists.
         $ipKey = 'personal-sso-ip:'.$request->ip();
         $userKey = 'personal-sso-user:'.sha1($username);
         foreach ([[$ipKey, self::MAX_PER_IP], [$userKey, self::MAX_PER_USER]] as [$key, $max]) {
             if (RateLimiter::tooManyAttempts($key, $max)) {
-                return $fail(__('auth.throttle', ['seconds' => RateLimiter::availableIn($key)]));
+                return $this->fail($username, __('auth.throttle', ['seconds' => RateLimiter::availableIn($key)]));
             }
         }
         RateLimiter::hit($ipKey, 60);
-        RateLimiter::hit($userKey, 600);
 
         $user = User::query()->where('username', $username)->where('status', User::STATUS_ACTIVE)->first();
         $provider = $user?->personalSsoProvider()->first();
 
         // Only offered when the provider is complete and already linked to its owner.
         if (! $user || ! $provider || ! $provider->isUsable() || ! $provider->identities()->where('user_id', $user->id)->exists()) {
-            return $fail(__('sso.personal.login_unavailable'));
+            RateLimiter::hit($userKey, 600);
+
+            return $this->fail($username, __('sso.personal.login_unavailable'));
         }
 
-        try {
-            return redirect()->away($sso->redirect($provider, $request, Sso::MODE_LOGIN));
-        } catch (Throwable $e) {
-            report($e);
+        return [$user, $provider];
+    }
 
-            return $fail(__('sso.personal.login_unavailable'));
+    private function fail(string $username, string $message): RedirectResponse
+    {
+        return redirect()->route('login.personal')->withInput(['username' => $username])->withErrors(['username' => $message]);
+    }
+
+    /**
+     * The authorize endpoint (where users are sent) must belong to the issuer:
+     * same host, a subdomain of it, or a host under the issuer's parent domain.
+     * Reference is the issuer host, without issuer the token endpoint host.
+     */
+    private static function assertAuthorizeHost(SsoProvider $provider): void
+    {
+        if ((string) $provider->authorize_url === '') {
+            return;
+        }
+
+        $auth = OutboundUrl::asciiHost((string) parse_url((string) $provider->authorize_url, PHP_URL_HOST));
+        $refUrl = (string) $provider->issuer !== '' ? (string) $provider->issuer : (string) $provider->token_url;
+        $refHost = (string) parse_url($refUrl, PHP_URL_HOST);
+        $ref = $refHost !== '' ? OutboundUrl::asciiHost($refHost) : '';
+
+        // Parent domain only when the issuer host has at least three labels
+        // (assumption: no public suffix list, e.g. auth.example.org -> example.org).
+        $labels = explode('.', $ref);
+        $base = count($labels) >= 3 ? implode('.', array_slice($labels, 1)) : $ref;
+
+        $ok = $ref !== '' && ($auth === $ref || str_ends_with($auth, '.'.$ref) || $auth === $base || str_ends_with($auth, '.'.$base));
+        if (! $ok) {
+            throw new RuntimeException(__('sso.personal.error_authorize_host', ['host' => $auth, 'issuer' => $ref ?: '–']));
         }
     }
 

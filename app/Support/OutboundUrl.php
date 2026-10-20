@@ -59,12 +59,12 @@ class OutboundUrl
     {
         $parts = parse_url($url);
         $scheme = strtolower((string) ($parts['scheme'] ?? ''));
-        $host = strtolower((string) ($parts['host'] ?? ''));
 
-        if ($scheme !== 'https' || $host === '' || isset($parts['user']) || isset($parts['pass'])) {
+        if ($scheme !== 'https' || ($parts['host'] ?? '') === '' || isset($parts['user']) || isset($parts['pass'])) {
             throw new RuntimeException(__('sso.error_https', ['url' => $url]));
         }
 
+        $host = self::asciiHost((string) $parts['host']);
         $port = (int) ($parts['port'] ?? 443);
         $literal = trim($host, '[]');
         $ips = filter_var($literal, FILTER_VALIDATE_IP) !== false ? [$literal] : self::resolve($host);
@@ -79,6 +79,46 @@ class OutboundUrl
         }
 
         return ['host' => $host, 'port' => $port, 'ip' => $ips[0]];
+    }
+
+    /**
+     * The URL with its host as lowercase ASCII (IDN converted), i.e. exactly the
+     * host curl connects to. Stored endpoints are kept in this form.
+     */
+    public static function normalizeUrl(string $url): string
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts) || ($parts['host'] ?? '') === '') {
+            throw new RuntimeException(__('sso.error_https', ['url' => $url]));
+        }
+
+        $host = self::asciiHost((string) $parts['host']);
+        $pos = strpos($url, (string) $parts['host']);
+
+        return $pos === false ? $url : substr_replace($url, $host, $pos, strlen((string) $parts['host']));
+    }
+
+    /**
+     * Lowercase ASCII host; internationalized names are converted (UTS #46), failures rejected.
+     */
+    public static function asciiHost(string $host): string
+    {
+        if (str_starts_with($host, '[')) {
+            return strtolower($host);
+        }
+        if (preg_match('/^[\x21-\x7E]+$/', $host)) {
+            $ascii = strtolower($host);
+        } else {
+            $ascii = function_exists('idn_to_ascii')
+                ? idn_to_ascii(mb_strtolower($host, 'UTF-8'), IDNA_NONTRANSITIONAL_TO_ASCII | IDNA_CHECK_BIDI | IDNA_CHECK_CONTEXTJ, INTL_IDNA_VARIANT_UTS46)
+                : false;
+        }
+
+        if (! is_string($ascii) || $ascii === '' || ! preg_match('/^[a-z0-9.-]+$/', $ascii)) {
+            throw new RuntimeException(__('sso.error_host_invalid', ['host' => $host]));
+        }
+
+        return $ascii;
     }
 
     public static function isPublicIp(string $ip): bool
@@ -113,11 +153,16 @@ class OutboundUrl
 
         if ($strict) {
             $target = self::assertPublic($url);
+            // The pinned host must be the one curl uses: the URL has to be normalized already.
+            if (strtolower((string) parse_url($url, PHP_URL_HOST)) !== $target['host']) {
+                throw new RuntimeException(__('sso.error_host_invalid', ['host' => (string) parse_url($url, PHP_URL_HOST)]));
+            }
             $options['protocols'] = ['https'];
+            // Direct connection only: an (environment) proxy would resolve the host itself.
+            $options['proxy'] = '';
             if (filter_var(trim($target['host'], '[]'), FILTER_VALIDATE_IP) === false) {
                 // Connect to the checked address only (no second DNS lookup, no rebinding).
-                $ip = str_contains($target['ip'], ':') ? '['.$target['ip'].']' : $target['ip'];
-                $options['curl'] = [CURLOPT_RESOLVE => [$target['host'].':'.$target['port'].':'.$ip]];
+                $options['curl'] = [CURLOPT_RESOLVE => [self::resolveEntry($target)]];
             }
             $followRedirects = false;
         }
@@ -127,6 +172,18 @@ class OutboundUrl
         }
 
         return $http->withOptions($options);
+    }
+
+    /**
+     * CURLOPT_RESOLVE entry "host:port:address" for a checked target.
+     *
+     * @param  array{host:string,port:int,ip:string}  $target
+     */
+    public static function resolveEntry(array $target): string
+    {
+        $ip = str_contains($target['ip'], ':') ? '['.$target['ip'].']' : $target['ip'];
+
+        return $target['host'].':'.$target['port'].':'.$ip;
     }
 
     /**

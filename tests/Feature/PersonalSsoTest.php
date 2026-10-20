@@ -9,6 +9,8 @@ use App\Models\UserIdentity;
 use App\Services\Sso;
 use App\Support\AppSettings;
 use App\Support\OutboundUrl;
+use GuzzleHttp\Promise\Create;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
@@ -31,6 +33,9 @@ class PersonalSsoTest extends TestCase
             'intern.example.org' => ['192.168.1.5'],
             'mixed.example.org' => ['93.184.215.14', '10.1.2.3'],
             'v6local.example.org' => ['fd00::1'],
+            'login.example.org' => ['93.184.215.15'],
+            'evil.example.net' => ['93.184.215.16'],
+            'xn--bcher-kva.example' => ['93.184.215.17'],
             default => [],
         });
     }
@@ -85,16 +90,18 @@ class PersonalSsoTest extends TestCase
         $p = $this->personalProvider($user);
         UserIdentity::query()->create(['user_id' => $user->id, 'sso_provider_id' => $p->id, 'subject' => 'ak-1']);
 
+        // The link shows a confirmation page with the host, no direct redirect.
+        $this->get('/login/eigener/hans')->assertOk()->assertSee('Weiter zu auth.example.org?')
+            ->assertSee(route('login.personal.start', 'hans'));
         $query = $this->startFlow('/login/eigener/hans');
         $this->fakeToken($this->claims(['nonce' => $query['nonce']]));
         $this->get("/login/sso/{$p->slug}/callback?code=abc&state=".$query['state'])->assertRedirect(route('account.dashboard'));
         $this->assertAuthenticatedAs($user);
 
-        // Same via the form on the login page.
+        // The form on the login page leads to the same confirmation page.
         $this->post('/abmelden');
         $this->assertGuest();
-        $location = (string) $this->post('/login/eigener', ['username' => 'Hans '])->headers->get('Location');
-        $this->assertStringStartsWith(self::BASE.'/authorize/?', $location);
+        $this->post('/login/eigener', ['username' => 'Hans '])->assertRedirect(route('login.personal.user', 'hans'));
     }
 
     public function test_totp_is_required_after_personal_login(): void
@@ -262,7 +269,9 @@ class PersonalSsoTest extends TestCase
         $this->personalProvider($linked);
 
         foreach (['gibtsnicht', 'ohne', 'unverbunden'] as $name) {
-            $this->post('/login/eigener', ['username' => $name])->assertRedirect(route('login.personal'))
+            $this->get('/login/eigener/'.$name)->assertRedirect(route('login.personal'))
+                ->assertSessionHasErrors(['username' => __('sso.personal.login_unavailable')]);
+            $this->post('/login/eigener/'.$name)->assertRedirect(route('login.personal'))
                 ->assertSessionHasErrors(['username' => __('sso.personal.login_unavailable')]);
         }
     }
@@ -271,13 +280,36 @@ class PersonalSsoTest extends TestCase
     {
         $this->freezeTime();
         for ($i = 0; $i < 10; $i++) {
-            $this->post('/login/eigener', ['username' => 'user'.$i])
+            $this->get('/login/eigener/user'.$i)
                 ->assertSessionHasErrors(['username' => __('sso.personal.login_unavailable')]);
         }
 
         $throttled = ['username' => __('auth.throttle', ['seconds' => 60])];
-        $this->post('/login/eigener', ['username' => 'another'])->assertSessionHasErrors($throttled);
         $this->get('/login/eigener/another')->assertRedirect(route('login.personal'))->assertSessionHasErrors($throttled);
+        $this->post('/login/eigener/another')->assertSessionHasErrors($throttled);
+    }
+
+    public function test_third_parties_cannot_lock_out_a_working_user(): void
+    {
+        $user = $this->user(['username' => 'hans']);
+        $p = $this->personalProvider($user);
+        UserIdentity::query()->create(['user_id' => $user->id, 'sso_provider_id' => $p->id, 'subject' => 'ak-1']);
+
+        // Many lookups from many addresses: successful lookups never count per user name.
+        for ($i = 1; $i <= 25; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => "198.51.100.{$i}"])->get('/login/eigener/hans')->assertOk();
+        }
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.200'])->post('/login/eigener/hans')
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        // Failed lookups for one user name are limited across addresses.
+        $this->freezeTime();
+        for ($i = 1; $i <= 10; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => "203.0.113.{$i}"])->get('/login/eigener/ghost')
+                ->assertSessionHasErrors(['username' => __('sso.personal.login_unavailable')]);
+        }
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.99'])->get('/login/eigener/ghost')
+            ->assertSessionHasErrors(['username' => __('auth.throttle', ['seconds' => 600])]);
     }
 
     public function test_admin_can_disable_personal_providers(): void
@@ -319,6 +351,76 @@ class PersonalSsoTest extends TestCase
         $this->assertSame('my-secret', $p->fresh()->client_secret, 'empty secret keeps the stored one');
     }
 
+    public function test_authorize_endpoint_must_belong_to_issuer(): void
+    {
+        Http::fake();
+        $this->actingAs($this->user());
+        $base = ['name' => 'X', 'issuer' => self::BASE.'/bier/', 'client_id' => 'c', 'client_secret' => 's', 'token_url' => self::BASE.'/token/'];
+
+        $this->put('/konto/eigener-anbieter', $base + ['authorize_url' => 'https://evil.example.net/authorize'])
+            ->assertSessionHasErrors('personal_sso');
+        $this->assertSame(0, SsoProvider::query()->count());
+
+        // Sibling host under the issuer's parent domain is fine.
+        $this->put('/konto/eigener-anbieter', $base + ['authorize_url' => 'https://login.example.org/authorize'])
+            ->assertSessionHas('status');
+        $this->assertSame(1, SsoProvider::query()->count());
+    }
+
+    public function test_idn_hosts_are_normalized_or_rejected(): void
+    {
+        Http::fake([
+            'https://xn--bcher-kva.example/.well-known/openid-configuration' => Http::response([
+                'issuer' => 'https://bücher.example',
+                'authorization_endpoint' => 'https://BÜCHER.example/authorize',
+                'token_endpoint' => 'https://bücher.example/token',
+            ]),
+        ]);
+        $user = $this->user();
+        $this->actingAs($user)->put('/konto/eigener-anbieter', [
+            'name' => 'IDN', 'discovery_url' => 'https://Bücher.example', 'client_id' => 'c', 'client_secret' => 's',
+        ])->assertSessionHas('status');
+
+        $p = $user->personalSsoProvider()->firstOrFail();
+        $this->assertSame('https://xn--bcher-kva.example/.well-known/openid-configuration', $p->discovery_url);
+        $this->assertSame('https://xn--bcher-kva.example/authorize', $p->authorize_url);
+        $this->assertSame('https://xn--bcher-kva.example/token', $p->token_url);
+
+        $this->expectException(RuntimeException::class);
+        OutboundUrl::asciiHost("bad\u{00A0}host.example");
+    }
+
+    public function test_strict_client_pins_resolved_address_without_proxy(): void
+    {
+        $seen = [];
+        $handler = function ($request, array $options) use (&$seen) {
+            $seen[] = ['host' => $request->getUri()->getHost(), 'port' => $request->getUri()->getPort(), 'options' => $options];
+
+            return Create::promiseFor(new Response(200, [], '{}'));
+        };
+
+        foreach (['https://AUTH.example.org/token/' => 'auth.example.org:443:93.184.215.14',
+            'https://auth.example.org:9443/token/' => 'auth.example.org:9443:93.184.215.14'] as $url => $entry) {
+            OutboundUrl::client($url, true)->setHandler($handler)->get($url);
+            $last = end($seen);
+            $this->assertSame([$entry], $last['options']['curl'][CURLOPT_RESOLVE]);
+            $this->assertSame(explode(':', $entry)[0], $last['host'], 'pinned host equals the host curl uses');
+            $this->assertSame('', $last['options']['proxy']);
+            $this->assertSame(['https'], $last['options']['protocols']);
+            $this->assertFalse($last['options']['allow_redirects']);
+        }
+        $this->assertSame(9443, $seen[1]['port']);
+
+        // IPv6 address is bracketed.
+        OutboundUrl::resolveUsing(fn () => ['2606:2800:21f:cb07:6820:80da:af6b:8b2c']);
+        OutboundUrl::client(self::BASE.'/token/', true)->setHandler($handler)->get(self::BASE.'/token/');
+        $this->assertSame(['auth.example.org:443:[2606:2800:21f:cb07:6820:80da:af6b:8b2c]'], end($seen)['options']['curl'][CURLOPT_RESOLVE]);
+
+        // A non-normalized (Unicode) host is refused instead of pinning a different name.
+        $this->expectException(RuntimeException::class);
+        OutboundUrl::client('https://bücher.example/', true);
+    }
+
     private function personalProvider(User $owner, array $attributes = []): SsoProvider
     {
         $p = new SsoProvider(array_merge([
@@ -344,7 +446,9 @@ class PersonalSsoTest extends TestCase
      */
     private function startFlow(string $url): array
     {
-        $location = (string) $this->get($url)->headers->get('Location');
+        // Login links start with the POST button of the confirmation page.
+        $response = str_starts_with($url, '/login/eigener/') ? $this->post($url) : $this->get($url);
+        $location = (string) $response->headers->get('Location');
         $this->assertStringStartsWith(self::BASE.'/authorize/?', $location);
         parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
 

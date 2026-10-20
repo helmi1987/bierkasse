@@ -83,6 +83,7 @@ return [
     'error_id_token_nonce' => 'ID-Token: nonce stimmt nicht.',
     'error_host_unresolved' => 'Host :host kann nicht aufgelöst werden.',
     'error_host_private' => 'Host :host zeigt auf eine interne oder reservierte Adresse. Nur öffentlich erreichbare Anbieter sind erlaubt.',
+    'error_host_invalid' => 'Ungültiger Hostname: :host',
     'error_response_size' => 'Antwort des Anbieters ist zu gross.',
 
     // Personal provider of a user (account settings, login by user name).
@@ -113,6 +114,10 @@ return [
         'login_intro' => 'Benutzername eingeben. Du wirst zu dem Anbieter weitergeleitet, den du in deinem Konto verbunden hast.',
         'login_submit' => 'Weiter',
         'login_back' => 'Zurück zur Anmeldung',
+        'confirm_title' => 'Weiter zu :host?',
+        'confirm_intro' => 'Du wirst zum Anmelde-Anbieter «:name» auf :host weitergeleitet. Nur fortfahren, wenn das dein eigener Anbieter ist.',
+        'confirm_submit' => 'Weiter zu :host',
+        'error_authorize_host' => 'Der Authorize-Endpunkt (:host) gehört nicht zum Issuer (:issuer).',
         'login_unavailable' => 'Anmeldung mit eigenem Anbieter ist für diese Angaben nicht möglich.',
     ],
     'error_claim_missing' => 'Claim «:claim» fehlt in der Antwort des Anbieters.',

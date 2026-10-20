@@ -34,7 +34,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     // Personal provider of a user (rate limited in the controller, plus a coarse route throttle).
     Route::get('/login/eigener', [PersonalSsoController::class, 'loginForm'])->name('login.personal');
     Route::post('/login/eigener', [PersonalSsoController::class, 'loginPost'])->middleware('throttle:30,1')->name('login.personal.post');
-    Route::get('/login/eigener/{username}', [PersonalSsoController::class, 'loginUser'])->middleware('throttle:30,1')->where('username', '[A-Za-z0-9._-]{1,64}')->name('login.personal.user');
+    Route::get('/login/eigener/{username}', [PersonalSsoController::class, 'confirm'])->middleware('throttle:30,1')->where('username', '[A-Za-z0-9._-]{1,64}')->name('login.personal.user');
+    Route::post('/login/eigener/{username}', [PersonalSsoController::class, 'start'])->middleware('throttle:30,1')->where('username', '[A-Za-z0-9._-]{1,64}')->name('login.personal.start');
 
     // Registration and password reset (guests only)
     Route::middleware('guest')->group(function () {

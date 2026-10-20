@@ -97,15 +97,21 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
   (z. B. selbst gehostetes Authentik/Keycloak) hinterlegen: Discovery-URL oder Endpunkte von Hand, Client-ID,
   Client-Secret (verschlüsselt). Die angezeigte Redirect-URI (`/login/sso/p-…/callback`) beim Anbieter eintragen,
   speichern, dann "Verbinden". Anmelden: Login-Seite > "Mit eigenem Anbieter anmelden" (Benutzername) oder der
-  persönliche Link `/login/eigener/<benutzername>`. TOTP gilt auch hier.
+  persönliche Link `/login/eigener/<benutzername>`; beide zeigen zuerst "Weiter zu <host>?" (kein direkter
+  Redirect), erst der Knopf startet die Anmeldung. TOTP gilt auch hier.
+  Der Authorize-Endpunkt muss zum Issuer gehören (gleicher Host, Subdomain oder gleiche übergeordnete Domain;
+  **Annahme:** ohne Public-Suffix-Liste, übergeordnet = Issuer-Host ohne erstes Label bei mind. 3 Labels).
   Der Anbieter gehört nur seinem Besitzer (`sso_providers.owner_user_id`): nicht auf der Login-Seite, nicht für
   andere, nicht in `/backend/sso` (in der Benutzer-Detailansicht nur Name/Host/Status). Eine Identität eines
   eigenen Anbieters meldet nur dessen Besitzer an. Änderung von Issuer/Endpunkten/Client-ID trennt die Verknüpfung.
   Schutz gegen SSRF (`app/Support/OutboundUrl.php`): nur https, Host muss auf öffentliche Adressen auflösen
-  (private, Loopback, Link-Local inkl. 169.254.169.254, CGNAT, ULA usw. abgelehnt), aufgelöste IP wird für die
-  Verbindung fixiert, keine Redirects, Timeouts, Antwort max. 1 MB; geprüft beim Speichern (auch die Endpunkte aus
-  der Discovery) und bei jedem Abruf. Rate-Limit: 10 Versuche/Minute pro IP, 10 pro Benutzername/10 Minuten.
-  Hinweis: Ist für ausgehende Verbindungen ein HTTP-Proxy konfiguriert, löst der Proxy den Host auf.
+  (private, Loopback, Link-Local inkl. 169.254.169.254, CGNAT, ULA usw. abgelehnt), Hostnamen werden als ASCII
+  (IDN) gespeichert, die aufgelöste IP wird für die Verbindung fixiert, keine Redirects, Timeouts, Antwort max. 1 MB;
+  geprüft beim Speichern (auch die Endpunkte aus der Discovery) und bei jedem Abruf.
+  Rate-Limit: 10 Abfragen/Minute pro IP; pro Benutzername nur fehlgeschlagene (10 in 10 Minuten), damit Dritte
+  niemanden aussperren können.
+  Anfragen an eigene Anbieter gehen nie über einen Proxy (auch nicht `HTTPS_PROXY`): der Server braucht dafür
+  direkten ausgehenden HTTPS-Zugang.
 - Geld immer in Rappen (Integer), Anzeige `CHF 1.50`. Saldo = Summe der bestätigten Buchungen (`transactions`).
   - Doppeltes Abschicken (Doppeltipp) wird verhindert: Einmal-Token pro Formular (Bier, Einzahlung melden)
     und Sperre des Knopfs nach dem Absenden.

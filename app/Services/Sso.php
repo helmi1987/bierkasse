@@ -98,6 +98,9 @@ class Sso
     {
         $url = self::normalizeDiscoveryUrl($url);
         self::assertSafeUrl($url);
+        if ($strict) {
+            $url = OutboundUrl::normalizeUrl($url);
+        }
 
         $response = OutboundUrl::client($url, $strict, 10, true)->get($url);
         OutboundUrl::assertSize($response);
@@ -121,7 +124,12 @@ class Sso
 
         foreach (['authorize_url', 'token_url', 'userinfo_url'] as $key) {
             if ($fields[$key] !== null) {
-                $strict ? OutboundUrl::assertPublic($fields[$key]) : self::assertSafeUrl($fields[$key]);
+                if ($strict) {
+                    $fields[$key] = OutboundUrl::normalizeUrl($fields[$key]);
+                    OutboundUrl::assertPublic($fields[$key]);
+                } else {
+                    self::assertSafeUrl($fields[$key]);
+                }
             }
         }
 

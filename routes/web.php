@@ -97,6 +97,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::put('/benutzer/{user}/rolle', [Backend\UserController::class, 'role'])->whereNumber('user')->middleware('role:admin')->name('users.role');
 
             Route::get('/statistik', [Backend\DashboardController::class, 'stats'])->name('stats');
+            Route::get('/lager', [Backend\StockController::class, 'index'])->name('stock');
+            Route::put('/lager/mindestbestand', [Backend\StockController::class, 'minimum'])->name('stock.minimum');
+            Route::post('/lager/korrektur', [Backend\StockController::class, 'correct'])->name('stock.correct');
             Route::get('/einzahlungsvorschlaege', [Backend\DepositSuggestionController::class, 'edit'])->name('deposit-suggestions');
             Route::put('/einzahlungsvorschlaege', [Backend\DepositSuggestionController::class, 'update'])->name('deposit-suggestions.update');
 

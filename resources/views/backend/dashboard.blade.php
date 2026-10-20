@@ -6,7 +6,14 @@
 @include('partials.backend-nav')
 <h1>{{ __('backend.title') }}</h1>
 
+@php($stockLow = $stockMin > 0 && $stock < $stockMin)
+@if ($stockLow)
+    <div class="alert warn" role="alert">{{ __('stock.low_alert', ['stock' => $stock, 'min' => $stockMin]) }} <a href="{{ route('backend.stock') }}">{{ __('stock.title') }} →</a></div>
+@endif
+
 <div class="kpis">
+    <div class="kpi"><span>{{ __('stock.stock') }}</span><strong @class(['neg' => $stockLow || $stock < 0])>{{ trans_choice('stock.beers', $stock, ['count' => $stock]) }}</strong>
+        <small>{{ $stockMin > 0 ? __('stock.minimum_short', ['min' => $stockMin]) : __('stock.minimum_off') }}</small></div>
     <div class="kpi"><span>{{ __('backend.cash_balance') }}</span><strong>{{ chf($overview['cash']['total']) }}</strong>
         <small>{{ __('backend.cash_split', ['cash' => chf($overview['cash']['cash']), 'twint' => chf($overview['cash']['twint'])]) }}</small></div>
     <div class="kpi"><span>{{ __('backend.credit_total') }}</span><strong>{{ chf($overview['credit']) }}</strong></div>

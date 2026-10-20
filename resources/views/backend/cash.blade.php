@@ -13,6 +13,8 @@
     <div class="kpi"><span>{{ __('cash.deposits') }}</span><strong>{{ chf($deposits) }}</strong></div>
     <div class="kpi"><span>{{ __('cash.payouts') }}</span><strong>{{ chf($payouts) }}</strong></div>
     <div class="kpi"><span>{{ __('backend.surplus') }}</span><strong @class(['neg' => $overview['surplus'] < 0])>{{ chf($overview['surplus']) }}</strong></div>
+    <div class="kpi"><span>{{ __('stock.stock') }}</span><strong @class(['neg' => $stockLow || $stock < 0])>{{ trans_choice('stock.beers', $stock, ['count' => $stock]) }}</strong>
+        <small><a href="{{ route('backend.stock') }}">{{ __('stock.correct') }} →</a></small></div>
 </div>
 
 <section class="card">
@@ -36,6 +38,11 @@
                 <label for="amount">{{ __('cash.amount') }}</label>
                 <input type="text" id="amount" name="amount" inputmode="decimal" value="{{ old('amount') }}" required>
                 <div class="hint">{{ __('cash.amount_hint') }}</div>
+            </div>
+            <div class="field">
+                <label for="beers">{{ __('cash.beers') }}</label>
+                <input type="number" id="beers" name="beers" min="1" max="100000" step="1" value="{{ old('beers') }}" inputmode="numeric">
+                <div class="hint">{{ __('cash.beers_hint') }}</div>
             </div>
             <div class="field">
                 <label for="method">{{ __('cash.method') }}</label>
@@ -63,7 +70,7 @@
             @foreach ($entries as $entry)
                 <li class="wrap-row">
                     <span>
-                        <span class="tx-date">{{ local_time($entry->date, 'd.m.Y') }} · {{ __('cash.types.'.$entry->type) }} · {{ __('ledger.method.'.$entry->method) }}</span><br>
+                        <span class="tx-date">{{ local_time($entry->date, 'd.m.Y') }} · {{ __('cash.types.'.$entry->type) }}@if ($entry->beers) · {{ trans_choice('stock.beers', $entry->beers, ['count' => $entry->beers]) }}@endif · {{ __('ledger.method.'.$entry->method) }}</span><br>
                         {{ $entry->note }} <span class="muted">{{ __('cash.by') }} {{ $entry->creator?->username ?? '–' }}</span>
                     </span>
                     <strong @class(['amount', 'neg' => $entry->amount < 0, 'pos' => $entry->amount > 0])>{{ chf($entry->amount) }}</strong>

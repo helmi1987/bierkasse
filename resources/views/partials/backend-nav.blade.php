@@ -3,6 +3,7 @@
     <a href="{{ route('backend.cash') }}" @class(['active' => request()->routeIs('backend.cash')])>{{ __('backend.nav.cash') }}</a>
     <a href="{{ route('backend.users.index') }}" @class(['active' => request()->routeIs('backend.users.*')])>{{ __('backend.nav.users') }}</a>
     <a href="{{ route('backend.stats') }}" @class(['active' => request()->routeIs('backend.stats')])>{{ __('backend.nav.stats') }}</a>
+    <a href="{{ route('backend.stock') }}" @class(['active' => request()->routeIs('backend.stock*')])>{{ __('backend.nav.stock') }}@if (\App\Services\BeerStock::isLow()) <span class="pill warn">{{ __('stock.low_badge') }}</span>@endif</a>
     <a href="{{ route('backend.deposit-suggestions') }}" @class(['active' => request()->routeIs('backend.deposit-suggestions')])>{{ __('backend.nav.deposit_suggestions') }}</a>
     @if (auth()->user()->isAdmin())
         <a href="{{ route('backend.settings') }}" @class(['active' => request()->routeIs('backend.settings')])>{{ __('backend.nav.settings') }}</a>

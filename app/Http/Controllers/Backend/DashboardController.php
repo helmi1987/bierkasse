@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\StatsController;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\BeerStock;
 use App\Services\CashBook;
 use App\Services\Ledger;
 use App\Services\LedgerException;
@@ -32,6 +33,8 @@ class DashboardController extends Controller
             'payouts' => Ledger::pendingPayouts(),
             'minus' => $minus,
             'overview' => CashBook::overview(),
+            'stock' => BeerStock::current(),
+            'stockMin' => BeerStock::minimum(),
         ]);
     }
 

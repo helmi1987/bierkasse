@@ -33,7 +33,7 @@ class CashBookTest extends TestCase
         Ledger::confirmPayout(Ledger::requestPayout($d), $kassier, 'cash'); // cash -19
 
         $this->actingAs($kassier);
-        $this->post('/backend/kasse', ['type' => 'expense_beer', 'date' => '2026-10-01', 'amount' => '24.00', 'method' => 'cash', 'note' => 'Harass'])->assertSessionHas('status');
+        $this->post('/backend/kasse', ['type' => 'expense_beer', 'date' => '2026-10-01', 'amount' => '24.00', 'beers' => '24', 'method' => 'cash', 'note' => 'Harass'])->assertSessionHas('status');
         $this->post('/backend/kasse', ['type' => 'income', 'date' => '2026-10-02', 'amount' => '10', 'method' => 'twint', 'note' => 'Apéro'])->assertSessionHas('status');
         $this->post('/backend/kasse', ['type' => 'adjustment', 'date' => '2026-10-03', 'amount' => '-1.50', 'method' => 'cash', 'note' => 'Zählung'])->assertSessionHas('status');
         $this->post('/backend/kasse', ['type' => 'expense_other', 'date' => '2026-10-03', 'amount' => '-5', 'method' => 'cash', 'note' => 'x'])->assertSessionHasErrors('amount');

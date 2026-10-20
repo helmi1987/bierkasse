@@ -58,7 +58,7 @@ class Ledger
             throw new LedgerException(__('ledger.quantity_invalid'));
         }
 
-        return DB::transaction(function () use ($user, $quantity) {
+        $tx = DB::transaction(function () use ($user, $quantity) {
             self::lock($user);
             self::assertActive($user);
             if (self::hasPendingPayout($user)) {
@@ -83,6 +83,11 @@ class Ledger
                 'confirmed_at' => now(),
             ]);
         });
+
+        // Outside the transaction: a mail never delays or blocks the booking.
+        BeerStock::afterConsumption($quantity);
+
+        return $tx;
     }
 
     public static function undo(Transaction $tx, User $user): void
@@ -91,6 +96,7 @@ class Ledger
             throw new LedgerException(__('ledger.undo_expired'));
         }
         $tx->delete();
+        BeerStock::rearm();
     }
 
     /** User reports a deposit; counts once a kassier confirms it. */

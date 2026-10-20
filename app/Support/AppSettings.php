@@ -30,6 +30,10 @@ class AppSettings
 
     public const DEPOSIT_SUGGESTIONS = 'deposit_suggestions';
 
+    public const STOCK_MINIMUM = 'stock_minimum';
+
+    public const STOCK_LOW_WARNED = 'stock_low_warned';
+
     /** Preselected deposit proposal in Rappen; null = first proposal. */
     public const DEPOSIT_DEFAULT = 'deposit_suggestion_default';
 
@@ -105,6 +109,18 @@ class AppSettings
         $amount = (int) self::get(self::DEPOSIT_DEFAULT, 0);
 
         return $amount > 0 ? $amount : null;
+    }
+
+    /** Minimum beer stock (low-stock mail and warning); 0 = off. */
+    public static function stockMinimum(): int
+    {
+        return max(0, (int) self::get(self::STOCK_MINIMUM, 20));
+    }
+
+    /** A low-stock mail was sent and the stock has not been back at the minimum since. */
+    public static function stockLowWarned(): bool
+    {
+        return (bool) self::get(self::STOCK_LOW_WARNED, false);
     }
 
     /** Users may add their own OAuth2/OIDC provider (default on). */

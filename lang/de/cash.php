@@ -16,6 +16,8 @@ return [
     'date' => 'Datum',
     'amount' => 'Betrag (CHF)',
     'amount_hint' => 'Bei Kassenkorrekturen mit Vorzeichen, z.B. -5.00.',
+    'beers' => 'Anzahl Biere',
+    'beers_hint' => 'Pflicht bei «Bierkauf» (für den Lagerbestand).',
     'method' => 'Bar / TWINT',
     'note' => 'Bemerkung',
     'save' => 'Erfassen',

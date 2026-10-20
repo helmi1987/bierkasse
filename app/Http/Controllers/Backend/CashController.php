@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\CashEntry;
 use App\Models\Transaction;
+use App\Services\BeerStock;
 use App\Services\CashBook;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
@@ -25,6 +26,8 @@ class CashController extends Controller
             'entries' => CashEntry::query()->with('creator')->orderByDesc('date')->orderByDesc('id')->paginate(30),
             'deposits' => (int) Transaction::query()->confirmed()->where('type', Transaction::TYPE_DEPOSIT)->sum('amount'),
             'payouts' => (int) -Transaction::query()->confirmed()->where('type', Transaction::TYPE_PAYOUT)->sum('amount'),
+            'stock' => BeerStock::current(),
+            'stockLow' => BeerStock::isLow(),
         ]);
     }
 
@@ -34,6 +37,8 @@ class CashController extends Controller
             'type' => ['required', Rule::in(CashEntry::TYPES)],
             'date' => ['required', 'date'],
             'amount' => ['required', 'string', 'max:20'],
+            // Number of beers bought: required for beer purchases (stock), ignored otherwise.
+            'beers' => ['nullable', 'required_if:type,expense_beer', 'integer', 'min:1', 'max:100000'],
             'method' => ['required', Rule::in(Transaction::METHODS)],
             'note' => ['required', 'string', 'max:500'],
         ]);
@@ -47,10 +52,12 @@ class CashController extends Controller
             'type' => $data['type'],
             'date' => $data['date'],
             'amount' => CashBook::signedAmount($data['type'], $amount),
+            'beers' => $data['type'] === 'expense_beer' ? (int) $data['beers'] : null,
             'method' => $data['method'],
             'note' => $data['note'],
             'created_by' => $request->user()->id,
         ]);
+        BeerStock::rearm();
 
         return back()->with('status', __('cash.saved'));
     }
@@ -58,6 +65,7 @@ class CashController extends Controller
     public function destroy(CashEntry $entry): RedirectResponse
     {
         $entry->delete();
+        BeerStock::rearm();
 
         return back()->with('status', __('cash.deleted'));
     }

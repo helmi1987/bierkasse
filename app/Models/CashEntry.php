@@ -13,11 +13,11 @@ class CashEntry extends Model
 {
     public const TYPES = ['expense_beer', 'expense_other', 'income', 'adjustment'];
 
-    protected $fillable = ['type', 'date', 'amount', 'method', 'note', 'created_by'];
+    protected $fillable = ['type', 'date', 'amount', 'beers', 'method', 'note', 'created_by'];
 
     protected function casts(): array
     {
-        return ['date' => 'date', 'amount' => 'integer'];
+        return ['date' => 'date', 'amount' => 'integer', 'beers' => 'integer'];
     }
 
     public function creator(): BelongsTo

@@ -8,6 +8,7 @@ return [
         'users' => 'Benutzer',
         'stats' => 'Statistik',
         'deposit_suggestions' => 'Vorschläge',
+        'stock' => 'Lager',
         'settings' => 'Einstellungen',
         'sso' => 'SSO',
         'qr' => 'Registrierungs-QR',

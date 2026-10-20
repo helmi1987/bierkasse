@@ -5,7 +5,16 @@
 @section('content')
 <section @class(['balance-card', 'negative' => $balance < 0])>
     <div class="balance-label">{{ $balance < 0 ? __('account.balance_negative') : __('account.balance') }}</div>
-    <div class="balance-amount" data-testid="balance">{{ chf($balance) }}</div>
+    @php
+        $openBeers = array_sum(array_column($open['beers'], 'quantity')) + count($open['partial']);
+        $beerCount = $balance < 0 ? $openBeers : intdiv($balance, max(1, $price));
+    @endphp
+    @if ($balance >= 0 || $openBeers > 0)
+        <div class="balance-amount" data-testid="balance-beers">{{ trans_choice($balance < 0 ? 'account.balance_beers_open' : 'account.balance_beers', $beerCount, ['count' => $beerCount]) }}</div>
+        <div class="balance-chf" data-testid="balance">{{ chf($balance) }}</div>
+    @else
+        <div class="balance-amount" data-testid="balance">{{ chf($balance) }}</div>
+    @endif
     @if ($balance < 0)
         @include('partials.open-items', ['open' => $open])
     @endif

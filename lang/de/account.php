@@ -5,6 +5,8 @@ return [
     'title' => 'Mein Konto',
     'balance' => 'Guthaben',
     'balance_negative' => 'Im Minus',
+    'balance_beers' => '{0} Keine Biere|{1} :count Bier|[2,*] :count Biere',
+    'balance_beers_open' => '{1} :count Bier offen|[2,*] :count Biere offen',
     'open' => 'Offen: :amount',
     'open_beers' => ':count × Bier à :price',
     'open_partial' => 'Rest von 1 Bier à :price: :amount',

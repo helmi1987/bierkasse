@@ -40,6 +40,19 @@ class PagesTest extends TestCase
             ->assertDontSee('Limit:')->assertDontSee('Kein Minus erlaubt');
     }
 
+    public function test_balance_is_shown_in_beers_with_amount_below(): void
+    {
+        $this->setDefaultLimit(1000);
+        $user = $this->user();
+        $kassier = $this->admin();
+        Ledger::bookDeposit($user, 1200, 'cash', $kassier);
+        $this->actingAs($user);
+        $this->get('/konto')->assertOk()->assertSee('8 Biere')->assertSee('CHF 12.00');
+
+        Ledger::consume($user, 10);
+        $this->get('/konto')->assertOk()->assertSee('2 Biere offen')->assertSee('CHF -3.00');
+    }
+
     public function test_all_pages_render_for_admin_with_data(): void
     {
         $this->setDefaultLimit(10000);

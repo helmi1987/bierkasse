@@ -10,7 +10,9 @@ use App\Services\BeerStock;
 use App\Services\CashBook;
 use App\Services\Stats;
 use App\Support\AppSettings;
+use App\Support\FormToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -127,6 +129,28 @@ class GuestTest extends TestCase
         $this->delete("/backend/gaeste/{$sale->id}")->assertSessionHas('status');
         $this->assertSame(0, GuestSale::query()->count());
         $this->assertSame(0, CashBook::balance()['total']);
+    }
+
+    public function test_enabling_guests_requires_password(): void
+    {
+        Setting::putMany([AppSettings::GUEST_ENABLED => false, AppSettings::GUEST_PASSWORD => '']);
+        $this->actingAs($this->kassier())->put('/backend/gaeste', ['guest_enabled' => '1', 'guest_password' => ''])
+            ->assertSessionHasErrors(['guest_password' => __('guest.password_required')]);
+        $this->assertFalse(AppSettings::guestOpen());
+
+        // Switching off without a password is fine.
+        $this->put('/backend/gaeste', ['guest_password' => ''])->assertSessionHas('status');
+    }
+
+    public function test_used_token_cannot_be_claimed_twice(): void
+    {
+        $data = $this->sale();
+        $token = $data[FormToken::FIELD];
+        // A parallel request already claimed the token (session still lists it).
+        Cache::add('form-token:'.hash('sha256', 'guest|'.$token), 1, 60);
+
+        $this->post('/gast', $data)->assertSessionHas('warning');
+        $this->assertSame(0, GuestSale::query()->count());
     }
 
     private function sale(array $overrides = []): array

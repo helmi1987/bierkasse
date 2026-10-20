@@ -17,6 +17,7 @@ return [
     'open_items' => 'Offene Posten',
     'deposits' => 'Offene Einzahlungen',
     'deposits_none' => 'Keine offenen Einzahlungen.',
+    'deposit_edited' => 'geändert :time',
     'payouts' => 'Auszahlungsanträge',
     'payouts_none' => 'Keine offenen Auszahlungen.',
     'payout_amount' => 'Auszuzahlen: :amount',

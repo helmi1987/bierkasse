@@ -7,8 +7,8 @@ use App\Services\Ledger;
 use App\Services\LedgerException;
 use App\Services\Stats;
 use App\Support\AppSettings;
-use App\Support\DepositSuggestions;
 use App\Support\BarChart;
+use App\Support\DepositSuggestions;
 use App\Support\FormToken;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
@@ -114,6 +114,51 @@ class AccountController extends Controller
         }
 
         return back()->with('status', __('ledger.deposit_reported'));
+    }
+
+    /**
+     * Own pending deposit report: change amount/method.
+     */
+    public function updateDeposit(Request $request, Transaction $transaction): RedirectResponse
+    {
+        $this->guardOwnDeposit($request, $transaction);
+        $data = $request->validate([
+            'amount' => ['required', 'string', 'max:20'],
+            'method' => ['required', Rule::in(Transaction::METHODS)],
+        ]);
+        $amount = Money::parse($data['amount']);
+        if ($amount === null || $amount <= 0 || $amount > 100000) {
+            throw ValidationException::withMessages(['amount' => __('ledger.amount_invalid')]);
+        }
+
+        try {
+            Ledger::updateDeposit($transaction, $request->user(), $amount, $data['method']);
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', __('ledger.deposit_updated'));
+    }
+
+    /**
+     * Own pending deposit report: withdraw ("nicht bezahlt").
+     */
+    public function cancelDeposit(Request $request, Transaction $transaction): RedirectResponse
+    {
+        $this->guardOwnDeposit($request, $transaction);
+
+        try {
+            Ledger::cancelDeposit($transaction, $request->user());
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', __('ledger.deposit_cancelled'));
+    }
+
+    private function guardOwnDeposit(Request $request, Transaction $transaction): void
+    {
+        abort_unless($transaction->user_id === $request->user()->id && $transaction->type === Transaction::TYPE_DEPOSIT, 404);
     }
 
     public function history(Request $request): View

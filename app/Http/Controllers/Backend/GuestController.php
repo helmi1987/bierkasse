@@ -30,7 +30,9 @@ class GuestController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $data = $request->validate(['guest_password' => ['nullable', 'string', 'min:4', 'max:100']]);
+        // Guests can only be enabled together with a guest password.
+        $data = $request->validate(['guest_password' => ['nullable', 'required_if_accepted:guest_enabled', 'string', 'min:4', 'max:100']],
+            ['guest_password.required_if_accepted' => __('guest.password_required')]);
 
         Setting::putMany([
             AppSettings::GUEST_ENABLED => $request->boolean('guest_enabled'),

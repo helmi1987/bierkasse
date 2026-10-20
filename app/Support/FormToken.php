@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 /**
@@ -10,6 +11,10 @@ use Illuminate\Support\Str;
  * Every rendered form gets a fresh token stored in the session; a booking is only
  * made when the posted token is still unused. A few tokens per form are kept so
  * several open tabs keep working.
+ *
+ * The session alone is not atomic (two parallel requests read the same token list),
+ * so a used token is additionally claimed with an atomic Cache::add (file and
+ * database cache stores implement add atomically).
  */
 class FormToken
 {
@@ -18,6 +23,9 @@ class FormToken
     private const SESSION = 'form_tokens';
 
     private const KEEP = 10;
+
+    /** How long a used token stays claimed in the cache (seconds). */
+    private const CLAIM_TTL = 86400;
 
     public static function issue(string $form): string
     {
@@ -39,6 +47,10 @@ class FormToken
 
         foreach ($tokens as $i => $token) {
             if ($posted !== '' && hash_equals((string) $token, $posted)) {
+                // Only the first request may claim the token.
+                if (! Cache::add('form-token:'.hash('sha256', $form.'|'.$posted), 1, self::CLAIM_TTL)) {
+                    return false;
+                }
                 unset($tokens[$i]);
                 $request->session()->put(self::SESSION.'.'.$form, array_values($tokens));
 

@@ -66,7 +66,9 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Anmelden per SSO kann nur, wer den Anbieter vorher unter Konto > Einstellungen verknüpft hat.
    - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
 8. Steht ein Reverse-Proxy vor PHP, dessen IP in `.env` als `TRUSTED_PROXIES` (kommagetrennt, Standard: keine)
-   eintragen, sonst werden `X-Forwarded-*`-Header ignoriert.
+   eintragen, sonst werden `X-Forwarded-*`-Header ignoriert. Wichtig: Die Rate-Limits (Login, TOTP, Gäste,
+   eigener Anbieter) zählen pro Client-IP; ohne korrekt gesetzte Proxy-IP teilen sich alle Benutzer die IP des
+   Proxys. Nie `*` eintragen, sonst kann jeder Client seine IP per `X-Forwarded-For` fälschen.
 
 Break-glass via SSH: `php artisan user:password <username>` (optional `--generate`),
 `php artisan user:totp-reset <username>`, `php artisan user:admin <username>`.
@@ -122,6 +124,9 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
     angezeigt (Einzahlungen decken die ältesten Biere zuerst). Die Positionen ergeben immer das Total:
     volle offene Biere, Rest eines teilweise bezahlten Biers, übrige Beträge (negative Korrekturen).
   - Einzahlung: Benutzer meldet (offen), Kassier bestätigt/lehnt ab; Kassier kann direkt buchen.
+    Solange offen, kann der Benutzer die eigene Meldung im Dashboard antippen und ändern (Betrag, Bar/TWINT) oder
+    zurückziehen ("Nicht bezahlt", Meldung wird gelöscht); der Kassier sieht "geändert". Bereits bestätigte oder
+    abgelehnte Meldungen sind gesperrt. **Annahme:** keine neue Kassier-Mail bei Änderung/Rückzug.
   - Haus verlassen (nur mit Saldo ≥ 0): Auszahlung beantragen (Kassier bestätigt die Auszahlung, Betrag = Saldo)
     oder Guthaben spenden. Danach ist das Konto `left` (keine Anmeldung, Verlauf bleibt).
   - Korrektur durch Kassier/Admin mit Pflicht-Bemerkung.

@@ -288,3 +288,14 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
     body { background: #fff; }
     .print-sheet { border: 0; }
 }
+
+/* Own pending deposit report: tap the row to change or withdraw it. */
+.list li.pending-edit { display: block; }
+.pending-edit details > summary { justify-content: space-between; gap: .75rem; font-weight: 400; list-style: none; }
+.pending-edit details > summary::-webkit-details-marker { display: none; }
+.pending-edit details > summary::after { content: "›"; color: var(--muted); font-size: 1.2rem; transition: transform .15s; }
+.pending-edit details[open] > summary::after { transform: rotate(90deg); }
+.pending-edit details > summary > span { flex: 1; }
+.pending-edit details[open] { padding-bottom: .75rem; }
+.pending-edit details form { margin-top: .5rem; }
+.btn.danger-text { color: var(--bad); }

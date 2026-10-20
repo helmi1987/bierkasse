@@ -125,12 +125,59 @@
         </form>
         @if ($pending->isNotEmpty())
             <h3>{{ __('account.pending_heading') }}</h3>
+            @if ($pending->where('type', \App\Models\Transaction::TYPE_DEPOSIT)->isNotEmpty())
+                <p class="hint">{{ __('account.pending_tap_hint') }}</p>
+            @endif
             <ul class="list">
                 @foreach ($pending as $tx)
-                    <li>
-                        <span>{{ local_time($tx->created_at) }} · {{ __('ledger.type.'.$tx->type) }}@if ($tx->method) · {{ __('ledger.method.'.$tx->method) }}@endif</span>
-                        <strong>{{ chf(abs($tx->amount)) }}</strong>
-                    </li>
+                    @if ($tx->type === \App\Models\Transaction::TYPE_DEPOSIT)
+                        {{-- Tap to change or withdraw the own report while it is pending. --}}
+                        <li class="pending-edit">
+                            <details>
+                                <summary>
+                                    <span>{{ local_time($tx->created_at) }} · {{ __('ledger.type.'.$tx->type) }} · {{ __('ledger.method.'.$tx->method) }}@if ($tx->edited_at) · <span class="muted">{{ __('account.deposit_edited') }}</span>@endif</span>
+                                    <strong>{{ chf($tx->amount) }}</strong>
+                                </summary>
+                                <form method="post" action="{{ route('account.deposit.update', $tx) }}" class="stack">
+                                    @csrf
+                                    @method('PUT')
+                                    @if ($suggestions)
+                                        <div class="suggestions">
+                                            @foreach ($suggestions as $s)
+                                                <button type="button" class="suggestion" data-fill="#amount-{{ $tx->id }}" data-value="{{ \App\Support\Money::plain($s['amount']) }}">
+                                                    @include('partials.beer-amount', ['s' => $s])
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                    <div class="field">
+                                        <label for="amount-{{ $tx->id }}">{{ __('account.amount') }}</label>
+                                        <input type="text" id="amount-{{ $tx->id }}" name="amount" inputmode="decimal" value="{{ \App\Support\Money::plain($tx->amount) }}" required
+                                            data-beers="#amount-beers-{{ $tx->id }}" data-price="{{ $price }}" data-debt="{{ max(0, -$balance) }}"
+                                            data-text="{{ __('account.amount_beers') }}" data-text-debt="{{ __('account.amount_beers_debt') }}">
+                                        <small class="muted" id="amount-beers-{{ $tx->id }}" aria-live="polite"></small>
+                                    </div>
+                                    <fieldset class="segmented">
+                                        <legend>{{ __('account.method') }}</legend>
+                                        @foreach (\App\Models\Transaction::METHODS as $method)
+                                            <label><input type="radio" name="method" value="{{ $method }}" @checked($tx->method === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
+                                        @endforeach
+                                    </fieldset>
+                                    <button type="submit" class="btn">{{ __('account.deposit_update') }}</button>
+                                </form>
+                                <form method="post" action="{{ route('account.deposit.cancel', $tx) }}" data-confirm="{{ __('account.deposit_cancel_confirm') }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn ghost danger-text">{{ __('account.deposit_cancel') }}</button>
+                                </form>
+                            </details>
+                        </li>
+                    @else
+                        <li>
+                            <span>{{ local_time($tx->created_at) }} · {{ __('ledger.type.'.$tx->type) }}@if ($tx->method) · {{ __('ledger.method.'.$tx->method) }}@endif</span>
+                            <strong>{{ chf(abs($tx->amount)) }}</strong>
+                        </li>
+                    @endif
                 @endforeach
             </ul>
         @endif

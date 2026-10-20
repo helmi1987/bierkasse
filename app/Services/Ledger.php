@@ -161,6 +161,28 @@ class Ledger
         });
     }
 
+    /**
+     * The user corrects an own deposit report while it is still pending
+     * (no new kassier mail; the backend list shows the new values as "geändert").
+     */
+    public static function updateDeposit(Transaction $tx, User $user, int $amount, string $method): void
+    {
+        self::assertAmount($amount);
+        DB::transaction(function () use ($tx, $user, $amount, $method) {
+            $locked = self::lockOwnPendingDeposit($tx, $user);
+            $locked->forceFill(['amount' => $amount, 'method' => $method, 'edited_at' => now()])->save();
+            $tx->setRawAttributes($locked->getAttributes(), true);
+        });
+    }
+
+    /** The user withdraws an own pending deposit report ("nicht bezahlt"); the row is deleted. */
+    public static function cancelDeposit(Transaction $tx, User $user): void
+    {
+        DB::transaction(function () use ($tx, $user) {
+            self::lockOwnPendingDeposit($tx, $user)->delete();
+        });
+    }
+
     public static function rejectDeposit(Transaction $tx, User $by): void
     {
         DB::transaction(function () use ($tx, $by) {
@@ -392,6 +414,25 @@ class Ledger
         if ($amount <= 0) {
             throw new LedgerException(__('ledger.amount_invalid'));
         }
+    }
+
+    /**
+     * Locks an own deposit report; a report the kassier handled meanwhile cannot be changed.
+     */
+    private static function lockOwnPendingDeposit(Transaction $tx, User $user): Transaction
+    {
+        $locked = Transaction::query()->whereKey($tx->id)->lockForUpdate()->first();
+        if (! $locked || $locked->user_id !== $user->id || $locked->type !== Transaction::TYPE_DEPOSIT) {
+            throw new LedgerException(__('ledger.not_pending'));
+        }
+        if ($locked->status === Transaction::STATUS_CONFIRMED) {
+            throw new LedgerException(__('ledger.deposit_already_confirmed'));
+        }
+        if (! $locked->isPending()) {
+            throw new LedgerException(__('ledger.not_pending'));
+        }
+
+        return $locked;
     }
 
     /**

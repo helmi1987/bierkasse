@@ -92,6 +92,62 @@
         btn.addEventListener('click', function () { window.print(); });
     });
 
+    // PWA install hint: native prompt where the browser offers one (Chrome/Edge/Samsung on Android and
+    // desktop), instructions for iOS Safari. Hidden when running installed or dismissed (30 days).
+    (function () {
+        var hint = document.querySelector('[data-install-hint]');
+        if (!hint) {
+            return;
+        }
+        var KEY = 'installHintDismissed';
+        var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        var dismissed = false;
+        try {
+            dismissed = Date.now() - parseInt(window.localStorage.getItem(KEY) || '0', 10) < 30 * 864e5;
+        } catch (err) { /* storage blocked: show the hint */ }
+        if (standalone || dismissed) {
+            return;
+        }
+        var show = function (variant) {
+            hint.querySelectorAll('[data-install-variant]').forEach(function (el) {
+                el.hidden = el.dataset.installVariant !== variant;
+            });
+            hint.hidden = false;
+        };
+        var deferred = null;
+        var button = hint.querySelector('[data-install-button]');
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferred = e;
+            button.hidden = false;
+            show('prompt');
+        });
+        button.addEventListener('click', function () {
+            if (!deferred) {
+                return;
+            }
+            deferred.prompt();
+            deferred.userChoice.finally(function () {
+                deferred = null;
+                hint.hidden = true;
+            });
+        });
+        window.addEventListener('appinstalled', function () { hint.hidden = true; });
+        hint.querySelector('[data-install-dismiss]').addEventListener('click', function () {
+            hint.hidden = true;
+            try {
+                window.localStorage.setItem(KEY, String(Date.now()));
+            } catch (err) { /* ignore */ }
+        });
+        var ua = window.navigator.userAgent;
+        var ios = /iPhone|iPad|iPod/.test(ua) || (ua.indexOf('Macintosh') !== -1 && navigator.maxTouchPoints > 1);
+        if (ios) {
+            show('ios');
+        } else if (/Android/.test(ua) && /Firefox/.test(ua)) {
+            show('other');
+        }
+    })();
+
     // PWA: register the (network-only) service worker.
     if ('serviceWorker' in navigator && window.isSecureContext) {
         navigator.serviceWorker.register('/sw.js').catch(function () {});

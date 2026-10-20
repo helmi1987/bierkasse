@@ -14,4 +14,13 @@ return [
     'previous' => 'Zurück',
     'next' => 'Weiter',
     'page' => 'Seite :current von :last',
+    'install' => [
+        'title' => ':app als App installieren',
+        'prompt' => 'Direkt vom Startbildschirm öffnen, ohne Browser.',
+        'ios' => 'Auf :share «Teilen» tippen, dann «Zum Home-Bildschirm».',
+        'other' => 'Im Browser-Menü «App installieren» bzw. «Zum Startbildschirm hinzufügen» wählen.',
+        'share' => 'Teilen',
+        'button' => 'Installieren',
+        'dismiss' => 'Hinweis ausblenden',
+    ],
 ];

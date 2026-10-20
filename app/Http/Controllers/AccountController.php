@@ -36,7 +36,7 @@ class AccountController extends Controller
             ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
             ->latest('id')->get();
 
-        $suggestions = DepositSuggestions::for($balance, $price);
+        $suggestions = DepositSuggestions::for($balance, $price, AppSettings::depositSuggestions());
         $suggested = $suggestions[DepositSuggestions::defaultIndex($suggestions)] ?? null;
 
         return view('account.dashboard', [

@@ -28,6 +28,8 @@ class AppSettings
 
     public const PERSONAL_SSO = 'personal_sso_enabled';
 
+    public const DEPOSIT_SUGGESTIONS = 'deposit_suggestions';
+
     public const MAIL = 'mail';
 
     public const MAIL_TRANSPORTS = ['sendmail', 'smtp'];
@@ -80,6 +82,18 @@ class AppSettings
     public static function registrationOpen(): bool
     {
         return (bool) self::get(self::REGISTRATION_ENABLED, true) && self::registrationPassword() !== '';
+    }
+
+    /**
+     * Configured deposit proposals in Rappen; null = automatic (see DepositSuggestions).
+     *
+     * @return list<int>|null
+     */
+    public static function depositSuggestions(): ?array
+    {
+        $list = array_values(array_filter(array_map('intval', (array) self::get(self::DEPOSIT_SUGGESTIONS, [])), fn (int $a) => $a > 0));
+
+        return $list === [] ? null : $list;
     }
 
     /** Users may add their own OAuth2/OIDC provider (default on). */

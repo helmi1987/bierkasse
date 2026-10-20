@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Backend;
+use App\Http\Controllers\GuestController;
 use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\PersonalSsoController;
 use App\Http\Controllers\SetupController;
@@ -36,6 +37,11 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     Route::post('/login/eigener', [PersonalSsoController::class, 'loginPost'])->middleware('throttle:30,1')->name('login.personal.post');
     Route::get('/login/eigener/{username}', [PersonalSsoController::class, 'confirm'])->middleware('throttle:30,1')->where('username', '[A-Za-z0-9._-]{1,64}')->name('login.personal.user');
     Route::post('/login/eigener/{username}', [PersonalSsoController::class, 'start'])->middleware('throttle:30,1')->where('username', '[A-Za-z0-9._-]{1,64}')->name('login.personal.start');
+
+    // Guest sale via the guest QR code (no login).
+    Route::get('/gast', [GuestController::class, 'show'])->name('guest');
+    Route::post('/gast', [GuestController::class, 'store'])->middleware('throttle:30,1')->name('guest.store');
+    Route::get('/gast/danke', [GuestController::class, 'thanks'])->name('guest.thanks');
 
     // Registration and password reset (guests only)
     Route::middleware('guest')->group(function () {
@@ -97,6 +103,10 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::put('/benutzer/{user}/rolle', [Backend\UserController::class, 'role'])->whereNumber('user')->middleware('role:admin')->name('users.role');
 
             Route::get('/statistik', [Backend\DashboardController::class, 'stats'])->name('stats');
+            Route::get('/gaeste', [Backend\GuestController::class, 'index'])->name('guests');
+            Route::put('/gaeste', [Backend\GuestController::class, 'update'])->name('guests.update');
+            Route::get('/gaeste/qr', [Backend\GuestController::class, 'qr'])->name('guests.qr');
+            Route::delete('/gaeste/{sale}', [Backend\GuestController::class, 'destroy'])->whereNumber('sale')->name('guests.destroy');
             Route::get('/lager', [Backend\StockController::class, 'index'])->name('stock');
             Route::put('/lager/mindestbestand', [Backend\StockController::class, 'minimum'])->name('stock.minimum');
             Route::post('/lager/korrektur', [Backend\StockController::class, 'correct'])->name('stock.correct');

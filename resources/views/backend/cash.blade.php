@@ -12,6 +12,8 @@
         <small>{{ __('backend.cash_split', ['cash' => chf($overview['cash']['cash']), 'twint' => chf($overview['cash']['twint'])]) }}</small></div>
     <div class="kpi"><span>{{ __('cash.deposits') }}</span><strong>{{ chf($deposits) }}</strong></div>
     <div class="kpi"><span>{{ __('cash.payouts') }}</span><strong>{{ chf($payouts) }}</strong></div>
+    <div class="kpi"><span>{{ __('cash.guests') }}</span><strong>{{ chf($guests) }}</strong>
+        <small><a href="{{ route('backend.guests') }}">{{ __('guest.sales') }} →</a></small></div>
     <div class="kpi"><span>{{ __('backend.surplus') }}</span><strong @class(['neg' => $overview['surplus'] < 0])>{{ chf($overview['surplus']) }}</strong></div>
     <div class="kpi"><span>{{ __('stock.stock') }}</span><strong @class(['neg' => $stockLow || $stock < 0])>{{ trans_choice('stock.beers', $stock, ['count' => $stock]) }}</strong>
         <small><a href="{{ route('backend.stock') }}">{{ __('stock.correct') }} →</a></small></div>

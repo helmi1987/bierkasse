@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CashEntry;
+use App\Models\GuestSale;
 use App\Models\Setting;
 use App\Models\StockCorrection;
 use App\Models\Transaction;
@@ -10,7 +11,7 @@ use App\Models\User;
 use App\Support\AppSettings;
 
 /**
- * Beer stock = purchased beers (cash book) + inventory corrections - confirmed consumption.
+ * Beer stock = purchased beers (cash book) + inventory corrections - confirmed consumption - guest sales.
  * Consumption is never blocked by the stock (it may become negative).
  *
  * Low-stock mail: once when a consumption takes the stock from >= minimum to below it.
@@ -23,8 +24,9 @@ class BeerStock
         $purchased = (int) CashEntry::query()->where('type', 'expense_beer')->sum('beers');
         $corrections = (int) StockCorrection::query()->sum('delta');
         $consumed = (int) Transaction::query()->confirmed()->where('type', Transaction::TYPE_CONSUMPTION)->sum('quantity');
+        $guests = (int) GuestSale::query()->sum('beers');
 
-        return $purchased + $corrections - $consumed;
+        return $purchased + $corrections - $consumed - $guests;
     }
 
     /** Minimum stock; 0 = no warning. */

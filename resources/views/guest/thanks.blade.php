@@ -1,0 +1,29 @@
+@extends('layouts.app')
+
+@section('title', __('guest.thanks_title'))
+@section('main_class', 'narrow')
+
+@section('content')
+<section class="card stack center">
+    <img src="{{ asset('logo.svg') }}" alt="" width="72" height="72" class="hero-logo">
+    <h1>{{ __('guest.thanks_title') }}</h1>
+    <p>{{ trans_choice('guest.thanks_beers', $sale['beers'], ['count' => $sale['beers']]) }}</p>
+    @if ($sale['method'] === 'twint')
+        @if ($twintPhone !== '')
+            <p class="lead">{{ __('guest.thanks_twint', ['amount' => chf($sale['amount']), 'phone' => $twintPhone]) }}</p>
+            <div class="twint-number">
+                <span id="twint-phone">{{ $twintPhone }}</span>
+                <button type="button" class="btn small" data-copy="#twint-phone" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
+            </div>
+            @if ($twintName !== '')
+                <p class="muted">{{ $twintName }}</p>
+            @endif
+        @else
+            <p class="lead">{{ __('guest.thanks_twint_noname', ['amount' => chf($sale['amount'])]) }}</p>
+        @endif
+    @else
+        <p class="lead">{{ __('guest.thanks_cash', ['amount' => chf($sale['amount'])]) }}</p>
+    @endif
+    <p><a href="{{ route('guest') }}">{{ __('guest.again') }}</a></p>
+</section>
+@endsection

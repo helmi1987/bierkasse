@@ -9,6 +9,7 @@ return [
         'stats' => 'Statistik',
         'deposit_suggestions' => 'Vorschläge',
         'stock' => 'Lager',
+        'guests' => 'Gäste',
         'settings' => 'Einstellungen',
         'sso' => 'SSO',
         'qr' => 'Registrierungs-QR',

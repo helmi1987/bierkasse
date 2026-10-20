@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\CashEntry;
+use App\Models\GuestSale;
 use App\Models\Transaction;
 use App\Services\BeerStock;
 use App\Services\CashBook;
@@ -26,6 +27,7 @@ class CashController extends Controller
             'entries' => CashEntry::query()->with('creator')->orderByDesc('date')->orderByDesc('id')->paginate(30),
             'deposits' => (int) Transaction::query()->confirmed()->where('type', Transaction::TYPE_DEPOSIT)->sum('amount'),
             'payouts' => (int) -Transaction::query()->confirmed()->where('type', Transaction::TYPE_PAYOUT)->sum('amount'),
+            'guests' => (int) GuestSale::query()->sum('amount'),
             'stock' => BeerStock::current(),
             'stockLow' => BeerStock::isLow(),
         ]);

@@ -2,9 +2,10 @@
 
 return [
     'title' => 'Kasse',
-    'intro' => 'Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen ± Korrekturen.',
+    'intro' => 'Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen + Gäste-Verkäufe ± Korrekturen.',
     'deposits' => 'Einzahlungen (bestätigt)',
     'payouts' => 'Auszahlungen',
+    'guests' => 'Gäste-Verkäufe',
     'new' => 'Neuer Eintrag',
     'type' => 'Art',
     'types' => [

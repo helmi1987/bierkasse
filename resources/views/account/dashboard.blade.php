@@ -284,7 +284,10 @@
     </details>
 </section>
 
-@if ($canInvite)
-    <p class="center small-link"><a href="{{ route('account.invite') }}">{{ __('account.invite_link') }}</a></p>
-@endif
+<p class="center small-link">
+    @if ($canInvite)
+        <a href="{{ route('account.invite') }}">{{ __('account.invite_link') }}</a> ·
+    @endif
+    <a href="{{ route('account.feedback') }}">{{ __('feedback.link') }}</a>
+</p>
 @endsection

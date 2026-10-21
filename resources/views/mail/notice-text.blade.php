@@ -16,6 +16,10 @@
 @if (! empty($rows))
 
 @endif
+@if (($textBlock ?? '') !== '')
+{!! $textBlock !!}
+
+@endif
 @if (! empty($buttonUrl))
 {!! $buttonLabel !!}:
 {!! $buttonUrl !!}

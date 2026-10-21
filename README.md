@@ -242,6 +242,15 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Vielfaches des Bierpreises, das durch CHF 10 teilbar ist, dann 2×, 3×, 5× (bei CHF 1.50: 30/60/90/150).
   Passt ein gespeicherter Betrag nach einer Preisänderung nicht mehr, wird er auf ganze Biere aufgerundet.
   Bei Minus: Vorschlag = offener Betrag + Betrag ("inkl. Minus"). Der erste Vorschlag ist vorausgewählt.
+- Feedback (Entscheid 2026-10-21): jeder angemeldete aktive Benutzer sendet unter `/konto/feedback` (Link in den
+  Einstellungen und unten im Dashboard) Feedback: Art "Feedback" (Standard), "Idee" oder "Bug", Nachricht
+  5–5000 Zeichen, optional "Antwort per Mail erwünscht" (nur mit hinterlegter E-Mail; die Mail hat dann
+  Reply-To = E-Mail des Benutzers). Einmal-Token, max. 5 Feedbacks pro Stunde und Benutzer. Gespeichert in
+  `feedback` (mit Herkunftsseite aus dem Referer und User-Agent). `/backend/feedback` (nur Admins, Menüpunkt mit
+  Zahl ungelesener): Liste (neueste zuerst), gelesen/ungelesen, löschen; dort auch die Empfänger der Mail:
+  "Alle Admins" (Standard, aktive Admins mit E-Mail) oder "Feste E-Mail-Adressen" (1–20, eine pro Zeile oder
+  mit Komma getrennt). Die Feedback-Mail geht immer raus, unabhängig vom Schalter "Kassier-Benachrichtigung".
+  Scheitert der Versand, wird das geloggt; das Feedback ist trotzdem gespeichert.
 - TWINT: Nummer mit Kopier-Knopf und Betragsvorschlag; es gibt keinen öffentlichen TWINT-Deep-Link für
   Zahlungen an Privatpersonen.
 - Sicherheit: CSRF, CSP mit Nonce (keine Inline-Styles/-Handler), Rollen-Middleware, verschlüsselte

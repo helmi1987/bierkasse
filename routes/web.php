@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Backend;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GuestController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ManifestController;
@@ -67,6 +68,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::get('/konto/einladen', [InvitationController::class, 'index'])->name('account.invite');
         Route::post('/konto/einladen', [InvitationController::class, 'store'])->middleware('throttle:20,1')->name('account.invite.store');
         Route::delete('/konto/einladungen/{invitation}', [InvitationController::class, 'destroy'])->whereNumber('invitation')->name('account.invite.destroy');
+        Route::get('/konto/feedback', [FeedbackController::class, 'show'])->name('account.feedback');
+        Route::post('/konto/feedback', [FeedbackController::class, 'store'])->middleware('throttle:20,1')->name('account.feedback.store');
         Route::get('/konto/verlauf', [AccountController::class, 'history'])->name('account.history');
         Route::get('/konto/verlassen', [AccountController::class, 'leaveForm'])->name('account.leave');
         Route::post('/konto/verlassen', [AccountController::class, 'leave'])->name('account.leave.store');
@@ -134,6 +137,10 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 // No .svg extension: Plesk/nginx may treat such URLs as static files.
                 Route::get('/registrierung-qr/flyer-bild', [Backend\SettingsController::class, 'flyerSvg'])->name('registration.flyer-svg');
                 Route::post('/registrierung-qr/neuer-code', [Backend\SettingsController::class, 'regenerateFlyerCode'])->name('registration.flyer-code');
+                Route::get('/feedback', [Backend\FeedbackController::class, 'index'])->name('feedback');
+                Route::put('/feedback/empfaenger', [Backend\FeedbackController::class, 'recipients'])->name('feedback.recipients');
+                Route::post('/feedback/{feedback}/gelesen', [Backend\FeedbackController::class, 'read'])->whereNumber('feedback')->name('feedback.read');
+                Route::delete('/feedback/{feedback}', [Backend\FeedbackController::class, 'destroy'])->whereNumber('feedback')->name('feedback.destroy');
                 Route::get('/wartung', [Backend\MaintenanceController::class, 'index'])->name('maintenance');
                 Route::post('/wartung/cache', [Backend\MaintenanceController::class, 'clearCache'])->name('maintenance.cache');
                 Route::post('/wartung/sperren', [Backend\MaintenanceController::class, 'clearLimits'])->name('maintenance.limits');

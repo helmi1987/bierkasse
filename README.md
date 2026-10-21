@@ -119,7 +119,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 
 - Rollen: `admin`, `kassier`, `user`. Admin hat alle Kassier-Rechte; mehrere Kassiers möglich.
   Admin/Kassier sehen im Kopf den Link "Backend" mit der Zahl offener Posten (Einzahlungen + Auszahlungen).
-- Anmeldung `/`: Benutzername + Passwort, optional TOTP (im Konto einrichten, Wiederherstellungscodes).
+- Anmeldung `/`: Benutzername oder E-Mail (nur wenn eindeutig) + Passwort, optional TOTP (im Konto einrichten, Wiederherstellungscodes).
   Auch nach einer SSO-Anmeldung wird TOTP verlangt, wenn der Benutzer es eingerichtet hat.
   Passwort vergessen per Mail (nur mit hinterlegter E-Mail; die E-Mail ist pro Konto eindeutig).
   Kassier/Admin können Passwörter setzen ("muss bei nächster Anmeldung geändert werden") und TOTP zurücksetzen.

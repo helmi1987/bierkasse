@@ -10,7 +10,7 @@
     @csrf
     <p class="muted">{{ __('sso.personal.login_intro') }}</p>
     <div class="field">
-        <label for="username">{{ __('auth.login.username') }}</label>
+        <label for="username">{{ __('auth.login.username_only') }}</label>
         <input type="text" id="username" name="username" value="{{ old('username') }}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="255" required autofocus>
     </div>
     <button class="btn primary big" type="submit">{{ __('sso.personal.login_submit') }}</button>

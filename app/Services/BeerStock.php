@@ -20,7 +20,7 @@ use App\Support\AppSettings;
  */
 class BeerStock
 {
-    /** Cache lock for bookings that must not exceed the stock (guest sales, rounds). */
+    /** Cache lock for bookings that must not exceed the stock (guest sales). */
     public const LOCK = 'beer-stock-bookings';
 
     public static function current(): int

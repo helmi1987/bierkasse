@@ -12,7 +12,6 @@ use App\Models\User;
 use App\Services\BeerStock;
 use App\Services\CashBook;
 use App\Services\Ledger;
-use App\Services\LedgerException;
 use App\Services\Rounds;
 use App\Services\Stats;
 use App\Support\AppSettings;
@@ -38,25 +37,18 @@ class RoundTest extends TestCase
         Ledger::bookDeposit($this->giver, 3000, 'cash', $this->kassier());
     }
 
-    public function test_round_cannot_exceed_the_stock(): void
+    public function test_round_is_not_limited_by_the_stock(): void
     {
         $anna = $this->user(['first_name' => 'Anna']);
-        // Stock 30 from setUp; 28 consumed by others leaves 2.
-        $other = $this->user();
-        Ledger::bookDeposit($other, 6000, 'cash', $this->kassier());
-        Ledger::consume($other, 10);
-        Ledger::consume($other, 10);
-        Ledger::consume($other, 8);
-        $this->assertSame(2, BeerStock::current());
-
-        try {
-            Ledger::giveRound($this->giver, [$anna->id], 2);
-            $this->fail('Round above the stock must be refused.');
-        } catch (LedgerException $e) {
-            $this->assertSame('Nur noch 2 Biere an Lager.', $e->getMessage());
-        }
-        Ledger::giveRound($this->giver, [$anna->id], 1);
-        $this->assertSame(0, BeerStock::current());
+        // Stock 30 from setUp; like normal consumption a round may take it below 0.
+        Ledger::giveRound($this->giver, [$anna->id], 0);
+        $giver2 = $this->user();
+        Ledger::bookDeposit($giver2, 10000, 'cash', $this->kassier());
+        Ledger::consume($giver2, 10);
+        Ledger::consume($giver2, 10);
+        Ledger::consume($giver2, 9);
+        Ledger::giveRound($giver2, [$anna->id], 5);
+        $this->assertSame(-6, BeerStock::current());
     }
 
     public function test_colleagues_sorted_by_most_recent_beer_then_name(): void

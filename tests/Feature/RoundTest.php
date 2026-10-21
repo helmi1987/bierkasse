@@ -335,15 +335,21 @@ class RoundTest extends TestCase
         $this->assertTrue($audit->newValues()['include_self']);
     }
 
-    public function test_round_including_self_alone_and_undo(): void
+    public function test_round_including_self_needs_another_beer_and_undo(): void
     {
         $this->setPrice(150);
+        $anna = $this->user(['first_name' => 'Anna']);
         $this->actingAs($this->giver);
-        $this->post('/konto/runde', $this->round(['include_self' => '1']))->assertSessionHas('status');
+        $this->get('/konto')->assertSee('data-round-submit-self data-label="'.e(__('round.submit_self')).'" disabled', false);
+
+        $this->post('/konto/runde', $this->round(['include_self' => '1']))->assertSessionHas('error', __('round.none_selected'));
+        $this->assertSame(0, Transaction::query()->where('type', Transaction::TYPE_ROUND)->count());
+
+        $this->post('/konto/runde', $this->round(['recipients' => [$anna->id], 'include_self' => '1']))->assertSessionHas('status');
         $tx = Transaction::query()->where('type', Transaction::TYPE_ROUND)->sole();
-        $this->assertSame(1, $tx->quantity);
+        $this->assertSame(2, $tx->quantity);
         $this->assertSame(1, Stats::forUser($this->giver)['total_beers']);
-        $this->assertSame(0, Stats::forUser($this->giver)['given']);
+        $this->assertSame(1, Stats::forUser($this->giver)['given']);
 
         $this->post("/konto/bier/{$tx->id}/rueckgaengig")->assertSessionHas('status', __('round.undone'));
         $this->assertSame(0, Transaction::query()->where('type', Transaction::TYPE_ROUND)->count());

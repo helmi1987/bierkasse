@@ -111,7 +111,8 @@ class Ledger
         if ($extra < 0 || $extra > Rounds::MAX_EXTRA) {
             throw new LedgerException(__('ledger.quantity_invalid'));
         }
-        if ($total < 1) {
+        // At least one beer for somebody else; the own beer alone is normal consumption.
+        if (count($recipientIds) + $extra < 1) {
             throw new LedgerException(__('round.none_selected'));
         }
         if ($total > Rounds::MAX_BEERS) {

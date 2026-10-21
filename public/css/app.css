@@ -360,16 +360,17 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .flyer-footer { flex: none; display: flex; justify-content: space-between; gap: 3cqw; padding: 2.2cqw 5cqw; border-top: 1px solid var(--border); background: var(--bg); font-size: 1.85cqw; color: var(--muted); }
 .flyer-footer span:first-child { font-weight: 600; color: var(--text); white-space: nowrap; }
 .flyer-footer span:last-child { text-align: right; }
-/* Fixed 180 x 260 mm with 12 mm page margins: fits on one A4 page even where a browser
-   ignores the @page rule and applies its own margins plus header/footer (iOS Safari). */
+/* Printed size 155 x 225 mm (same ratio as the content): stays on one A4 page even where a
+   browser ignores the @page rule and adds its own margins plus header/footer (iOS Safari leaves
+   only about 245 mm of height). */
 @page flyer { size: A4 portrait; margin: 12mm; }
 @media print {
     /* body min-height: 100vh is the screen height on iOS and pushed a blank second page. */
     html, body { margin: 0; padding: 0; height: auto !important; min-height: 0 !important; }
     .print-flyer .main { max-width: none; padding: 0; margin: 0; }
     .print-flyer .main > :not(.flyer-frame) { display: none !important; }
-    .flyer-frame { width: 180mm; max-width: none; margin: 0 auto; }
-    .flyer { width: 180mm; height: 260mm; aspect-ratio: auto; border: 0; border-radius: 0; box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+    .flyer-frame { width: 155mm; max-width: none; margin: 0 auto; }
+    .flyer { width: 155mm; height: 225mm; aspect-ratio: auto; border: 0; border-radius: 0; box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
 }
 
 /* Own pending deposit report: tap the row to change or withdraw it. */

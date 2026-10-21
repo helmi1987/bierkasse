@@ -50,7 +50,8 @@ class Stats
             'total_amount' => (int) -$own->sum('amount') - (int) $rounds->amount,
             'per_week' => round($beers / $weeks, 1),
             'months' => self::months($rows),
-            'given' => (int) $rounds->beers,
+            // Paid for others: the own beer of "Runde inkl. mir" counts as own beer above.
+            'given' => (int) $rounds->beers - Rounds::ownBeers($user),
         ];
     }
 

@@ -99,12 +99,15 @@ class Ledger
      * current price (one transaction of type "round", same limit and payout rules as consume).
      * Each named colleague gets one beer, $extra beers have no name (e.g. guests).
      *
+     * With $includeSelf the giver's own beer is part of the round ("Runde inkl. mir": one item
+     * with the giver as drinker; counts as his own beer in the statistics, not as "spendiert").
+     *
      * @param  list<int>  $recipientIds  active colleagues (not the giver)
      */
-    public static function giveRound(User $giver, array $recipientIds, int $extra, ?string $message = null): Transaction
+    public static function giveRound(User $giver, array $recipientIds, int $extra, ?string $message = null, bool $includeSelf = false): Transaction
     {
         $recipientIds = array_values(array_unique(array_map('intval', $recipientIds)));
-        $total = count($recipientIds) + $extra;
+        $total = count($recipientIds) + $extra + ($includeSelf ? 1 : 0);
         if ($extra < 0 || $extra > Rounds::MAX_EXTRA) {
             throw new LedgerException(__('ledger.quantity_invalid'));
         }
@@ -119,7 +122,7 @@ class Ledger
             throw new LedgerException(__('round.message_too_long', ['max' => Rounds::MESSAGE_MAX]));
         }
 
-        $tx = DB::transaction(function () use ($giver, $recipientIds, $extra, $total, $message) {
+        $tx = DB::transaction(function () use ($giver, $recipientIds, $extra, $total, $message, $includeSelf) {
             self::lock($giver);
             self::assertActive($giver);
             self::assertBeerAccount($giver);
@@ -152,10 +155,13 @@ class Ledger
             foreach ($recipientIds as $id) {
                 $tx->roundItems()->create(['user_id' => $id, 'quantity' => 1]);
             }
+            if ($includeSelf) {
+                $tx->roundItems()->create(['user_id' => $giver->id, 'quantity' => 1]);
+            }
             if ($extra > 0) {
                 $tx->roundItems()->create(['user_id' => null, 'quantity' => $extra]);
             }
-            Audit::log('round.create', $tx, [], self::auditValues($tx) + ['recipients' => $recipientIds, 'extra' => $extra], $giver);
+            Audit::log('round.create', $tx, [], self::auditValues($tx) + ['recipients' => $recipientIds, 'extra' => $extra, 'include_self' => $includeSelf], $giver);
 
             return $tx;
         });

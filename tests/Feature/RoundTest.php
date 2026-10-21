@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\KassierNotice;
+use App\Models\AuditLog;
 use App\Models\CashEntry;
 use App\Models\GuestSale;
 use App\Models\RoundItem;
@@ -295,6 +296,76 @@ class RoundTest extends TestCase
         $this->actingAs($this->giver)->post('/konto/runde', $this->round(['extra' => 3]));
         $this->assertSame(27, BeerStock::current());
         Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => $m->hasTo('kassier@example.test') && str_contains($m->noticeSubject, '27'));
+    }
+
+    public function test_round_including_self_books_own_beer(): void
+    {
+        $this->setPrice(150);
+        $anna = $this->user(['first_name' => 'Anna']);
+        $beat = $this->user(['first_name' => 'Beat']);
+        $this->actingAs($this->giver);
+
+        $this->get('/konto')->assertOk()
+            ->assertSee('Runde spendieren (0)')->assertSee('Runde inkl. mir (1)')
+            ->assertSee('name="include_self" value="1"', false);
+
+        $this->post('/konto/runde', $this->round(['recipients' => [$anna->id, $beat->id], 'extra' => 1, 'include_self' => '1']))
+            ->assertSessionHas('status');
+
+        $tx = Transaction::query()->where('type', Transaction::TYPE_ROUND)->sole();
+        $this->assertSame(4, $tx->quantity);
+        $this->assertSame(-600, $tx->amount);
+        $this->assertSame(3000 - 600, $this->giver->refresh()->balance());
+        $this->assertSame(1, RoundItem::query()->where('transaction_id', $tx->id)->where('user_id', $this->giver->id)->sum('quantity'));
+
+        // Statistics: the own beer counts at the giver (drinker), not as "spendiert".
+        $stats = Stats::forUser($this->giver);
+        $this->assertSame(1, $stats['total_beers']);
+        $this->assertSame(3, $stats['given']);
+        $this->assertSame(3, Rounds::beersGiven($this->giver));
+        $this->assertSame(1, Stats::forUser($anna)['total_beers']);
+        $ranking = collect(Stats::global()['ranking'])->keyBy('user_id');
+        $this->assertSame(1, $ranking[$this->giver->id]['beers']);
+
+        // No notice or mail to oneself.
+        $this->assertTrue(Rounds::receivedRecently($this->giver)->isEmpty());
+        Mail::assertNotSent(KassierNotice::class, fn ($m) => $m->hasTo('gabi@example.test'));
+
+        $audit = AuditLog::query()->where('action', 'round.create')->sole();
+        $this->assertTrue($audit->newValues()['include_self']);
+    }
+
+    public function test_round_including_self_alone_and_undo(): void
+    {
+        $this->setPrice(150);
+        $this->actingAs($this->giver);
+        $this->post('/konto/runde', $this->round(['include_self' => '1']))->assertSessionHas('status');
+        $tx = Transaction::query()->where('type', Transaction::TYPE_ROUND)->sole();
+        $this->assertSame(1, $tx->quantity);
+        $this->assertSame(1, Stats::forUser($this->giver)['total_beers']);
+        $this->assertSame(0, Stats::forUser($this->giver)['given']);
+
+        $this->post("/konto/bier/{$tx->id}/rueckgaengig")->assertSessionHas('status', __('round.undone'));
+        $this->assertSame(0, Transaction::query()->where('type', Transaction::TYPE_ROUND)->count());
+        $this->assertSame(0, RoundItem::query()->count());
+        $this->assertSame(3000, $this->giver->refresh()->balance());
+    }
+
+    public function test_round_including_self_counts_for_limit_and_maximum(): void
+    {
+        $this->setPrice(150);
+        $poor = $this->user(['overdraft_limit' => 300]);
+        $colleague = $this->user();
+        $this->actingAs($poor);
+
+        $this->post('/konto/runde', $this->round(['recipients' => [$colleague->id], 'extra' => 1, 'include_self' => '1']))
+            ->assertSessionHas('error', 'Bitte zuerst einzahlen');
+        $this->post('/konto/runde', $this->round(['recipients' => [$colleague->id], 'include_self' => '1']))->assertSessionHas('status');
+        $this->assertSame(-300, $poor->refresh()->balance());
+
+        $this->actingAs($this->giver);
+        $this->post('/konto/runde', $this->round(['extra' => Rounds::MAX_EXTRA, 'recipients' => array_map(fn () => $this->user()->id, range(1, Rounds::MAX_BEERS - Rounds::MAX_EXTRA)), 'include_self' => '1']))
+            ->assertSessionHas('error', __('round.too_many', ['max' => Rounds::MAX_BEERS]));
     }
 
     private function round(array $overrides = []): array

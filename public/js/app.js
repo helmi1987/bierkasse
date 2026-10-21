@@ -76,6 +76,7 @@
         var count = form.querySelector('[data-round-count]');
         var amount = form.querySelector('[data-round-amount]');
         var submit = form.querySelector('[data-round-submit]');
+        var submitSelf = form.querySelector('[data-round-submit-self]');
         var extra = form.querySelector('input[name=extra]');
         var filter = form.querySelector('[data-round-filter]');
         var render = function () {
@@ -85,7 +86,13 @@
             var rappen = n * price;
             count.textContent = n === 1 ? form.dataset.one : form.dataset.many.replace(':count', String(n));
             amount.textContent = 'CHF ' + Math.floor(rappen / 100) + '.' + String(rappen % 100).padStart(2, '0');
+            // Two buttons: the round alone and "inkl. mir" (one beer more for the giver).
+            submit.textContent = submit.dataset.label.replace(':count', String(n));
             submit.disabled = n < 1 || n > max;
+            if (submitSelf) {
+                submitSelf.textContent = submitSelf.dataset.label.replace(':count', String(n + 1));
+                submitSelf.disabled = n + 1 > max;
+            }
         };
         form.addEventListener('change', render);
         form.addEventListener('input', function (e) {

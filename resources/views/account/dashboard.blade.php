@@ -133,7 +133,10 @@
                 </div>
                 <p class="round-total center" aria-live="polite">{{ __('round.total') }}: <strong data-round-count>{{ trans_choice('round.beers', $roundCount, ['count' => $roundCount]) }}</strong> · <strong data-round-amount>{{ chf($roundCount * $price) }}</strong></p>
                 <p class="hint center">{{ __('round.total_hint', ['max' => \App\Services\Rounds::MAX_BEERS, 'price' => chf($price)]) }}</p>
-                <button type="submit" class="btn primary big" data-round-submit>{{ __('round.submit') }}</button>
+                <div class="row-buttons">
+                    <button type="submit" class="btn primary big" data-round-submit data-label="{{ __('round.submit') }}">{{ __('round.submit', ['count' => $roundCount]) }}</button>
+                    <button type="submit" name="include_self" value="1" class="btn big" data-round-submit-self data-label="{{ __('round.submit_self') }}">{{ __('round.submit_self', ['count' => $roundCount + 1]) }}</button>
+                </div>
             </form>
 
             @if ($roundUndoable->isNotEmpty())

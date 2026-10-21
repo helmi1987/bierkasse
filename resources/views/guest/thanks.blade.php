@@ -9,13 +9,10 @@
     <h1>{{ __('guest.thanks_title') }}</h1>
     <p>{{ trans_choice('guest.thanks_beers', $sale['beers'], ['count' => $sale['beers']]) }}</p>
     @if ($sale['method'] === 'twint')
-        @if ($twintPhone !== '')
-            <p class="lead">{{ __('guest.thanks_twint', ['amount' => chf($sale['amount']), 'phone' => $twintPhone]) }}</p>
-            <div class="twint-number">
-                <span id="twint-phone">{{ $twintPhone }}</span>
-                <button type="button" class="btn small" data-copy="#twint-phone" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
-            </div>
-            @if ($twintName !== '')
+        @if ($twintEnabled)
+            <p class="lead">{{ __('guest.thanks_twint', ['amount' => chf($sale['amount']), 'phone' => $twintPhone !== '' ? $twintPhone : $twintName]) }}</p>
+            @include('partials.twint-number', ['id' => 'twint-phone'])
+            @if ($twintPhone !== '' && $twintName !== '')
                 <p class="muted">{{ $twintName }}</p>
             @endif
         @else

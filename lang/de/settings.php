@@ -14,6 +14,9 @@ return [
     'twint' => 'TWINT',
     'twint_phone' => 'TWINT-Nummer des Kassiers',
     'twint_name' => 'Name (Anzeige)',
+    'twint_enabled' => 'TWINT aktiv',
+    'twint_phone_hint' => 'Leer: Benutzer sehen nur den Namen (Nummer bekannt).',
+    'twint_missing' => 'Für TWINT eine Nummer oder einen Namen angeben.',
     'registration' => 'Registrierung',
     'registration_mode' => 'Registrierungsmodus',
     'registration_modes' => [

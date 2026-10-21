@@ -182,17 +182,13 @@
                 <fieldset class="segmented">
                     <legend>{{ __('guest.method') }}</legend>
                     @foreach (\App\Models\Transaction::METHODS as $method)
-                        @continue($method === 'twint' && $twintPhone === '')
+                        @continue($method === 'twint' && ! $twintEnabled)
                         <label><input type="radio" name="guest_method" value="{{ $method }}" @checked(old('guest_method', 'cash') === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
                     @endforeach
                 </fieldset>
-                @if ($twintPhone !== '')
-                    <div class="twint-number">
-                        <span class="muted">{{ __('guest.twint_to') }}</span>
-                        <span id="guest-twint-phone">{{ $twintPhone }}</span>
-                        <button type="button" class="btn small" data-copy="#guest-twint-phone" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
-                    </div>
-                    <p class="hint">{{ __('guest.twint_hint') }}@if ($twintName !== '') ({{ $twintName }})@endif</p>
+                @if ($twintEnabled)
+                    @include('partials.twint-number', ['id' => 'guest-twint-phone', 'label' => __('guest.twint_to')])
+                    <p class="hint">{{ __('guest.twint_hint') }}@if ($twintPhone !== '' && $twintName !== '') ({{ $twintName }})@endif</p>
                 @endif
                 <div class="field">
                     <label for="guest_name">{{ __('guest.name') }}</label>
@@ -249,7 +245,7 @@
             <fieldset class="segmented">
                 <legend>{{ __('account.method') }}</legend>
                 @foreach (\App\Models\Transaction::METHODS as $method)
-                    <label><input type="radio" name="method" value="{{ $method }}" @checked(old('method', $twintPhone !== '' ? 'twint' : 'cash') === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
+                    <label><input type="radio" name="method" value="{{ $method }}" @checked(old('method', $twintEnabled ? 'twint' : 'cash') === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
                 @endforeach
             </fieldset>
             <div class="field">
@@ -319,16 +315,13 @@
         @endif
     </section>
 
-    @if ($twintPhone !== '')
+    @if ($twintEnabled)
         <section class="card twint">
             <details>
             <summary><h2>{{ __('account.twint_heading') }}</h2></summary>
             <p class="muted">{{ __('account.twint_intro') }}</p>
-            <div class="twint-number">
-                <span id="twint-phone">{{ $twintPhone }}</span>
-                <button type="button" class="btn small" data-copy="#twint-phone" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
-            </div>
-            @if ($twintName !== '')
+            @include('partials.twint-number', ['id' => 'twint-phone'])
+            @if ($twintPhone !== '' && $twintName !== '')
                 <p>{{ $twintName }}</p>
             @endif
             @if ($suggested)

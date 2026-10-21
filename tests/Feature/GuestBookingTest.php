@@ -84,6 +84,22 @@ class GuestBookingTest extends TestCase
         $this->assertSame(0, GuestSale::query()->count());
     }
 
+    public function test_twint_switch_and_name_without_number(): void
+    {
+        Setting::put(AppSettings::TWINT_PHONE, '');
+        Setting::put(AppSettings::TWINT_NAME, 'Phlipp Arnold');
+        Setting::put(AppSettings::TWINT_ENABLED, true);
+        $this->actingAs($this->user())->get('/konto')->assertOk()
+            ->assertSee('name="guest_method" value="twint"', false)->assertSee('Phlipp Arnold')->assertDontSee('guest-twint-phone', false);
+        $this->post('/konto/gast', $this->sale(['guest_method' => 'twint']))
+            ->assertSessionHas('status', '1 Bier für Gast erfasst – bitte CHF 1.50 per TWINT an Phlipp Arnold senden.');
+
+        Setting::put(AppSettings::TWINT_PHONE, '079 123 45 67');
+        Setting::put(AppSettings::TWINT_ENABLED, false);
+        $this->get('/konto')->assertOk()->assertDontSee('name="guest_method" value="twint"', false)->assertDontSee('079 123 45 67');
+        $this->post('/konto/gast', $this->sale(['guest_method' => 'twint']))->assertSessionHasErrors('guest_method');
+    }
+
     public function test_validation_and_double_submit(): void
     {
         $this->actingAs($this->user());

@@ -38,17 +38,13 @@
     <fieldset class="segmented">
         <legend>{{ __('guest.method') }}</legend>
         @foreach (\App\Models\Transaction::METHODS as $method)
-            @continue($method === 'twint' && $twintPhone === '')
+            @continue($method === 'twint' && ! $twintEnabled)
             <label><input type="radio" name="method" value="{{ $method }}" @checked(old('method', 'cash') === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
         @endforeach
     </fieldset>
-    @if ($twintPhone !== '')
-        <div class="twint-number">
-            <span class="muted">{{ __('guest.twint_to') }}</span>
-            <span id="twint-phone">{{ $twintPhone }}</span>
-            <button type="button" class="btn small" data-copy="#twint-phone" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
-        </div>
-        <p class="hint">{{ __('guest.twint_hint') }}@if ($twintName !== '') ({{ $twintName }})@endif</p>
+    @if ($twintEnabled)
+        @include('partials.twint-number', ['id' => 'twint-phone', 'label' => __('guest.twint_to')])
+        <p class="hint">{{ __('guest.twint_hint') }}@if ($twintPhone !== '' && $twintName !== '') ({{ $twintName }})@endif</p>
     @endif
     <button class="btn primary big" type="submit" @disabled($available === 0)>{{ __('guest.submit') }}</button>
 </form>

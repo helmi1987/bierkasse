@@ -85,6 +85,7 @@ class AccountController extends Controller
             'open' => Ledger::openItems($user),
             'undoable' => $undoable,
             'pending' => Transaction::query()->where('user_id', $user->id)->pending()->latest('id')->get(),
+            'twintEnabled' => AppSettings::twintEnabled(),
             'twintPhone' => AppSettings::twintPhone(),
             'twintName' => AppSettings::twintName(),
             'suggestions' => $suggestions,
@@ -162,8 +163,7 @@ class AccountController extends Controller
     public function guest(Request $request): RedirectResponse
     {
         abort_unless(AppSettings::guestUserBooking(), 404);
-        $twintPhone = AppSettings::twintPhone();
-        $methods = $twintPhone !== '' ? Transaction::METHODS : array_values(array_diff(Transaction::METHODS, ['twint']));
+        $methods = AppSettings::twintEnabled() ? Transaction::METHODS : array_values(array_diff(Transaction::METHODS, ['twint']));
         $data = $request->validate([
             'guest_quantity' => ['required', 'integer', 'between:1,'.GuestSales::MAX_BEERS],
             'guest_method' => ['required', Rule::in($methods)],
@@ -179,7 +179,7 @@ class AccountController extends Controller
             return back()->withInput($request->only(['guest_quantity', 'guest_method', 'guest_name']))->with('error', $e->getMessage());
         }
 
-        $replace = ['count' => $sale->beers, 'amount' => chf($sale->amount), 'phone' => $twintPhone];
+        $replace = ['count' => $sale->beers, 'amount' => chf($sale->amount), 'phone' => AppSettings::twintRecipient()];
 
         return back()->with('status', trans_choice($sale->method === 'twint' ? 'guest.booked_twint' : 'guest.booked_cash', $sale->beers, $replace));
     }

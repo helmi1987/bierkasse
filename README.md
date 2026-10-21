@@ -343,7 +343,8 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
 `/backend/wartung` (nur Admins, Menüpunkt "Wartung" im Backend). Jede Aktion fragt nach und wird mit dem
 Benutzernamen des Admins protokolliert (`Log::info`, `storage/logs`).
 
-- System: App-Version (Commit-Kurzhash, Branch und Datum, gelesen aus `.git/HEAD`, Refs bzw. `packed-refs`
+- System: App-Version aus der Datei `VERSION` (Semver, wird mit jeder Änderung erhöht: Minor = Funktion,
+  Patch = Korrektur; "installiert" = Dateidatum beim Deploy), zusätzlich falls `.git` lesbar (Commit-Kurzhash, Branch und Datum, gelesen aus `.git/HEAD`, Refs bzw. `packed-refs`
   ohne Shell; Datum aus dem Commit-Objekt, sonst Dateidatum der Ref; ohne lesbares `.git` "unbekannt"),
   PHP, Laravel, Datenbank (Treiber, Verbindung), ausstehende Migrationen, Cache/Sperren/Session/Queue/Mail,
   Schreibrechte `storage/` und `bootstrap/cache/`, `APP_ENV`/`APP_DEBUG` (Warnung bei Debug in Produktion),

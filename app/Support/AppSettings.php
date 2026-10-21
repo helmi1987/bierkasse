@@ -164,14 +164,20 @@ class AppSettings
         return self::twintSwitch() && self::twintRecipients() !== [];
     }
 
-    /** Recipients for a sentence ("an A oder B"): the number with the name, or only the name or number. */
-    public static function twintRecipientText(): string
+    /**
+     * Recipients for a sentence ("an A oder B"): the number with the name, or only the name or number.
+     * With $html each recipient is escaped and wrapped in <strong>.
+     */
+    public static function twintRecipientText(bool $html = false): string
     {
         $parts = array_map(fn (array $r) => match (true) {
             $r['phone'] === '' => $r['name'],
             $r['name'] === '' => $r['phone'],
             default => $r['name'].' ('.$r['phone'].')',
         }, self::twintRecipients());
+        if ($html) {
+            $parts = array_map(fn (string $p) => '<strong>'.e($p).'</strong>', $parts);
+        }
 
         return implode(' '.__('account.twint_or').' ', $parts);
     }

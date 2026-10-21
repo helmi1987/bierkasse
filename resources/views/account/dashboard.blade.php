@@ -322,10 +322,10 @@
             @if (collect($twintRecipients)->every(fn ($r) => $r['phone'] === ''))
                 {{-- No number configured: one sentence with the names (users know the numbers). --}}
                 @if ($suggested)
-                    <p class="lead">{{ __('account.twint_send_amount', ['amount' => chf($suggested['amount']), 'name' => $twintText]) }}</p>
+                    <p class="lead">{!! __('account.twint_send_amount', ['amount' => e(chf($suggested['amount'])), 'name' => $twintHtml]) !!}</p>
                     <p class="muted">{{ trans_choice('account.suggestion_beers', $suggested['beers'], ['count' => $suggested['beers']]) }}@if ($suggested['debt'] > 0) · {{ __('account.suggestion_debt') }}@endif · {{ __('account.twint_then_report') }}</p>
                 @else
-                    <p class="lead">{{ __('account.twint_send', ['name' => $twintText]) }}</p>
+                    <p class="lead">{!! __('account.twint_send', ['name' => $twintHtml]) !!}</p>
                     <p class="muted">{{ __('account.twint_then_report') }}</p>
                 @endif
             @else

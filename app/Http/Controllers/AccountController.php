@@ -87,7 +87,7 @@ class AccountController extends Controller
             'pending' => Transaction::query()->where('user_id', $user->id)->pending()->latest('id')->get(),
             'twintEnabled' => AppSettings::twintEnabled(),
             'twintRecipients' => AppSettings::twintRecipients(),
-            'twintText' => AppSettings::twintRecipientText(),
+            'twintHtml' => AppSettings::twintRecipientText(true),
             'suggestions' => $suggestions,
             'suggested' => $suggested,
             'recent' => Transaction::query()->with('roundItems.user')->where('user_id', $user->id)->latest('id')->limit(5)->get(),

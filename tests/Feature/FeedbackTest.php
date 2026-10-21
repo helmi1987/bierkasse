@@ -245,11 +245,12 @@ class FeedbackTest extends TestCase
 
         $this->actingAs($this->admin());
         $this->get('/backend')->assertOk()
-            ->assertSee(route('backend.feedback'))
+            ->assertSee(route('backend.settings'))
             ->assertSee('<span class="badge" title="2 ungelesen">2</span>', false);
+        $this->get('/backend/einstellungen')->assertOk()->assertSee(route('backend.feedback'));
 
         $this->actingAs($this->kassier());
-        $this->get('/backend')->assertOk()->assertDontSee(route('backend.feedback'));
+        $this->get('/backend')->assertOk()->assertDontSee(route('backend.feedback'))->assertDontSee('2 ungelesen');
     }
 
     // --- Recipients --------------------------------------------------------------------

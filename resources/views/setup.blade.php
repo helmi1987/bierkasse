@@ -63,7 +63,7 @@
         </div>
         <div class="field">
             <label for="admin_email">{{ __('setup.admin_email') }}</label>
-            <input type="email" id="admin_email" name="admin_email" value="{{ old('admin_email') }}">
+            <input type="email" id="admin_email" name="admin_email" value="{{ old('admin_email') }}" required autocomplete="email">
         </div>
         <div class="field">
             <label for="admin_first_name">{{ __('setup.admin_first_name') }}</label>

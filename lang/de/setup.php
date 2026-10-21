@@ -22,7 +22,7 @@ return [
     'admin_username' => 'Benutzername',
     'admin_first_name' => 'Vorname (optional)',
     'admin_last_name' => 'Nachname (optional)',
-    'admin_email' => 'E-Mail (optional, für Benachrichtigungen)',
+    'admin_email' => 'E-Mail (Pflicht, für Benachrichtigungen und Passwort-Reset)',
     'username_hint' => '3–32 Zeichen: Kleinbuchstaben, Ziffern, Punkt, Bindestrich, Unterstrich.',
     'admin_password' => 'Passwort (min. 12 Zeichen)',
     'admin_password_confirmation' => 'Passwort wiederholen',

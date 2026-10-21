@@ -64,6 +64,15 @@ class SetupTest extends TestCase
         $this->assertStringNotContainsString('APP_INSTALLED=true', (string) file_get_contents($this->tmp.'/.env'));
     }
 
+    public function test_setup_requires_admin_email(): void
+    {
+        $this->useTempPaths('the-token');
+        config(['app.installed' => false]);
+
+        $this->from('/setup')->post('/setup', $this->setupData(['admin_email' => '']))->assertSessionHasErrors('admin_email');
+        $this->assertStringNotContainsString('APP_INSTALLED=true', (string) file_get_contents($this->tmp.'/.env'));
+    }
+
     public function test_setup_with_sqlite_installs_and_creates_admin(): void
     {
         $this->useTempPaths('the-token');
@@ -120,6 +129,7 @@ class SetupTest extends TestCase
             'database' => $this->tmp.'/db.sqlite',
             'admin_username' => 'chef',
             'admin_first_name' => 'Chef',
+            'admin_email' => 'chef@example.org',
             'admin_password' => 'a-long-password-123',
             'admin_password_confirmation' => 'a-long-password-123',
         ], $overrides);

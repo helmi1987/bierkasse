@@ -42,10 +42,19 @@
                 @endif
                 <a href="{{ route('stats') }}" @class(['active' => request()->routeIs('stats')])>{{ __('site.nav.stats') }}</a>
                 @if ($authUser->isKassier())
-                    <a href="{{ route('backend.dashboard') }}" @class(['active' => request()->routeIs('backend.*')])>
-                        {{ __('site.nav.backend') }}
+                    <a href="{{ route('backend.dashboard') }}" @class(['active' => \App\Support\BackendNav::isKassierPage()])>
+                        {{ __('site.nav.kassier') }}
                         @if ($openItems > 0)
                             <span class="badge" title="{{ __('site.open_items', ['count' => $openItems]) }}">{{ $openItems }}</span>
+                        @endif
+                    </a>
+                @endif
+                @if ($authUser->isAdmin())
+                    @php($unreadFeedback = \App\Models\Feedback::unreadCount())
+                    <a href="{{ route('backend.settings') }}" @class(['active' => \App\Support\BackendNav::isAdminPage()])>
+                        {{ __('site.nav.backend') }}
+                        @if ($unreadFeedback > 0)
+                            <span class="badge" title="{{ __('feedback.unread_count', ['count' => $unreadFeedback]) }}">{{ $unreadFeedback }}</span>
                         @endif
                     </a>
                 @endif
@@ -71,6 +80,9 @@
         </div>
     @endif
     @include('partials.install-hint')
+    @if ($authUser?->isKassier() && (string) $authUser->email === '')
+        <div class="alert warn" role="alert">{{ __('account.email_missing') }} <a href="{{ route('account.settings') }}">{{ __('account.email_missing_link') }}</a></div>
+    @endif
     @include('partials.alerts')
     @yield('content')
 </main>

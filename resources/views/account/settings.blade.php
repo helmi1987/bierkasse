@@ -27,7 +27,7 @@
             </div>
             <div class="field">
                 <label for="email">{{ __('account.email') }}</label>
-                <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" autocomplete="email">
+                <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" autocomplete="email" @required($user->isKassier())>
                 <div class="hint">{{ __('account.email_hint') }}</div>
             </div>
             <button type="submit" class="btn">{{ __('account.save') }}</button>

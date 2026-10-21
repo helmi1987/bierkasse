@@ -50,7 +50,7 @@ class MaintenanceTest extends TestCase
         $this->get('/backend')->assertOk()->assertDontSee(route('backend.maintenance'));
 
         $this->actingAs($this->admin());
-        $this->get('/backend')->assertOk()->assertSee(route('backend.maintenance'));
+        $this->get('/backend/einstellungen')->assertOk()->assertSee(route('backend.maintenance'));
         $this->get('/backend/wartung')->assertOk()
             ->assertSee('Cache leeren')
             ->assertSee('Setzt auch gesperrte Anmelde-/Registrierungsversuche zurück', false)

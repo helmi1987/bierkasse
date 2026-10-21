@@ -146,6 +146,12 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 Route::post('/wartung/sperren', [Backend\MaintenanceController::class, 'clearLimits'])->name('maintenance.limits');
                 Route::post('/wartung/optimierung', [Backend\MaintenanceController::class, 'clearOptimize'])->name('maintenance.optimize');
                 Route::post('/wartung/migrieren', [Backend\MaintenanceController::class, 'migrate'])->name('maintenance.migrate');
+                Route::post('/wartung/backup', [Backend\MaintenanceController::class, 'backup'])->name('maintenance.backup');
+                // Without the .sql.gz extension: Plesk/nginx may serve such URLs as static files.
+                Route::get('/wartung/backup/{backup}', [Backend\MaintenanceController::class, 'backupFile'])
+                    ->where('backup', 'bierkasse-\d{4}-\d{2}-\d{2}-\d{6}')->name('maintenance.backup.file');
+                Route::delete('/wartung/backup/{backup}', [Backend\MaintenanceController::class, 'backupDelete'])
+                    ->where('backup', 'bierkasse-\d{4}-\d{2}-\d{2}-\d{6}')->name('maintenance.backup.delete');
                 Route::put('/wartung/modus', [Backend\MaintenanceController::class, 'mode'])->name('maintenance.mode');
                 Route::resource('sso', Backend\SsoProviderController::class)->except(['show'])
                     ->parameters(['sso' => 'ssoProvider'])->names('sso');

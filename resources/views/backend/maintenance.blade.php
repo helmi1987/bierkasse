@@ -73,6 +73,38 @@
 </section>
 
 <section class="card stack">
+    <h2>{{ __('maintenance.backup') }}</h2>
+    <p class="hint">{{ __('maintenance.backup_hint') }}</p>
+    <form method="post" action="{{ route('backend.maintenance.backup') }}" class="stack" data-confirm="{{ __('maintenance.backup_confirm') }}">
+        @csrf
+        <div><button type="submit" class="btn primary">{{ __('maintenance.backup_download') }}</button></div>
+    </form>
+
+    <h3>{{ __('maintenance.backup_stored') }}</h3>
+    <p class="hint">{{ __('maintenance.backup_stored_hint') }}</p>
+    @if ($backups === [])
+        <p class="muted">{{ __('maintenance.backup_none') }}</p>
+    @else
+        <ul class="list">
+            @foreach ($backups as $backup)
+                @php($key = \Illuminate\Support\Str::beforeLast($backup['name'], '.sql.gz'))
+                <li class="wrap-row">
+                    <span>
+                        <a href="{{ route('backend.maintenance.backup.file', $key) }}">{{ $backup['name'] }}</a>
+                        <span class="muted">· {{ \Illuminate\Support\Number::fileSize($backup['size'], 1) }} · {{ \Illuminate\Support\Carbon::createFromTimestamp($backup['time'])->setTimezone(config('app.timezone'))->format('d.m.Y H:i') }}</span>
+                    </span>
+                    <form method="post" action="{{ route('backend.maintenance.backup.delete', $key) }}" class="inline" data-confirm="{{ __('maintenance.backup_delete_confirm', ['name' => $backup['name']]) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn small ghost">{{ __('maintenance.backup_delete') }}</button>
+                    </form>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+</section>
+
+<section class="card stack">
     <h2>{{ __('maintenance.info') }}</h2>
     <dl class="info-list">
         <dt>{{ __('maintenance.version') }}</dt>

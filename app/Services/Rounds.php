@@ -32,14 +32,27 @@ class Rounds
     public const NOTICE_MAX = 3;
 
     /**
-     * Active colleagues who can get a beer from $giver, sorted by display name.
+     * Active colleagues who can get a beer from $giver, most recent beer drinkers first, then by display name.
      *
      * @return Collection<int, User>
      */
     public static function colleagues(User $giver): Collection
     {
-        return User::query()->where('status', User::STATUS_ACTIVE)->whereKeyNot($giver->id)->get()
-            ->sortBy(fn (User $u) => mb_strtolower($u->displayName()), SORT_NATURAL)->values();
+        // Most recent beer drinkers first (own consumption), then the others alphabetically.
+        $users = User::query()->where('status', User::STATUS_ACTIVE)->whereKeyNot($giver->id)
+            ->addSelect(['last_beer_at' => Transaction::query()->select('created_at')
+                ->whereColumn('transactions.user_id', 'users.id')
+                ->where('type', Transaction::TYPE_CONSUMPTION)->confirmed()
+                ->latest('created_at')->limit(1)])
+            ->get();
+
+        return $users->sort(function (User $a, User $b) {
+            if ($a->last_beer_at !== $b->last_beer_at) {
+                return strcmp((string) $b->last_beer_at, (string) $a->last_beer_at);
+            }
+
+            return strnatcasecmp($a->displayName(), $b->displayName());
+        })->values();
     }
 
     /**

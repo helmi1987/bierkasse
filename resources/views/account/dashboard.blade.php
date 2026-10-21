@@ -86,68 +86,6 @@
     </section>
 @endif
 
-@if ($guestBooking)
-    {{-- Beers for a guest: paid by the guest right away, the own balance stays unchanged. --}}
-    <section class="card guest-card" data-testid="guest-booking">
-        <details @if ($guestUndoable->isNotEmpty() || $errors->hasAny(['guest_quantity', 'guest_method', 'guest_name']) || old('guest_quantity')) open @endif>
-            <summary><h2>{{ __('guest.book_heading') }}</h2></summary>
-            <p class="muted">{{ __('guest.book_intro') }}</p>
-            @if ($guestAvailable === 0)
-                <p class="alert warn" role="alert">{{ trans_choice('guest.stock_short', 0) }}</p>
-            @endif
-            <form method="post" action="{{ route('account.guest') }}" class="stack">
-                @csrf
-                {!! \App\Support\FormToken::field('guest-booking') !!}
-                <div class="field">
-                    <span class="label">{{ __('guest.quantity') }}</span>
-                    <div class="stepper" data-stepper>
-                        <button type="button" class="btn round" data-step="-1" aria-label="{{ __('account.less') }}">−</button>
-                        <label class="sr-only" for="guest_quantity">{{ __('guest.quantity') }}</label>
-                        <input type="number" id="guest_quantity" name="guest_quantity" value="{{ old('guest_quantity', 1) }}" min="1" max="{{ max(1, $guestAvailable) }}" inputmode="numeric" data-price="{{ $price }}">
-                        <button type="button" class="btn round" data-step="1" aria-label="{{ __('account.more') }}">+</button>
-                    </div>
-                    <p class="muted center">{{ __('guest.price', ['price' => chf($price)]) }} · <strong data-total>{{ chf($price) }}</strong></p>
-                </div>
-                <fieldset class="segmented">
-                    <legend>{{ __('guest.method') }}</legend>
-                    @foreach (\App\Models\Transaction::METHODS as $method)
-                        @continue($method === 'twint' && $twintPhone === '')
-                        <label><input type="radio" name="guest_method" value="{{ $method }}" @checked(old('guest_method', 'cash') === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
-                    @endforeach
-                </fieldset>
-                @if ($twintPhone !== '')
-                    <div class="twint-number">
-                        <span class="muted">{{ __('guest.twint_to') }}</span>
-                        <span id="guest-twint-phone">{{ $twintPhone }}</span>
-                        <button type="button" class="btn small" data-copy="#guest-twint-phone" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
-                    </div>
-                    <p class="hint">{{ __('guest.twint_hint') }}@if ($twintName !== '') ({{ $twintName }})@endif</p>
-                @endif
-                <div class="field">
-                    <label for="guest_name">{{ __('guest.name') }}</label>
-                    <input type="text" id="guest_name" name="guest_name" value="{{ old('guest_name') }}" maxlength="100" autocomplete="off">
-                </div>
-                <button type="submit" class="btn primary big" @disabled($guestAvailable === 0)>{{ __('guest.book_submit') }}</button>
-            </form>
-
-            @if ($guestUndoable->isNotEmpty())
-                <ul class="undo-list">
-                    @foreach ($guestUndoable as $sale)
-                        <li>
-                            <span>{{ local_time($sale->created_at, 'H:i') }} · {{ $sale->name ?? __('guest.anonymous') }} · {{ trans_choice('stock.beers', $sale->beers, ['count' => $sale->beers]) }} · {{ __('ledger.method.'.$sale->method) }} · {{ chf($sale->amount) }}</span>
-                            <form method="post" action="{{ route('account.guest.undo', $sale) }}" class="inline">
-                                @csrf
-                                <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
-                            </form>
-                        </li>
-                    @endforeach
-                </ul>
-                <p class="hint">{{ __('guest.undo_hint', ['minutes' => \App\Models\Transaction::UNDO_MINUTES]) }}</p>
-            @endif
-        </details>
-    </section>
-@endif
-
 @if ($rounds && $pending->where('type', 'payout')->isEmpty())
     {{-- Round for colleagues (one beer each) and beers without a name, paid by the user. --}}
     {{-- Inline @php only: a @php block here would swallow the inline @php() above it. --}}
@@ -211,6 +149,68 @@
                     @endforeach
                 </ul>
                 <p class="hint">{{ __('round.undo_hint', ['minutes' => \App\Models\Transaction::UNDO_MINUTES]) }}</p>
+            @endif
+        </details>
+    </section>
+@endif
+
+@if ($guestBooking)
+    {{-- Beers for a guest: paid by the guest right away, the own balance stays unchanged. --}}
+    <section class="card guest-card" data-testid="guest-booking">
+        <details @if ($guestUndoable->isNotEmpty() || $errors->hasAny(['guest_quantity', 'guest_method', 'guest_name']) || old('guest_quantity')) open @endif>
+            <summary><h2>{{ __('guest.book_heading') }}</h2></summary>
+            <p class="muted">{{ __('guest.book_intro') }}</p>
+            @if ($guestAvailable === 0)
+                <p class="alert warn" role="alert">{{ trans_choice('guest.stock_short', 0) }}</p>
+            @endif
+            <form method="post" action="{{ route('account.guest') }}" class="stack">
+                @csrf
+                {!! \App\Support\FormToken::field('guest-booking') !!}
+                <div class="field">
+                    <span class="label">{{ __('guest.quantity') }}</span>
+                    <div class="stepper" data-stepper>
+                        <button type="button" class="btn round" data-step="-1" aria-label="{{ __('account.less') }}">−</button>
+                        <label class="sr-only" for="guest_quantity">{{ __('guest.quantity') }}</label>
+                        <input type="number" id="guest_quantity" name="guest_quantity" value="{{ old('guest_quantity', 1) }}" min="1" max="{{ max(1, $guestAvailable) }}" inputmode="numeric" data-price="{{ $price }}">
+                        <button type="button" class="btn round" data-step="1" aria-label="{{ __('account.more') }}">+</button>
+                    </div>
+                    <p class="muted center">{{ __('guest.price', ['price' => chf($price)]) }} · <strong data-total>{{ chf($price) }}</strong></p>
+                </div>
+                <fieldset class="segmented">
+                    <legend>{{ __('guest.method') }}</legend>
+                    @foreach (\App\Models\Transaction::METHODS as $method)
+                        @continue($method === 'twint' && $twintPhone === '')
+                        <label><input type="radio" name="guest_method" value="{{ $method }}" @checked(old('guest_method', 'cash') === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
+                    @endforeach
+                </fieldset>
+                @if ($twintPhone !== '')
+                    <div class="twint-number">
+                        <span class="muted">{{ __('guest.twint_to') }}</span>
+                        <span id="guest-twint-phone">{{ $twintPhone }}</span>
+                        <button type="button" class="btn small" data-copy="#guest-twint-phone" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
+                    </div>
+                    <p class="hint">{{ __('guest.twint_hint') }}@if ($twintName !== '') ({{ $twintName }})@endif</p>
+                @endif
+                <div class="field">
+                    <label for="guest_name">{{ __('guest.name') }}</label>
+                    <input type="text" id="guest_name" name="guest_name" value="{{ old('guest_name') }}" maxlength="100" autocomplete="off">
+                </div>
+                <button type="submit" class="btn primary big" @disabled($guestAvailable === 0)>{{ __('guest.book_submit') }}</button>
+            </form>
+
+            @if ($guestUndoable->isNotEmpty())
+                <ul class="undo-list">
+                    @foreach ($guestUndoable as $sale)
+                        <li>
+                            <span>{{ local_time($sale->created_at, 'H:i') }} · {{ $sale->name ?? __('guest.anonymous') }} · {{ trans_choice('stock.beers', $sale->beers, ['count' => $sale->beers]) }} · {{ __('ledger.method.'.$sale->method) }} · {{ chf($sale->amount) }}</span>
+                            <form method="post" action="{{ route('account.guest.undo', $sale) }}" class="inline">
+                                @csrf
+                                <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
+                            </form>
+                        </li>
+                    @endforeach
+                </ul>
+                <p class="hint">{{ __('guest.undo_hint', ['minutes' => \App\Models\Transaction::UNDO_MINUTES]) }}</p>
             @endif
         </details>
     </section>

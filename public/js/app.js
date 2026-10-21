@@ -91,7 +91,8 @@
             submit.disabled = n < 1 || n > max;
             if (submitSelf) {
                 submitSelf.textContent = submitSelf.dataset.label.replace(':count', String(n + 1));
-                submitSelf.disabled = n + 1 > max;
+                // A round only for oneself makes no sense: needs at least one other beer.
+                submitSelf.disabled = n < 1 || n + 1 > max;
             }
         };
         form.addEventListener('change', render);

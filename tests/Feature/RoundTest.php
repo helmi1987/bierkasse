@@ -1,0 +1,265 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Mail\KassierNotice;
+use App\Models\CashEntry;
+use App\Models\GuestSale;
+use App\Models\RoundItem;
+use App\Models\Setting;
+use App\Models\Transaction;
+use App\Models\User;
+use App\Services\BeerStock;
+use App\Services\CashBook;
+use App\Services\Ledger;
+use App\Services\Stats;
+use App\Support\AppSettings;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Tests\TestCase;
+
+/**
+ * "Runde spendieren": a user pays beers for colleagues (one each) and beers without a name.
+ */
+class RoundTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $giver;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Mail::fake();
+        CashEntry::query()->create(['type' => 'expense_beer', 'date' => '2026-10-01', 'amount' => -3000, 'beers' => 30, 'method' => 'cash', 'note' => 'Kauf']);
+        $this->giver = $this->user(['first_name' => 'Gabi', 'last_name' => 'Geber', 'email' => 'gabi@example.test']);
+        Ledger::bookDeposit($this->giver, 3000, 'cash', $this->kassier());
+    }
+
+    public function test_round_with_colleagues_and_guests_charges_the_giver_and_reduces_the_stock(): void
+    {
+        [$anna, $beat] = [$this->user(['first_name' => 'Anna', 'last_name' => 'A']), $this->user(['first_name' => 'Beat', 'last_name' => 'B'])];
+
+        $this->actingAs($this->giver)->get('/konto')->assertOk()
+            ->assertSeeInOrder(['Bier für Gast', 'Runde spendieren', 'Einzahlung'])
+            ->assertSee('Anna A')->assertSee('Beat B')->assertDontSee('name="recipients[]" value="'.$this->giver->id.'"', false)
+            ->assertSee('name="recipients[]" value="'.$anna->id.'"', false);
+
+        $this->post('/konto/runde', $this->round(['recipients' => [$anna->id, $beat->id], 'extra' => 2, 'message' => 'Prost zum Geburtstag!']))
+            ->assertSessionHas('status', 'Runde spendiert: 4 Biere (CHF 6.00). Prost!');
+
+        $tx = Transaction::query()->where('type', Transaction::TYPE_ROUND)->sole();
+        $this->assertSame([$this->giver->id, 4, 150, -600, 'Prost zum Geburtstag!'], [$tx->user_id, $tx->quantity, $tx->unit_price, $tx->amount, $tx->note]);
+        $this->assertEqualsCanonicalizing(
+            [[$anna->id, 1], [$beat->id, 1], [null, 2]],
+            $tx->roundItems->map(fn (RoundItem $i) => [$i->user_id, $i->quantity])->all(),
+        );
+        $this->assertSame(2400, $this->giver->refresh()->balance());
+        $this->assertSame(0, $anna->refresh()->balance());
+        $this->assertSame(26, BeerStock::current());
+        // The cash book is not affected (like consumption).
+        $this->assertSame(0, CashBook::balance()['cash']);
+
+        $this->get('/konto/verlauf')->assertOk()->assertSee('Runde spendiert (4 Biere)')->assertSee('für Anna A, Beat B + 2 Gäste')
+            ->assertSee('Prost zum Geburtstag!');
+        $this->actingAs($this->kassier())->get('/backend/runden')->assertOk()->assertSee('Gabi Geber')->assertSee('für Anna A, Beat B + 2 Gäste');
+        $this->get('/backend/benutzer/'.$this->giver->id)->assertOk()->assertSee('Spendiert: 4 Biere');
+    }
+
+    public function test_overdraft_limit_is_respected_like_consume(): void
+    {
+        $poor = $this->user();
+        $colleague = $this->user();
+        $this->actingAs($poor)->post('/konto/runde', $this->round(['recipients' => [$colleague->id]]))
+            ->assertSessionHas('error', 'Bitte zuerst einzahlen');
+        $this->assertSame(0, Transaction::query()->where('type', Transaction::TYPE_ROUND)->count());
+
+        $poor->forceFill(['overdraft_limit' => 300])->save();
+        $this->post('/konto/runde', $this->round(['extra' => 3]))->assertSessionHas('error', 'Bitte zuerst einzahlen');
+        $this->post('/konto/runde', $this->round(['extra' => 2]))->assertSessionHas('status');
+        $this->assertSame(-300, $poor->refresh()->balance());
+    }
+
+    public function test_not_allowed_while_a_payout_is_pending(): void
+    {
+        $colleague = $this->user();
+        Ledger::requestPayout($this->giver);
+
+        $this->actingAs($this->giver)->get('/konto')->assertOk()->assertDontSee('data-testid="round"', false);
+        $this->post('/konto/runde', $this->round(['recipients' => [$colleague->id]]))
+            ->assertSessionHas('error', 'Eine Auszahlung ist beantragt – keine weiteren Buchungen möglich.');
+        $this->assertSame(0, RoundItem::query()->count());
+    }
+
+    public function test_invalid_rounds_are_refused(): void
+    {
+        $left = $this->user(['status' => User::STATUS_LEFT]);
+        $this->actingAs($this->giver);
+
+        $this->post('/konto/runde', $this->round())->assertSessionHas('error', 'Bitte mindestens ein Bier wählen.');
+        $this->post('/konto/runde', $this->round(['recipients' => [$this->giver->id]]))->assertSessionHas('error');
+        $this->post('/konto/runde', $this->round(['recipients' => [$left->id]]))->assertSessionHas('error');
+        $this->post('/konto/runde', $this->round(['extra' => 21]))->assertSessionHasErrors('extra');
+        $this->post('/konto/runde', $this->round(['extra' => 1, 'message' => str_repeat('x', 141)]))->assertSessionHasErrors('message');
+
+        $many = collect(range(1, 11))->map(fn () => $this->user()->id)->all();
+        $this->post('/konto/runde', $this->round(['recipients' => $many, 'extra' => 20]))->assertSessionHas('error', 'Höchstens 30 Biere pro Runde.');
+
+        $this->assertSame(0, Transaction::query()->where('type', Transaction::TYPE_ROUND)->count());
+    }
+
+    public function test_setting_off_hides_the_card_and_returns_404(): void
+    {
+        $this->assertTrue(AppSettings::roundsAllowed());
+        $colleague = $this->user();
+
+        // Kassiers switch it (like the guest switches); normal users cannot.
+        $this->actingAs($this->user())->get('/backend/runden')->assertForbidden();
+        $this->actingAs($this->kassier())->put('/backend/runden', [])->assertSessionHas('status');
+        $this->assertFalse(AppSettings::roundsAllowed());
+
+        $this->actingAs($this->giver)->get('/konto')->assertOk()->assertDontSee('Runde spendieren');
+        $this->post('/konto/runde', $this->round(['recipients' => [$colleague->id]]))->assertNotFound();
+        $this->get('/konto/einstellungen')->assertOk()->assertDontSee('Mail bei spendiertem Bier');
+
+        $this->actingAs($this->admin())->put('/backend/runden', ['rounds_enabled' => '1']);
+        $this->assertTrue(AppSettings::roundsAllowed());
+    }
+
+    public function test_undo_by_the_giver_within_the_window_only(): void
+    {
+        $colleague = $this->user();
+        $this->actingAs($this->giver)->post('/konto/runde', $this->round(['recipients' => [$colleague->id], 'extra' => 1]));
+        $tx = Transaction::query()->where('type', Transaction::TYPE_ROUND)->sole();
+        $this->assertSame(28, BeerStock::current());
+
+        // Not by somebody else.
+        $this->actingAs($colleague)->post('/konto/bier/'.$tx->id.'/rueckgaengig')->assertSessionHas('error');
+        $this->assertModelExists($tx);
+
+        $this->actingAs($this->giver)->get('/konto')->assertSee('/konto/bier/'.$tx->id.'/rueckgaengig', false);
+        $this->post('/konto/bier/'.$tx->id.'/rueckgaengig')->assertSessionHas('status', 'Runde zurückgenommen.');
+        $this->assertModelMissing($tx);
+        $this->assertSame(0, RoundItem::query()->count());
+        $this->assertSame(3000, $this->giver->refresh()->balance());
+        $this->assertSame(30, BeerStock::current());
+
+        $this->post('/konto/runde', $this->round(['extra' => 1]));
+        $late = Transaction::query()->where('type', Transaction::TYPE_ROUND)->sole();
+        $this->travel(Transaction::UNDO_MINUTES + 1)->minutes();
+        $this->post('/konto/bier/'.$late->id.'/rueckgaengig')->assertSessionHas('error', 'Das kann nicht mehr zurückgenommen werden.');
+        $this->assertModelExists($late);
+    }
+
+    public function test_recipients_see_a_notice_and_get_a_mail(): void
+    {
+        $anna = $this->user(['first_name' => 'Anna', 'last_name' => 'A', 'email' => 'anna@example.test']);
+        $noMail = $this->user(['email' => 'nomail@example.test', 'round_mail' => false]);
+        $noAddress = $this->user(['email' => null]);
+        $other = $this->user(['email' => 'other@example.test']);
+
+        $this->actingAs($this->giver)->post('/konto/runde', $this->round(['recipients' => [$anna->id, $noMail->id, $noAddress->id], 'message' => 'Prost zum Geburtstag!']))
+            ->assertSessionHas('status');
+
+        Mail::assertSent(KassierNotice::class, 1);
+        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => $m->hasTo('anna@example.test')
+            && $m->noticeSubject === 'Prost! Gabi Geber spendiert dir ein Bier'
+            && in_array('Prost zum Geburtstag!', $m->rows, true));
+
+        $this->actingAs($anna)->get('/konto')->assertOk()
+            ->assertSee('🍺 Gabi Geber hat dir ein Bier spendiert – Prost zum Geburtstag!');
+        $this->actingAs($other)->get('/konto')->assertOk()->assertDontSee('hat dir ein Bier spendiert');
+
+        // Only the last 7 days.
+        $this->travel(8)->days();
+        $this->actingAs($anna)->get('/konto')->assertOk()->assertDontSee('hat dir ein Bier spendiert');
+
+        // Recipient switches the mail off in the settings.
+        $this->post('/konto/runden-mail', [])->assertSessionHas('status');
+        $this->assertFalse($anna->refresh()->round_mail);
+    }
+
+    public function test_a_failing_mail_never_breaks_the_booking(): void
+    {
+        $anna = $this->user(['email' => 'anna@example.test']);
+        Mail::shouldReceive('to')->andThrow(new \RuntimeException('smtp down'));
+
+        $this->actingAs($this->giver)->post('/konto/runde', $this->round(['recipients' => [$anna->id]]))->assertSessionHas('status');
+        $this->assertSame(1, Transaction::query()->where('type', Transaction::TYPE_ROUND)->count());
+    }
+
+    public function test_statistics_count_the_beers_at_the_drinker(): void
+    {
+        $anna = $this->user(['first_name' => 'Anna', 'last_name' => 'A']);
+        $hidden = $this->user(['first_name' => 'Hans', 'last_name' => 'Hidden', 'stats_opt_out' => true]);
+        Ledger::consume($this->giver, 2);
+        GuestSale::query()->create(['beers' => 1, 'unit_price' => 150, 'amount' => 150, 'method' => 'cash']);
+        $this->actingAs($this->giver)->post('/konto/runde', $this->round(['recipients' => [$anna->id, $hidden->id], 'extra' => 3]));
+
+        $global = Stats::global();
+        // 2 consumed + 1 guest sale + 5 round beers, nothing counted twice.
+        $this->assertSame(8, $global['total_beers']);
+        $this->assertSame(8, array_sum(array_column($global['months'], 'beers')));
+        $this->assertSame(8, array_sum(array_column($global['weekdays'], 'beers')));
+        $ranking = collect($global['ranking'])->keyBy('user_id');
+        $this->assertSame(['Gäste (eingeladen)', 3], [$ranking[-1]['name'], $ranking[-1]['beers']]);
+        $this->assertSame(2, $ranking[$this->giver->id]['beers']);
+        $this->assertSame(1, $ranking[$anna->id]['beers']);
+        $this->assertSame(1, $ranking[0]['beers']);
+        // Opt-out: not named, but in the totals.
+        $this->assertFalse($ranking->has($hidden->id));
+
+        $giverStats = Stats::forUser($this->giver);
+        $this->assertSame([2, 5, 300 + 750], [$giverStats['total_beers'], $giverStats['given'], $giverStats['total_amount']]);
+        $annaStats = Stats::forUser($anna);
+        $this->assertSame([1, 0, 0], [$annaStats['total_beers'], $annaStats['given'], $annaStats['total_amount']]);
+        $this->assertSame(1, Stats::forUser($hidden)['total_beers']);
+
+        $this->get('/konto')->assertOk()->assertSee('data-testid="round-given"', false);
+        $this->get('/statistik')->assertOk()->assertSee('Gäste (eingeladen)')->assertSee('Anna A')->assertDontSee('Hans Hidden');
+    }
+
+    public function test_open_items_keep_the_price_of_the_round(): void
+    {
+        $user = $this->user(['overdraft_limit' => 10000]);
+        $this->actingAs($user)->post('/konto/runde', $this->round(['extra' => 3]));
+        $this->setPrice(200);
+        Ledger::consume($user, 1);
+
+        $open = Ledger::openItems($user);
+        $this->assertSame(650, $open['total']);
+        $this->assertSame([
+            ['unit_price' => 150, 'quantity' => 3, 'amount' => 450],
+            ['unit_price' => 200, 'quantity' => 1, 'amount' => 200],
+        ], $open['beers']);
+        $this->assertSame(0, $open['other']);
+    }
+
+    public function test_double_submit_books_once(): void
+    {
+        $colleague = $this->user();
+        $data = $this->actingAs($this->giver)->round(['recipients' => [$colleague->id]]);
+        $this->post('/konto/runde', $data)->assertSessionHas('status');
+        $this->post('/konto/runde', $data)->assertSessionHas('warning');
+        $this->post('/konto/runde', ['recipients' => [$colleague->id]])->assertSessionHas('warning');
+
+        $this->assertSame(1, Transaction::query()->where('type', Transaction::TYPE_ROUND)->count());
+        $this->assertSame(29, BeerStock::current());
+    }
+
+    public function test_low_stock_mail_counts_rounds(): void
+    {
+        Setting::put(AppSettings::STOCK_MINIMUM, 28);
+        $kassier = $this->kassier(['email' => 'kassier@example.test']);
+        Ledger::bookDeposit($this->giver, 1, 'cash', $kassier);
+
+        $this->actingAs($this->giver)->post('/konto/runde', $this->round(['extra' => 3]));
+        $this->assertSame(27, BeerStock::current());
+        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => $m->hasTo('kassier@example.test') && str_contains($m->noticeSubject, '27'));
+    }
+
+    private function round(array $overrides = []): array
+    {
+        return $this->tokened('round', array_merge(['recipients' => [], 'extra' => 0], $overrides));
+    }
+}

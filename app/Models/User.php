@@ -30,7 +30,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'username', 'first_name', 'last_name', 'email', 'password', 'role', 'status',
-        'overdraft_limit', 'stats_opt_out', 'must_change_password', 'last_login_at', 'left_at',
+        'overdraft_limit', 'stats_opt_out', 'round_mail', 'must_change_password', 'last_login_at', 'left_at',
     ];
 
     protected $hidden = ['password', 'remember_token', 'totp_secret', 'totp_recovery_codes'];
@@ -39,6 +39,7 @@ class User extends Authenticatable
         'role' => self::ROLE_USER,
         'status' => self::STATUS_ACTIVE,
         'stats_opt_out' => false,
+        'round_mail' => true,
         'must_change_password' => false,
     ];
 
@@ -48,6 +49,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'overdraft_limit' => 'integer',
             'stats_opt_out' => 'boolean',
+            'round_mail' => 'boolean',
             'must_change_password' => 'boolean',
             'last_login_at' => 'datetime',
             'left_at' => 'datetime',

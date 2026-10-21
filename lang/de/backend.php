@@ -10,6 +10,7 @@ return [
         'deposit_suggestions' => 'Vorschläge',
         'stock' => 'Lager',
         'guests' => 'Gäste',
+        'rounds' => 'Runden',
         'invitations' => 'Einladungen',
         'settings' => 'Einstellungen',
         'sso' => 'SSO',

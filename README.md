@@ -225,9 +225,35 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     Öffentliche Seite `/gast` (Passwort per `?code=` vorausgefüllt oder eingeben): Name freiwillig, 1–10 Biere,
     Bar oder TWINT (TWINT-Nummer mit Kopier-Knopf). Passwort wird zuerst geprüft; 10 Versuche/Minute pro IP (auch
     falsche Passwörter), Einmal-Token gegen Doppelbuchung.
+- Runde spendieren (Entscheid 2026-10-21): Dashboard-Karte "Runde spendieren" (nach "Bier für Gast"). Angehakte
+  aktive Kollegen (alle aktiven Benutzer ausser einem selbst, nach Name sortiert, mit Suchfeld) bekommen je 1 Bier,
+  dazu 0–20 "weitere Biere" ohne Namen (z. B. Gäste) und eine freiwillige Nachricht (max. 140 Zeichen). Pro Runde
+  1–30 Biere; Total (Biere, Betrag) wird live angezeigt. Das eigene Bier wird normal abgestrichen.
+  - Buchung wie "Bier abstreichen" (eine DB-Transaktion mit Zeilensperre, gleiche Limit-Regel "Bitte zuerst
+    einzahlen", gesperrt bei beantragter Auszahlung, Einmal-Token): Spender zahlt Anzahl × aktueller Preis als
+    Buchung Typ `round` (Betrag negativ, Anzahl, Preis gespeichert, Nachricht als Bemerkung). Die Biere stehen in
+    `round_items` (pro Kollege 1 Zeile mit Anzahl 1, Biere ohne Namen als 1 Zeile ohne Benutzer). Der Spender kann
+    die Runde 10 Minuten lang zurücknehmen. Unter "Offen" zählen Runden-Biere wie eigene Biere (alter Preis).
+    Kassenstand unverändert (wie Abstreichen); Lager sinkt um alle Biere der Runde (Lager-Mail wie beim Abstreichen).
+  - Empfänger sehen 7 Tage lang im Dashboard "🍺 <Spender> hat dir ein Bier spendiert – <Nachricht>" (max. 3) und
+    erhalten eine Mail "Prost! <Spender> spendiert dir ein Bier" (nur mit E-Mail und Schalter "Mail bei spendiertem
+    Bier" unter Einstellungen, Standard an; unabhängig von der Kassier-Benachrichtigung). Fehler beim Versand werden
+    geloggt, die Buchung bleibt.
+  - Statistik: Biere zählen beim Trinker. Kollegen-Biere zählen beim Kollegen (eigene Statistik, Rangliste, Totals),
+    Biere ohne Namen als eigene Zeile "Gäste (eingeladen)" in der Rangliste. Monate/Wochentage nach Zeitpunkt der
+    Runde. Total = Abstreichen + Gäste-Verkäufe + Runden-Biere (die Runde selbst zählt nicht zusätzlich).
+    "In Statistik anzeigen" aus gilt auch hier (nur im Total). Der Spender sieht "Spendiert: N" in der eigenen
+    Statistik (auch in der Benutzer-Detailansicht im Backend); "Total ausgegeben" enthält die bezahlten Runden.
+    **Annahme:** erhaltene Biere erhöhen "Total ausgegeben" des Empfängers nicht (er hat nichts bezahlt).
+  - Backend `/backend/runden` (Kassier und Admin, wie die Gäste-Schalter): Schalter "Runde spendieren erlauben"
+    (Standard an; aus: Karte ausgeblendet, `/konto/runde` 404, bestehende Runden bleiben) und Liste der Runden.
+    Der Schalter ist eine eigene Einstellung (`rounds_enabled`) und soll mit der Mandantenfähigkeit in die
+    Mandanten-Einstellungen wandern.
+    **Annahme:** Wird ein Empfänger gelöscht (nicht deaktiviert), zählt sein Bier danach als "Gäste (eingeladen)".
 - Lager (`/backend/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
   Pflicht; alte Einträge ohne Anzahl zählen 0) + Inventur-Korrekturen (gezählter Bestand, gespeichert als Differenz
-  mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere (Rückgängig erhöht den Bestand wieder).
+  mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere inkl. spendierter Runden (Rückgängig erhöht den
+  Bestand wieder).
   Bestand im Backend-Dashboard und im Kassenbuch. Mindestbestand (Standard 20, 0 = aus): fällt der Bestand durch
   Abstreichen darunter, geht einmal eine Mail an Kassiers/Admins (Benachrichtigungs-Schalter gilt); erneut erst,
   nachdem der Bestand wieder ≥ Mindestbestand war. Warnung im Backend, solange er darunter ist.

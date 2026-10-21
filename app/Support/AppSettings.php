@@ -59,6 +59,9 @@ class AppSettings
 
     public const STOCK_LOW_WARNED = 'stock_low_warned';
 
+    /** Users may pay a round for colleagues/guests ("Runde spendieren"). Planned to move to the tenant settings. */
+    public const ROUNDS_ENABLED = 'rounds_enabled';
+
     /** Preselected deposit proposal in Rappen; null = first proposal. */
     public const DEPOSIT_DEFAULT = 'deposit_suggestion_default';
 
@@ -209,6 +212,12 @@ class AppSettings
     public static function guestUserBooking(): bool
     {
         return (bool) self::get(self::GUEST_USER_BOOKING, true);
+    }
+
+    /** "Runde spendieren" is allowed (default on). */
+    public static function roundsAllowed(): bool
+    {
+        return (bool) self::get(self::ROUNDS_ENABLED, true);
     }
 
     /** Minimum beer stock (low-stock mail and warning); 0 = off. */

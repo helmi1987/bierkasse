@@ -78,6 +78,14 @@ class AccountSettingsController extends Controller
         return back()->with('status', __('account.stats_saved'));
     }
 
+    /** Mail when a colleague pays the user a beer ("Runde spendieren"). */
+    public function roundMail(Request $request): RedirectResponse
+    {
+        $request->user()->forceFill(['round_mail' => $request->boolean('round_mail')])->save();
+
+        return back()->with('status', __('round.mail_setting_saved'));
+    }
+
     public function password(Request $request): RedirectResponse
     {
         $user = $request->user();

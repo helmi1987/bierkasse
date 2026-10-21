@@ -62,6 +62,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::post('/konto/bier/{transaction}/rueckgaengig', [AccountController::class, 'undo'])->whereNumber('transaction')->name('account.undo');
         Route::post('/konto/gast', [AccountController::class, 'guest'])->middleware('throttle:30,1')->name('account.guest');
         Route::post('/konto/gast/{sale}/rueckgaengig', [AccountController::class, 'undoGuest'])->whereNumber('sale')->name('account.guest.undo');
+        Route::post('/konto/runde', [AccountController::class, 'round'])->middleware('throttle:20,1')->name('account.round');
         Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
         Route::put('/konto/einzahlung/{transaction}', [AccountController::class, 'updateDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.update');
         Route::delete('/konto/einzahlung/{transaction}', [AccountController::class, 'cancelDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.cancel');
@@ -79,6 +80,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::put('/konto/profil', [AccountSettingsController::class, 'profile'])->name('account.profile');
         Route::put('/konto/passwort', [AccountSettingsController::class, 'password'])->name('account.password');
         Route::post('/konto/statistik', [AccountSettingsController::class, 'stats'])->name('account.stats');
+        Route::post('/konto/runden-mail', [AccountSettingsController::class, 'roundMail'])->name('account.round-mail');
         Route::post('/konto/totp', [AccountSettingsController::class, 'enableTotp'])->name('account.totp.enable');
         Route::post('/konto/totp/neu', [AccountSettingsController::class, 'restartTotp'])->name('account.totp.restart');
         Route::post('/konto/totp/deaktivieren', [AccountSettingsController::class, 'disableTotp'])->name('account.totp.disable');
@@ -121,6 +123,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::put('/gaeste', [Backend\GuestController::class, 'update'])->name('guests.update');
             Route::get('/gaeste/qr', [Backend\GuestController::class, 'qr'])->name('guests.qr');
             Route::delete('/gaeste/{sale}', [Backend\GuestController::class, 'destroy'])->whereNumber('sale')->name('guests.destroy');
+            Route::get('/runden', [Backend\RoundController::class, 'index'])->name('rounds');
+            Route::put('/runden', [Backend\RoundController::class, 'update'])->name('rounds.update');
             Route::get('/einladungen', [Backend\InvitationController::class, 'index'])->name('invitations');
             Route::delete('/einladungen/{invitation}', [Backend\InvitationController::class, 'destroy'])->whereNumber('invitation')->name('invitations.destroy');
             Route::get('/lager', [Backend\StockController::class, 'index'])->name('stock');

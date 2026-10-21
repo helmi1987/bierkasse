@@ -7,6 +7,7 @@ return [
     'per_weekday' => 'Pro Wochentag',
     'ranking' => 'Rangliste',
     'guests' => 'Gäste',
+    'guests_invited' => 'Gäste (eingeladen)',
     'ranking_hint' => 'Wer «In Statistik anzeigen» ausgeschaltet hat, erscheint hier nicht; die Biere zählen nur im Total.',
     'ranking_empty' => 'Noch niemand in der Rangliste.',
     'rank' => 'Rang',

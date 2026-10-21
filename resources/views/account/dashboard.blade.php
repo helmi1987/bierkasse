@@ -277,9 +277,11 @@
 </section>
 
 <section class="card">
-    <h2>{{ __('account.recent') }}</h2>
+    <details>
+    <summary><h2>{{ __('account.recent') }}</h2></summary>
     @include('account.tx-list', ['transactions' => $recent])
     <p><a href="{{ route('account.history') }}">{{ __('account.history') }} →</a></p>
+    </details>
 </section>
 
 @if ($canInvite)

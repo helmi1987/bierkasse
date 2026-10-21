@@ -61,7 +61,9 @@ class CarryoverTest extends TestCase
         $this->assertSame(150, $tx->unit_price);
         $this->assertSame(0, $user->balance());
 
-        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => str_contains($m->render(), 'Übertrag von der alten Strichliste: schuldet 12 Biere à CHF 1.50 (CHF 18.00)'));
+        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => ($m->rows['Übertrag'] ?? null) === 'schuldet 12 Biere à CHF 1.50 (CHF 18.00)'
+            && str_contains($m->render(), 'schuldet 12 Biere à CHF 1.50 (CHF 18.00)')
+            && str_contains($m->render(), 'Übertrag von der alten Strichliste muss im Backend bestätigt werden'));
 
         $this->actingAs($user)->get('/konto')->assertOk()
             ->assertSee('Übertrag ausstehend: CHF -18.00 – wartet auf Kassier');

@@ -308,7 +308,7 @@ class InviteTest extends TestCase
 
         $this->post('/registrieren', $this->data(['einladung' => $token]))->assertRedirect(route('account.dashboard'));
 
-        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => str_contains($m->render(), 'Eingeladen von: gastgeber'));
+        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => ($m->rows['Eingeladen von'] ?? null) === 'gastgeber' && str_contains($m->render(), 'gastgeber'));
     }
 
     // --- Backend ----------------------------------------------------------------------

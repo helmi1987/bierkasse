@@ -33,15 +33,34 @@ class AppServiceProvider extends ServiceProvider
 
         ResetPassword::toMailUsing(function ($notifiable, string $token) {
             $url = route('password.reset', ['token' => $token, 'email' => $notifiable->getEmailForPasswordReset()]);
+            $appName = AppSettings::appName();
+            $greeting = __('passwords.mail_greeting', ['name' => $notifiable->displayName()]);
+            $intro = __('passwords.mail_intro');
+            $outro = [
+                __('passwords.mail_expire', ['count' => config('auth.passwords.users.expire')]),
+                __('passwords.mail_ignore'),
+            ];
 
+            // Same layout as all other mails (HTML + plain text); action() keeps actionUrl set.
             return (new MailMessage)
-                ->subject(__('passwords.mail_subject', ['app' => AppSettings::appName()]))
-                ->greeting(__('passwords.mail_greeting', ['name' => $notifiable->displayName()]))
-                ->line(__('passwords.mail_intro'))
+                ->subject(__('passwords.mail_subject', ['app' => $appName]))
+                ->greeting($greeting)
+                ->line($intro)
                 ->action(__('passwords.mail_action'), $url)
-                ->line(__('passwords.mail_expire', ['count' => config('auth.passwords.users.expire')]))
-                ->line(__('passwords.mail_ignore'))
-                ->salutation(AppSettings::appName());
+                ->line($outro[0])
+                ->line($outro[1])
+                ->salutation($appName)
+                ->view(['html' => 'mail.notice', 'text' => 'mail.notice-text'], [
+                    'appName' => $appName,
+                    'appUrl' => url('/'),
+                    'title' => __('passwords.mail_action'),
+                    'preheader' => $intro,
+                    'lines' => [$greeting.',', $intro],
+                    'rows' => [],
+                    'buttonUrl' => $url,
+                    'buttonLabel' => __('passwords.mail_action'),
+                    'outro' => $outro,
+                ]);
         });
 
         // Header: app name and the open items badge for kassiers/admins.

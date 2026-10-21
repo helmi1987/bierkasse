@@ -120,7 +120,16 @@ class Ledger
 
         KassierNotifier::send(
             __('mail.deposit_subject', ['user' => $user->displayName()]),
-            [__('mail.deposit_line', ['user' => $user->displayName(), 'amount' => chf($amount), 'method' => __('ledger.method.'.$method)])],
+            [__('mail.deposit_line', ['user' => $user->displayName()])],
+            [
+                __('mail.row_user') => $user->displayName(),
+                __('mail.row_amount') => chf($amount),
+                __('mail.row_method') => __('ledger.method.'.$method),
+                __('mail.row_note') => (string) $note,
+                __('mail.row_time') => local_time($tx->created_at ?? now()),
+            ],
+            buttonLabel: __('mail.button_confirm'),
+            title: __('mail.deposit_title'),
         );
 
         return $tx;
@@ -303,7 +312,14 @@ class Ledger
 
         KassierNotifier::send(
             __('mail.payout_subject', ['user' => $user->displayName()]),
-            [__('mail.payout_line', ['user' => $user->displayName(), 'amount' => chf(-$tx->amount)])],
+            [__('mail.payout_line', ['user' => $user->displayName()])],
+            [
+                __('mail.row_user') => $user->displayName(),
+                __('mail.row_amount') => chf(-$tx->amount),
+                __('mail.row_time') => local_time($tx->created_at ?? now()),
+            ],
+            buttonLabel: __('mail.button_confirm'),
+            title: __('mail.payout_title'),
         );
 
         return $tx;

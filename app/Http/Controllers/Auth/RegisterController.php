@@ -222,28 +222,23 @@ class RegisterController extends Controller
     private function notifyKassiers(User $user, ?Transaction $carryover, ?Invitation $invitation): void
     {
         $name = trim(($user->first_name ?? '').' '.($user->last_name ?? ''));
-        $lines = [
-            __('mail.register_line', ['name' => $user->displayName(), 'time' => local_time($user->created_at ?? now())]),
-            '',
-            __('mail.register_username', ['username' => $user->username]),
-            __('mail.register_name', ['name' => $name !== '' ? $name : '–']),
+        $rows = [
+            __('mail.register_username') => $user->username,
+            __('mail.register_name') => $name !== '' ? $name : '–',
+            __('mail.register_email') => (string) ($user->email ?? ''),
+            __('mail.register_invited_by') => $invitation ? ($invitation->creator?->username ?? '?') : '',
+            __('mail.register_time') => local_time($user->created_at ?? now()),
+            __('mail.register_carryover') => $carryover ? $carryover->carryoverText() : '',
         ];
-        if (($user->email ?? '') !== '') {
-            $lines[] = __('mail.register_email', ['email' => $user->email]);
-        }
-        if ($invitation) {
-            $lines[] = __('mail.register_invited_by', ['user' => $invitation->creator?->username ?? '?']);
-        }
-        if ($carryover) {
-            $lines[] = '';
-            $lines[] = __('mail.register_carryover', ['text' => $carryover->carryoverText()]);
-        }
 
         KassierNotifier::send(
             __('mail.register_subject', ['user' => $user->username]),
-            $lines,
+            [__('mail.register_line', ['name' => $user->displayName()])],
+            $rows,
             route('backend.users.show', $user),
-            __('mail.register_footer'),
+            __('mail.register_button'),
+            __('mail.register_title'),
+            $carryover ? [__('mail.register_carryover_hint')] : [],
         );
     }
 }

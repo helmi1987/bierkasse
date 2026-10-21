@@ -23,5 +23,11 @@ return [
     'correction_row' => 'gezählt :counted (:delta)',
     'by' => 'von',
     'mail_subject' => 'Bierlager tief: :stock Biere',
-    'mail_line' => 'Der Lagerbestand ist auf :stock Biere gefallen (Mindestbestand :min). Bitte Bier nachkaufen und im Kassenbuch als «Bierkauf» mit Anzahl erfassen.',
+    'mail_title' => 'Bierlager tief',
+    'mail_line' => 'Der Lagerbestand ist unter den Mindestbestand gefallen.',
+    'mail_row_stock' => 'Lagerbestand',
+    'mail_row_min' => 'Mindestbestand',
+    'mail_beers' => ':count Biere',
+    'mail_hint' => 'Bitte Bier nachkaufen und im Kassenbuch als «Bierkauf» mit Anzahl erfassen.',
+    'mail_button' => 'Kassenbuch öffnen',
 ];

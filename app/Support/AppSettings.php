@@ -20,6 +20,9 @@ class AppSettings
 
     public const TWINT_NAME = 'twint_name';
 
+    /** TWINT on/off; unset = on when a number is configured (installs before the switch). */
+    public const TWINT_ENABLED = 'twint_enabled';
+
     /** Old on/off switch, replaced by REGISTRATION_MODE (only read by the migration). */
     public const LEGACY_REGISTRATION_ENABLED = 'registration_enabled';
 
@@ -125,6 +128,23 @@ class AppSettings
     public static function twintName(): string
     {
         return trim((string) self::get(self::TWINT_NAME, ''));
+    }
+
+    /** TWINT is offered: switched on and a number or a name is configured. */
+    public static function twintEnabled(): bool
+    {
+        $phone = self::twintPhone();
+        $enabled = (bool) self::get(self::TWINT_ENABLED, $phone !== '');
+
+        return $enabled && ($phone !== '' || self::twintName() !== '');
+    }
+
+    /** Where to send TWINT payments: the number, or only the name when no number is configured. */
+    public static function twintRecipient(): string
+    {
+        $phone = self::twintPhone();
+
+        return $phone !== '' ? $phone : self::twintName();
     }
 
     public static function registrationPassword(): string

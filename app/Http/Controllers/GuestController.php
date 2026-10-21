@@ -31,6 +31,7 @@ class GuestController extends Controller
             'code' => (string) $request->query('code', ''),
             'price' => AppSettings::beerPrice(),
             'available' => min(GuestSales::MAX_BEERS, max(0, BeerStock::current())),
+            'twintEnabled' => AppSettings::twintEnabled(),
             'twintPhone' => AppSettings::twintPhone(),
             'twintName' => AppSettings::twintName(),
         ]);
@@ -57,7 +58,7 @@ class GuestController extends Controller
         $data = $request->validate([
             'name' => ['nullable', 'string', 'max:100'],
             'quantity' => ['required', 'integer', 'between:1,'.GuestSales::MAX_BEERS],
-            'method' => ['required', Rule::in(Transaction::METHODS)],
+            'method' => ['required', Rule::in(AppSettings::twintEnabled() ? Transaction::METHODS : array_values(array_diff(Transaction::METHODS, ['twint'])))],
         ]);
         if (! FormToken::consume($request, 'guest')) {
             return back()->withInput($request->only(['name', 'quantity', 'method']))->with('warning', __('ledger.duplicate'));
@@ -85,6 +86,7 @@ class GuestController extends Controller
 
         return view('guest.thanks', [
             'sale' => $sale,
+            'twintEnabled' => AppSettings::twintEnabled(),
             'twintPhone' => AppSettings::twintPhone(),
             'twintName' => AppSettings::twintName(),
         ]);

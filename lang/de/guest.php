@@ -11,7 +11,7 @@ return [
     'price' => 'Preis pro Bier :price',
     'method' => 'Bezahlung',
     'twint_to' => 'TWINT an',
-    'twint_hint' => 'Nur bei Bezahlung mit TWINT: Betrag an diese Nummer senden.',
+    'twint_hint' => 'Nur bei Bezahlung mit TWINT: Betrag hierhin senden.',
     'submit' => 'Bier erfassen',
     'thanks_title' => 'Danke!',
     'thanks_cash' => 'Bitte :amount bar in die Kasse legen.',

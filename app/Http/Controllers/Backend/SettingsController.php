@@ -30,6 +30,7 @@ class SettingsController extends Controller
             'appName' => (string) AppSettings::get(AppSettings::APP_NAME, ''),
             'twintPhone' => AppSettings::twintPhone(),
             'twintName' => AppSettings::twintName(),
+            'twintEnabled' => (bool) AppSettings::get(AppSettings::TWINT_ENABLED, AppSettings::twintPhone() !== ''),
             'registrationMode' => AppSettings::registrationMode(),
             'registrationPassword' => AppSettings::registrationPassword(),
             'notifyKassier' => AppSettings::notifyKassier(),
@@ -58,6 +59,10 @@ class SettingsController extends Controller
             'smtp_encryption' => ['nullable', Rule::in(AppSettings::MAIL_ENCRYPTIONS)],
         ]);
 
+        if ($request->boolean('twint_enabled') && trim((string) ($data['twint_phone'] ?? '')) === '' && trim((string) ($data['twint_name'] ?? '')) === '') {
+            throw ValidationException::withMessages(['twint_phone' => __('settings.twint_missing')]);
+        }
+
         $price = Money::parse($data['beer_price']);
         if ($price === null || $price <= 0) {
             throw ValidationException::withMessages(['beer_price' => __('ledger.amount_invalid')]);
@@ -79,6 +84,7 @@ class SettingsController extends Controller
             AppSettings::APP_NAME => trim((string) ($data['app_name'] ?? '')),
             AppSettings::TWINT_PHONE => trim((string) ($data['twint_phone'] ?? '')),
             AppSettings::TWINT_NAME => trim((string) ($data['twint_name'] ?? '')),
+            AppSettings::TWINT_ENABLED => $request->boolean('twint_enabled'),
             AppSettings::REGISTRATION_MODE => $data['registration_mode'],
             AppSettings::REGISTRATION_PASSWORD => (string) ($data['registration_password'] ?? ''),
             AppSettings::NOTIFY_KASSIER => $request->boolean('notify_kassier'),

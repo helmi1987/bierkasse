@@ -33,10 +33,12 @@
 
     <section class="card stack">
         <h2>{{ __('settings.twint') }}</h2>
+        <label class="switch"><input type="checkbox" name="twint_enabled" value="1" @checked(old('twint_enabled', $twintEnabled))> <span>{{ __('settings.twint_enabled') }}</span></label>
         <div class="grid-2">
             <div class="field">
                 <label for="twint_phone">{{ __('settings.twint_phone') }}</label>
                 <input type="tel" id="twint_phone" name="twint_phone" value="{{ old('twint_phone', $twintPhone) }}">
+                <div class="hint">{{ __('settings.twint_phone_hint') }}</div>
             </div>
             <div class="field">
                 <label for="twint_name">{{ __('settings.twint_name') }}</label>

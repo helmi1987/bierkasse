@@ -36,7 +36,7 @@ return [
     'deposit_cancel_confirm' => 'Einzahlungsmeldung zurückziehen? Sie wird gelöscht.',
     'pending_tap_hint' => 'Antippen zum Ändern oder Zurückziehen.',
     'twint_heading' => 'TWINT',
-    'twint_intro' => 'An diese Nummer senden und danach die Einzahlung melden:',
+    'twint_intro' => 'Per TWINT senden und danach die Einzahlung melden:',
     'twint_suggested' => 'Vorschlag:',
     'suggestions' => 'Vorschläge',
     'suggestion_beers' => '{1} :count Bier|[2,*] :count Biere',

@@ -37,7 +37,7 @@ return [
     'pending_tap_hint' => 'Antippen zum Ändern oder Zurückziehen.',
     'twint_heading' => 'TWINT',
     'twint_intro' => 'An diese Nummer senden und danach die Einzahlung melden:',
-    'twint_send_amount' => 'Bitte :amount per TWINT an :name senden.',
+    'twint_send_amount' => 'Bitte z.B. :amount per TWINT an :name senden.',
     'twint_send' => 'Bitte per TWINT an :name senden.',
     'twint_then_report' => 'Danach die Einzahlung melden.',
     'twint_suggested' => 'Vorschlag:',

@@ -193,7 +193,7 @@ class HardeningTest extends TestCase
         $this->user(['username' => 'taken']);
         $data = ['code' => 'durst', 'username' => 'taken', 'password' => 'password-123', 'password_confirmation' => 'password-123'];
 
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 10; $i++) {
             $this->post('/registrieren', $data)->assertSessionHasErrors('username');
         }
         $this->post('/registrieren', ['username' => 'frei'] + $data)->assertSessionHasErrors('code');

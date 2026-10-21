@@ -216,6 +216,31 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   `apple-touch-icon.png` (statisch, neu erzeugbar mit `php resources/icons/generate.php public`).
   Manifest unter `/manifest.webmanifest`, Service Worker `public/sw.js` (nur Netzwerk, kein Cache).
 
+## Wartung (Admin)
+
+`/backend/wartung` (nur Admins, Menüpunkt "Wartung" im Backend). Jede Aktion fragt nach und wird mit dem
+Benutzernamen des Admins protokolliert (`Log::info`, `storage/logs`).
+
+- System: App-Version (Commit-Kurzhash, Branch und Datum, gelesen aus `.git/HEAD`, Refs bzw. `packed-refs`
+  ohne Shell; Datum aus dem Commit-Objekt, sonst Dateidatum der Ref; ohne lesbares `.git` "unbekannt"),
+  PHP, Laravel, Datenbank (Treiber, Verbindung), ausstehende Migrationen, Cache/Sperren/Session/Queue/Mail,
+  Schreibrechte `storage/` und `bootstrap/cache/`, `APP_ENV`/`APP_DEBUG` (Warnung bei Debug in Produktion),
+  zwischengespeicherte Konfiguration/Routen, freier Speicher.
+- "Cache leeren": `cache:clear` plus Sperren-Store; hebt damit auch gesperrte Anmelde-/Registrierungsversuche auf.
+- "Nur Sperren aufheben": die Rate-Limits liegen in einem eigenen Cache-Store `limiter`
+  (`config/cache.php`, Datei-Cache unter `storage/framework/cache/limiter`), der allein geleert wird.
+  `CACHE_LIMITER_DRIVER` (Standard `file`) bzw. `CACHE_LIMITER_STORE` (Standard `limiter`) ändern das; zeigt
+  `CACHE_LIMITER_STORE` auf den Anwendungs-Cache, leert die Aktion diesen ganz.
+- "Optimierungs-Cache leeren": `optimize:clear` (Konfiguration, Routen, Events, Views, Anwendungs-Cache);
+  der laufende Request behält seine geladene Konfiguration, der nächste liest `.env` neu.
+- "Datenbank migrieren": zeigt ausstehende Migrationen, führt `migrate --force` aus, Ausgabe wird angezeigt.
+- Wartungsmodus (Schalter + optionale Mitteilung, gespeichert in `settings`; nicht `artisan down`): nur Admins
+  können die App benutzen und sehen oben den Hinweis "Wartungsmodus aktiv". Alle anderen (Gäste, Benutzer,
+  Kassiers) erhalten die Seite "Die Bierkasse wird gerade gewartet" (HTTP 503) mit Mitteilung; angemeldete
+  Nicht-Admins werden abgemeldet, auch direkt nach der Anmeldung. Erreichbar bleiben Anmeldung (inkl. TOTP, SSO,
+  eigener Anbieter), Passwort-Reset, Manifest, `sw.js`, `/setup`, `/up` und statische Dateien.
+  **Annahme:** Passwort-Reset bleibt offen, damit ein Admin sich auch ohne Passwort wieder anmelden kann.
+
 ## Tests
 
 ```

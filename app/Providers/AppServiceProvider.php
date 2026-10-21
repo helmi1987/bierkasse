@@ -55,7 +55,9 @@ class AppServiceProvider extends ServiceProvider
                     $open = 0;
                 }
             }
-            $view->with('appName', AppSettings::appName())->with('openItems', $open);
+            $view->with('appName', AppSettings::appName())
+                ->with('openItems', $open)
+                ->with('maintenanceBanner', $user && $user->isAdmin() && AppSettings::maintenanceMode());
         });
     }
 }

@@ -46,6 +46,11 @@ class AppSettings
 
     public const MAIL = 'mail';
 
+    /** Maintenance mode for users: only admins can use the app (see MaintenanceMode middleware). */
+    public const MAINTENANCE = 'maintenance_mode';
+
+    public const MAINTENANCE_MESSAGE = 'maintenance_message';
+
     public const MAIL_TRANSPORTS = ['sendmail', 'smtp'];
 
     public const MAIL_ENCRYPTIONS = ['', 'tls', 'ssl'];
@@ -151,6 +156,16 @@ class AppSettings
     public static function personalSsoAllowed(): bool
     {
         return (bool) self::get(self::PERSONAL_SSO, true);
+    }
+
+    public static function maintenanceMode(): bool
+    {
+        return (bool) self::get(self::MAINTENANCE, false);
+    }
+
+    public static function maintenanceMessage(): string
+    {
+        return trim((string) self::get(self::MAINTENANCE_MESSAGE, ''));
     }
 
     public static function notifyKassier(): bool

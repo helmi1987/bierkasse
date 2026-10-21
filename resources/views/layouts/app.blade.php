@@ -59,6 +59,12 @@
     </header>
 @endif
 <main id="main" class="wrap main @yield('main_class')">
+    @if ($maintenanceBanner ?? false)
+        <div class="alert warn" role="alert">
+            <strong>{{ __('maintenance.banner') }}</strong> {{ __('maintenance.banner_text') }}
+            <a href="{{ route('backend.maintenance') }}">{{ __('maintenance.banner_link') }}</a>
+        </div>
+    @endif
     @include('partials.install-hint')
     @include('partials.alerts')
     @yield('content')

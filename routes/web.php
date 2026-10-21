@@ -126,6 +126,12 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 Route::get('/einstellungen', [Backend\SettingsController::class, 'edit'])->name('settings');
                 Route::put('/einstellungen', [Backend\SettingsController::class, 'update'])->name('settings.update');
                 Route::get('/registrierung-qr', [Backend\SettingsController::class, 'registrationQr'])->name('registration.qr');
+                Route::get('/wartung', [Backend\MaintenanceController::class, 'index'])->name('maintenance');
+                Route::post('/wartung/cache', [Backend\MaintenanceController::class, 'clearCache'])->name('maintenance.cache');
+                Route::post('/wartung/sperren', [Backend\MaintenanceController::class, 'clearLimits'])->name('maintenance.limits');
+                Route::post('/wartung/optimierung', [Backend\MaintenanceController::class, 'clearOptimize'])->name('maintenance.optimize');
+                Route::post('/wartung/migrieren', [Backend\MaintenanceController::class, 'migrate'])->name('maintenance.migrate');
+                Route::put('/wartung/modus', [Backend\MaintenanceController::class, 'mode'])->name('maintenance.mode');
                 Route::resource('sso', Backend\SsoProviderController::class)->except(['show'])
                     ->parameters(['sso' => 'ssoProvider'])->names('sso');
             });

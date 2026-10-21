@@ -13,6 +13,7 @@ return [
         'settings' => 'Einstellungen',
         'sso' => 'SSO',
         'qr' => 'Registrierungs-QR',
+        'maintenance' => 'Wartung',
     ],
     'open_items' => 'Offene Posten',
     'deposits' => 'Offene Einzahlungen',

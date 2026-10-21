@@ -10,5 +10,6 @@
         <a href="{{ route('backend.settings') }}" @class(['active' => request()->routeIs('backend.settings')])>{{ __('backend.nav.settings') }}</a>
         <a href="{{ route('backend.sso.index') }}" @class(['active' => request()->routeIs('backend.sso.*')])>{{ __('backend.nav.sso') }}</a>
         <a href="{{ route('backend.registration.qr') }}" @class(['active' => request()->routeIs('backend.registration.qr')])>{{ __('backend.nav.qr') }}</a>
+        <a href="{{ route('backend.maintenance') }}" @class(['active' => request()->routeIs('backend.maintenance*')])>{{ __('backend.nav.maintenance') }}</a>
     @endif
 </nav>

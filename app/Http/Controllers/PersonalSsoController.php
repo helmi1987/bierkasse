@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SsoProvider;
 use App\Models\User;
+use App\Services\Audit;
 use App\Services\Sso;
 use App\Support\AppSettings;
 use App\Support\OutboundUrl;
@@ -117,8 +118,12 @@ class PersonalSsoController extends Controller
 
         // Another issuer/client means another account namespace: the link has to be made again.
         $relink = ! $isNew && $provider->isDirty(['discovery_url', 'issuer', 'authorize_url', 'token_url', 'userinfo_url', 'client_id', 'subject_claim']);
-        DB::transaction(function () use ($provider, $relink) {
+        [$old, $new] = Audit::dirty($provider);
+        DB::transaction(function () use ($provider, $relink, $isNew, $old, $new) {
             $provider->save();
+            if ($isNew || $new !== []) {
+                Audit::log($isNew ? 'sso_provider.personal_create' : 'sso_provider.personal_update', $provider, $old, $new + ($relink ? ['identities_removed' => true] : []));
+            }
             if ($relink) {
                 $provider->identities()->delete();
             }
@@ -139,6 +144,7 @@ class PersonalSsoController extends Controller
             DB::transaction(function () use ($provider) {
                 $provider->identities()->delete();
                 $provider->delete();
+                Audit::log('sso_provider.personal_delete', $provider, ['name' => $provider->name]);
             });
         }
 

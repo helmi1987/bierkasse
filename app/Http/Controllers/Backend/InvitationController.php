@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invitation;
+use App\Services\Audit;
 use App\Support\AppSettings;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -28,7 +30,10 @@ class InvitationController extends Controller
             return back()->with('error', __('account.invitation_already_used'));
         }
 
-        $invitation->delete();
+        DB::transaction(function () use ($invitation) {
+            $invitation->delete();
+            Audit::log('invitation.revoke', $invitation, ['created_by' => $invitation->created_by]);
+        });
 
         return back()->with('status', __('account.invitation_revoked'));
     }

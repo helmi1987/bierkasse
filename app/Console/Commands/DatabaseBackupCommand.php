@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Audit;
 use App\Services\DatabaseBackup;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -32,6 +33,9 @@ class DatabaseBackupCommand extends Command
             : $target;
         $directory = dirname($file);
         $part = $file.'.part';
+
+        // Logged before the dump, so the backup contains its own entry.
+        Audit::try('backup.create', null, [], ['file' => basename($file)], null, 'cli');
 
         $gz = null;
         try {

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Invitation;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\Audit;
 use App\Services\KassierNotifier;
 use App\Services\Ledger;
 use App\Support\AppSettings;
@@ -175,6 +176,11 @@ class RegisterController extends Controller
                 if ($invitation && ! $invitation->consume($user)) {
                     throw new InvitationUsedException;
                 }
+                Audit::log('registration', $user, [], array_filter([
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'invitation_id' => $invitation?->id,
+                ], fn ($v) => $v !== null), $user);
                 $tx = $carryover ? Ledger::reportCarryover($user, ...$carryover) : null;
 
                 return [$user, $tx];

@@ -72,7 +72,7 @@ class Ledger
                 throw new LedgerException(__('ledger.limit_reached'));
             }
 
-            return Transaction::query()->create([
+            $tx = Transaction::query()->create([
                 'user_id' => $user->id,
                 'type' => Transaction::TYPE_CONSUMPTION,
                 'status' => Transaction::STATUS_CONFIRMED,
@@ -83,6 +83,9 @@ class Ledger
                 'confirmed_by' => $user->id,
                 'confirmed_at' => now(),
             ]);
+            Audit::log('consume', $tx, [], self::auditValues($tx), $user);
+
+            return $tx;
         });
 
         // Outside the transaction: a mail never delays or blocks the booking.
@@ -152,6 +155,7 @@ class Ledger
             if ($extra > 0) {
                 $tx->roundItems()->create(['user_id' => null, 'quantity' => $extra]);
             }
+            Audit::log('round.create', $tx, [], self::auditValues($tx) + ['recipients' => $recipientIds, 'extra' => $extra], $giver);
 
             return $tx;
         });
@@ -169,9 +173,14 @@ class Ledger
         if (! $tx->canBeUndoneBy($user)) {
             throw new LedgerException(__('ledger.undo_expired'));
         }
-        DB::transaction(function () use ($tx) {
+        DB::transaction(function () use ($tx, $user) {
+            $old = self::auditValues($tx);
+            if ($tx->type === Transaction::TYPE_ROUND) {
+                $old['recipients'] = $tx->roundItems()->pluck('user_id')->all();
+            }
             $tx->roundItems()->delete();
             $tx->delete();
+            Audit::log($tx->type === Transaction::TYPE_ROUND ? 'round.undo' : 'consume.undo', $tx, $old, [], $user);
         });
         BeerStock::rearm();
     }
@@ -186,15 +195,20 @@ class Ledger
             throw new LedgerException(__('ledger.payout_pending'));
         }
 
-        $tx = Transaction::query()->create([
-            'user_id' => $user->id,
-            'type' => Transaction::TYPE_DEPOSIT,
-            'status' => Transaction::STATUS_PENDING,
-            'method' => $method,
-            'amount' => $amount,
-            'note' => $note,
-            'created_by' => $user->id,
-        ]);
+        $tx = DB::transaction(function () use ($user, $amount, $method, $note) {
+            $tx = Transaction::query()->create([
+                'user_id' => $user->id,
+                'type' => Transaction::TYPE_DEPOSIT,
+                'status' => Transaction::STATUS_PENDING,
+                'method' => $method,
+                'amount' => $amount,
+                'note' => $note,
+                'created_by' => $user->id,
+            ]);
+            Audit::log('deposit.report', $tx, [], self::auditValues($tx), $user);
+
+            return $tx;
+        });
 
         KassierNotifier::send(
             __('mail.deposit_subject', ['user' => $user->displayName()]),
@@ -223,7 +237,7 @@ class Ledger
             self::assertActive($user);
             self::assertBeerAccount($user);
 
-            return Transaction::query()->create([
+            $tx = Transaction::query()->create([
                 'user_id' => $user->id,
                 'type' => Transaction::TYPE_DEPOSIT,
                 'status' => Transaction::STATUS_CONFIRMED,
@@ -234,6 +248,9 @@ class Ledger
                 'confirmed_by' => $by->id,
                 'confirmed_at' => now(),
             ]);
+            Audit::log('deposit.book', $tx, [], self::auditValues($tx), $by);
+
+            return $tx;
         });
     }
 
@@ -244,7 +261,7 @@ class Ledger
             self::lock($user);
             $locked = self::lockPending($tx, Transaction::TYPE_DEPOSIT);
             self::assertActive($user);
-            $locked->forceFill(['status' => Transaction::STATUS_CONFIRMED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+            self::saveAudited($locked, ['status' => Transaction::STATUS_CONFIRMED, 'confirmed_by' => $by->id, 'confirmed_at' => now()], 'deposit.confirm', $by);
             $tx->setRawAttributes($locked->getAttributes(), true);
         });
     }
@@ -258,7 +275,7 @@ class Ledger
         self::assertAmount($amount);
         DB::transaction(function () use ($tx, $user, $amount, $method) {
             $locked = self::lockOwnPendingDeposit($tx, $user);
-            $locked->forceFill(['amount' => $amount, 'method' => $method, 'edited_at' => now()])->save();
+            self::saveAudited($locked, ['amount' => $amount, 'method' => $method, 'edited_at' => now()], 'deposit.edit', $user);
             $tx->setRawAttributes($locked->getAttributes(), true);
         });
     }
@@ -267,7 +284,9 @@ class Ledger
     public static function cancelDeposit(Transaction $tx, User $user): void
     {
         DB::transaction(function () use ($tx, $user) {
-            self::lockOwnPendingDeposit($tx, $user)->delete();
+            $locked = self::lockOwnPendingDeposit($tx, $user);
+            $locked->delete();
+            Audit::log('deposit.withdraw', $locked, self::auditValues($locked), [], $user);
         });
     }
 
@@ -275,7 +294,7 @@ class Ledger
     {
         DB::transaction(function () use ($tx, $by) {
             $locked = self::lockPending($tx, Transaction::TYPE_DEPOSIT);
-            $locked->forceFill(['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+            self::saveAudited($locked, ['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()], 'deposit.reject', $by);
             $tx->setRawAttributes($locked->getAttributes(), true);
         });
     }
@@ -295,7 +314,7 @@ class Ledger
             self::assertActive($user);
             self::assertBeerAccount($user);
 
-            return Transaction::query()->create([
+            $tx = Transaction::query()->create([
                 'user_id' => $user->id,
                 'type' => Transaction::TYPE_CORRECTION,
                 'status' => Transaction::STATUS_CONFIRMED,
@@ -305,6 +324,9 @@ class Ledger
                 'confirmed_by' => $by->id,
                 'confirmed_at' => now(),
             ]);
+            Audit::log('correction.create', $tx, [], self::auditValues($tx), $by);
+
+            return $tx;
         });
     }
 
@@ -321,15 +343,20 @@ class Ledger
             throw new LedgerException(__('ledger.amount_invalid'));
         }
 
-        return Transaction::query()->create([
-            'user_id' => $user->id,
-            'type' => Transaction::TYPE_CARRYOVER,
-            'status' => Transaction::STATUS_PENDING,
-            'quantity' => $quantity,
-            'unit_price' => $quantity !== null ? $unitPrice : null,
-            'amount' => $amount,
-            'created_by' => $user->id,
-        ]);
+        return DB::transaction(function () use ($user, $amount, $quantity, $unitPrice) {
+            $tx = Transaction::query()->create([
+                'user_id' => $user->id,
+                'type' => Transaction::TYPE_CARRYOVER,
+                'status' => Transaction::STATUS_PENDING,
+                'quantity' => $quantity,
+                'unit_price' => $quantity !== null ? $unitPrice : null,
+                'amount' => $amount,
+                'created_by' => $user->id,
+            ]);
+            Audit::log('carryover.report', $tx, [], self::auditValues($tx), $user);
+
+            return $tx;
+        });
     }
 
     /**
@@ -356,7 +383,7 @@ class Ledger
                     'unit_price' => null,
                 ];
             }
-            $locked->forceFill($changes)->save();
+            self::saveAudited($locked, $changes, 'carryover.confirm', $by);
             $tx->setRawAttributes($locked->getAttributes(), true);
         });
     }
@@ -365,7 +392,7 @@ class Ledger
     {
         DB::transaction(function () use ($tx, $by) {
             $locked = self::lockPending($tx, Transaction::TYPE_CARRYOVER);
-            $locked->forceFill(['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+            self::saveAudited($locked, ['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()], 'carryover.reject', $by);
             $tx->setRawAttributes($locked->getAttributes(), true);
         });
     }
@@ -380,7 +407,7 @@ class Ledger
             self::assertBeerAccount($user);
             self::assertCanLeave($user);
 
-            return Transaction::query()->create([
+            $tx = Transaction::query()->create([
                 'user_id' => $user->id,
                 'type' => Transaction::TYPE_PAYOUT,
                 'status' => Transaction::STATUS_PENDING,
@@ -389,6 +416,9 @@ class Ledger
                 'amount' => -self::balance($user),
                 'created_by' => $user->id,
             ]);
+            Audit::log('payout.request', $tx, [], self::auditValues($tx), $user);
+
+            return $tx;
         });
 
         KassierNotifier::send(
@@ -416,13 +446,13 @@ class Ledger
             $user = User::query()->findOrFail($tx->user_id);
             self::lock($user);
             $locked = self::lockPending($tx, Transaction::TYPE_PAYOUT);
-            $locked->forceFill([
+            self::saveAudited($locked, [
                 'status' => Transaction::STATUS_CONFIRMED,
                 'method' => $method,
                 'amount' => -self::balance($user),
                 'confirmed_by' => $by->id,
                 'confirmed_at' => now(),
-            ])->save();
+            ], 'payout.confirm', $by);
             self::markLeft($user);
             $tx->setRawAttributes($locked->getAttributes(), true);
         });
@@ -432,7 +462,7 @@ class Ledger
     {
         DB::transaction(function () use ($tx, $by) {
             $locked = self::lockPending($tx, Transaction::TYPE_PAYOUT);
-            $locked->forceFill(['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+            self::saveAudited($locked, ['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()], 'payout.cancel', $by);
             $tx->setRawAttributes($locked->getAttributes(), true);
         });
     }
@@ -459,6 +489,7 @@ class Ledger
                 ]);
             }
             self::markLeft($user);
+            Audit::log('leave.donate', $user, [], ['amount' => $tx?->amount ?? 0], $user);
 
             return $tx;
         });
@@ -605,8 +636,40 @@ class Ledger
                     throw new LedgerException(__('account.admin_only_settle_first'));
                 }
             }
+            $was = (bool) $user->admin_only;
             $user->forceFill(['admin_only' => $on])->save();
+            if ($was !== $on) {
+                Audit::log('user.admin_only', $user, ['admin_only' => $was], ['admin_only' => $on]);
+            }
         });
+    }
+
+    /** Booking fields for the audit log. */
+    private static function auditValues(Transaction $tx): array
+    {
+        return array_filter([
+            'user_id' => $tx->user_id,
+            'type' => $tx->type,
+            'status' => $tx->status,
+            'quantity' => $tx->quantity,
+            'unit_price' => $tx->unit_price,
+            'amount' => $tx->amount,
+            'method' => $tx->method,
+            'note' => $tx->note,
+        ], fn ($v) => $v !== null);
+    }
+
+    /** Saves the changes of a locked transaction and logs them (same DB transaction). */
+    private static function saveAudited(Transaction $tx, array $changes, string $action, User $by): void
+    {
+        $before = $tx->only(array_keys($changes));
+        $tx->forceFill($changes)->save();
+        $after = $tx->only(array_keys($changes));
+        [$old, $new] = Audit::diff(
+            array_map(fn ($v) => $v instanceof \DateTimeInterface ? $v->format(DATE_ATOM) : $v, $before),
+            array_map(fn ($v) => $v instanceof \DateTimeInterface ? $v->format(DATE_ATOM) : $v, $after),
+        );
+        Audit::log($action, $tx, $old + ['user_id' => $tx->user_id], $new + ['user_id' => $tx->user_id], $by);
     }
 
     private static function assertAmount(int $amount): void

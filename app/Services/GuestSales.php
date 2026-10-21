@@ -6,6 +6,7 @@ use App\Models\GuestSale;
 use App\Models\User;
 use App\Support\AppSettings;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Guest sales: booked immediately (no confirmation), at the current beer price.
@@ -33,14 +34,19 @@ class GuestSales
 
             $price = AppSettings::beerPrice();
 
-            return GuestSale::query()->create([
-                'name' => $name !== null && trim($name) !== '' ? trim($name) : null,
-                'beers' => $beers,
-                'unit_price' => $price,
-                'amount' => $beers * $price,
-                'method' => $method,
-                'booked_by' => $by?->id,
-            ]);
+            return DB::transaction(function () use ($beers, $method, $name, $by, $price) {
+                $sale = GuestSale::query()->create([
+                    'name' => $name !== null && trim($name) !== '' ? trim($name) : null,
+                    'beers' => $beers,
+                    'unit_price' => $price,
+                    'amount' => $beers * $price,
+                    'method' => $method,
+                    'booked_by' => $by?->id,
+                ]);
+                Audit::log('guest_sale.create', $sale, [], self::auditValues($sale), $by, $by === null ? 'Gast' : null);
+
+                return $sale;
+            });
         });
 
         BeerStock::afterConsumption($beers);
@@ -54,13 +60,25 @@ class GuestSales
         if (! $sale->canBeUndoneBy($user)) {
             throw new LedgerException(__('ledger.undo_expired'));
         }
-        self::cancel($sale);
+        DB::transaction(function () use ($sale, $user) {
+            $sale->delete();
+            Audit::log('guest_sale.undo', $sale, self::auditValues($sale), [], $user);
+        });
+        BeerStock::rearm();
     }
 
     /** Storno by kassier/admin. */
     public static function cancel(GuestSale $sale): void
     {
-        $sale->delete();
+        DB::transaction(function () use ($sale) {
+            $sale->delete();
+            Audit::log('guest_sale.cancel', $sale, self::auditValues($sale));
+        });
         BeerStock::rearm();
+    }
+
+    private static function auditValues(GuestSale $sale): array
+    {
+        return array_filter($sale->only(['name', 'beers', 'unit_price', 'amount', 'method', 'booked_by']), fn ($v) => $v !== null);
     }
 }

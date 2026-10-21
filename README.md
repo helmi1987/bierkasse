@@ -302,6 +302,38 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   `apple-touch-icon.png` (statisch, neu erzeugbar mit `php resources/icons/generate.php public`).
   Manifest unter `/manifest.webmanifest`, Service Worker `public/sw.js` (nur Netzwerk, kein Cache).
 
+## Protokoll (Audit-Log)
+
+Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Einträge werden **nie** gelöscht
+(keine Aufbewahrungsfrist, keine Lösch-/Änderungsroute, keine Aktion im UI, auch nicht für Admins oder in der Wartung).
+
+- Tabelle `audit_logs`: Zeit (UTC, Text), Person (`actor_id` mit Fremdschlüssel, dazu `actor_ref`/`actor_name` als
+  Schnappschuss), Aktion (z. B. `consume`, `consume.undo`, `round.create`, `deposit.report/confirm/reject/edit/withdraw`,
+  `correction.create`, `payout.*`, `carryover.*`, `guest_sale.*`, `cash_entry.create/delete`, `stock.correct`,
+  `settings.update` (geänderte Schlüssel), `user.role/status/limit/password_reset/totp_reset/admin_only/...`,
+  `auth.login`, `auth.login_failed` (nur versuchter Benutzername), `auth.logout`, `registration`,
+  `invitation.create/revoke`, `maintenance.*`, `backup.*`, `feedback.delete`, `sso_provider.*`), Objekt (Typ, ID),
+  alte/neue Werte (nur geänderte Felder), IP, gekürzter User-Agent.
+- Geheimnisse werden nie gespeichert: Passwörter, Secrets, Tokens, TOTP, Client-Secrets, SMTP-Passwort,
+  Registrierungs-/Gäste-Passwort, Flyer-Code erscheinen als `***changed***`.
+- Geschrieben mit `App\Services\Audit::log()` in derselben DB-Transaktion wie die Änderung (beides oder nichts).
+  Ausnahmen ohne Transaktion (Anmeldung, Abmeldung, Wartungsaktionen): Fehler beim Protokollieren werden gemeldet,
+  brechen die Aktion aber nicht ab.
+- Hash-Kette: `hash = sha256(JSON aus prev_hash und allen Feldern)`. Der Kopf der Kette (letzter Hash, Anzahl)
+  steht in `audit_chain` und wird beim Anhängen gesperrt (keine Verzweigung bei gleichzeitigen Schreibern).
+  Das Modell `AuditLog` verweigert Ändern und Löschen (auch Massen-Updates über Eloquent). Wer direkten
+  Datenbankzugriff hat, kann Zeilen trotzdem ändern oder löschen; die Prüfung zeigt das an.
+  **Annahme:** `actor_id` ist nicht Teil des Hashs (der Fremdschlüssel setzt ihn beim Löschen eines Benutzers auf
+  null), `actor_ref` schon.
+- Backend `/backend/protokoll` (nur Admins, nur lesen): neueste zuerst, Filter Person, Aktion (Präfix, z. B.
+  `deposit`), Datum von/bis, Freitext; Detailansicht mit alten/neuen Werten und Hashes; "Integrität prüfen"
+  prüft die ganze Kette und nennt den ersten fehlerhaften Eintrag; CSV-Export (mit Filtern).
+- Backups (`db:backup`, Download in der Wartung) enthalten `audit_logs` und `audit_chain`; `db:restore` stellt beide
+  wieder her und hängt danach `backup.restore` an. Einträge nach dem Backup-Zeitpunkt sind nach einer
+  Wiederherstellung weg (nur im neueren Backup).
+- Mandantenfähigkeit (später): `audit_logs` bekommt `tenant_id`; Mandanten-Admins sehen nur ihren Mandanten,
+  der Superadmin alle. Die Hash-Kette bleibt eine Kette über die ganze Installation.
+
 ## Wartung (Admin)
 
 `/backend/wartung` (nur Admins, Menüpunkt "Wartung" im Backend). Jede Aktion fragt nach und wird mit dem

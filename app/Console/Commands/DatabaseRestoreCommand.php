@@ -2,10 +2,12 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Audit;
 use App\Services\DatabaseBackup;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class DatabaseRestoreCommand extends Command
@@ -48,6 +50,10 @@ class DatabaseRestoreCommand extends Command
         }
 
         Log::info('Database restored', ['file' => basename($file), 'statements' => $count]);
+        // The audit log (with its hash chain) is part of the dump; the restore itself is appended.
+        if ($db->getName() === DB::connection()->getName() && Schema::hasTable('audit_logs')) {
+            Audit::try('backup.restore', null, [], ['file' => basename($file), 'statements' => $count], null, 'cli');
+        }
         $this->info("Restored {$file} into {$target}: {$count} statements.");
 
         return self::SUCCESS;

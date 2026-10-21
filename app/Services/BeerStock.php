@@ -9,6 +9,7 @@ use App\Models\StockCorrection;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\AppSettings;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Beer stock = purchased beers (cash book) + inventory corrections - confirmed consumption (incl. rounds)
@@ -59,12 +60,17 @@ class BeerStock
      */
     public static function correct(int $counted, ?string $note, User $by): StockCorrection
     {
-        $correction = StockCorrection::query()->create([
-            'delta' => $counted - self::current(),
-            'counted' => $counted,
-            'note' => $note,
-            'created_by' => $by->id,
-        ]);
+        $correction = DB::transaction(function () use ($counted, $note, $by) {
+            $correction = StockCorrection::query()->create([
+                'delta' => $counted - self::current(),
+                'counted' => $counted,
+                'note' => $note,
+                'created_by' => $by->id,
+            ]);
+            Audit::log('stock.correct', $correction, [], array_filter($correction->only(['delta', 'counted', 'note']), fn ($v) => $v !== null), $by);
+
+            return $correction;
+        });
         self::rearm();
 
         return $correction;

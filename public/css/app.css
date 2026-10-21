@@ -360,11 +360,15 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .flyer-footer { flex: none; display: flex; justify-content: space-between; gap: 3cqw; padding: 2.2cqw 5cqw; border-top: 1px solid var(--border); background: var(--bg); font-size: 1.85cqw; color: var(--muted); }
 .flyer-footer span:first-child { font-weight: 600; color: var(--text); white-space: nowrap; }
 .flyer-footer span:last-child { text-align: right; }
-@page flyer { size: A4 portrait; margin: 0; }
+/* Fixed 184 x 270 mm with 12 mm page margins: fits on one A4 page even where a browser
+   ignores the @page rule and applies its own default margins (about 10-13 mm). */
+@page flyer { size: A4 portrait; margin: 12mm; }
 @media print {
+    html, body { margin: 0; padding: 0; }
     .print-flyer .main { max-width: none; padding: 0; margin: 0; }
-    .flyer-frame { width: 210mm; max-width: none; }
-    .flyer { width: 210mm; height: 296mm; aspect-ratio: auto; border: 0; border-radius: 0; box-shadow: none; break-inside: avoid; }
+    .print-flyer .main > :not(.flyer-frame) { display: none !important; }
+    .flyer-frame { width: 184mm; max-width: none; margin: 0 auto; }
+    .flyer { width: 184mm; height: 270mm; aspect-ratio: auto; border: 0; border-radius: 0; box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
 }
 
 /* Own pending deposit report: tap the row to change or withdraw it. */

@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invitation;
+use App\Services\Audit;
 use App\Support\AppSettings;
 use App\Support\FormToken;
 use App\Support\Qr;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -41,6 +43,7 @@ class InvitationController extends Controller
         }
 
         [$invitation, $token] = Invitation::issue($user);
+        Audit::log('invitation.create', $invitation, [], ['expires_at' => (string) $invitation->expires_at]);
 
         // Rendered directly (no redirect), so the plain token is never stored in the session.
         return $this->page($request, $invitation, $token);
@@ -53,7 +56,10 @@ class InvitationController extends Controller
             return back()->with('error', __('account.invitation_already_used'));
         }
 
-        $invitation->delete();
+        DB::transaction(function () use ($invitation) {
+            $invitation->delete();
+            Audit::log('invitation.revoke', $invitation, ['created_by' => $invitation->created_by]);
+        });
 
         return back()->with('status', __('account.invitation_revoked'));
     }

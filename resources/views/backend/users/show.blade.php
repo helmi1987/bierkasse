@@ -6,13 +6,16 @@
 @include('partials.backend-nav')
 @php($me = auth()->user())
 @php($protected = $user->isAdmin() && ! $me->isAdmin())
-<h1>{{ $user->displayName() }} <span class="pill">{{ __('users.roles.'.$user->role) }}</span> <span @class(['pill', 'bad' => ! $user->isActive()])>{{ __('users.status.'.$user->status) }}</span></h1>
+<h1>{{ $user->displayName() }} <span class="pill">{{ __('users.roles.'.$user->role) }}</span> <span @class(['pill', 'bad' => ! $user->isActive()])>{{ __('users.status.'.$user->status) }}</span>@if ($user->isAdminOnly()) <span class="pill">{{ __('account.admin_only') }}</span>@endif</h1>
 <p class="muted">{{ $user->username }}@if ($user->email) · {{ $user->email }}@endif · {{ __('users.totp') }}: {{ $user->hasTotp() ? __('account.totp_active') : '–' }}@if ($user->stats_opt_out) · {{ __('users.stats_opt_out') }}@endif · {{ __('users.last_login') }}: {{ local_time($user->last_login_at) }}@if ($personalSso) · {{ __('users.personal_sso', ['name' => $personalSso->name, 'host' => parse_url((string) $personalSso->authorize_url, PHP_URL_HOST) ?: '–']) }} ({{ $personalSso->identities_count > 0 ? __('sso.personal.connected') : __('sso.personal.not_connected') }})@endif</p>
 
 @if ($roundsGiven > 0)
     <p class="muted" data-testid="round-given">{{ __('round.given_kpi') }}: {{ trans_choice('round.beers', $roundsGiven, ['count' => $roundsGiven]) }}</p>
 @endif
 
+@if ($user->isAdminOnly())
+    <p class="alert" data-testid="admin-only-note">{{ __('users.admin_only_no_money') }}</p>
+@else
 <section @class(['balance-card', 'small', 'negative' => $balance < 0])>
     <div class="balance-label">{{ __('users.balance') }}</div>
     <div class="balance-amount">{{ chf($balance) }}</div>
@@ -21,7 +24,10 @@
     @endif
 </section>
 
+@endif
+
 <div class="grid-2">
+    @unless ($user->isAdminOnly())
     <section class="card">
         <h2>{{ __('users.deposit_heading') }}</h2>
         <form method="post" action="{{ route('backend.users.deposit', $user) }}" class="stack">
@@ -75,6 +81,8 @@
         </form>
     </section>
 
+    @endunless
+
     @unless ($protected)
         <section class="card">
             <h2>{{ __('users.password_heading') }}</h2>
@@ -125,6 +133,15 @@
             </select>
             <button type="submit" class="btn small">{{ __('users.role_save') }}</button>
         </form>
+        @if ($user->isKassier())
+            <form method="post" action="{{ route('backend.users.admin-only', $user) }}" class="stack" id="nur-verwaltung">
+                @csrf
+                @method('PUT')
+                <label class="check"><input type="checkbox" name="admin_only" value="1" @checked($user->isAdminOnly())> {{ __('users.admin_only_heading') }}</label>
+                <p class="hint">{{ __('users.admin_only_hint') }}</p>
+                <button type="submit" class="btn small">{{ __('users.admin_only_save') }}</button>
+            </form>
+        @endif
     @endif
 </section>
 

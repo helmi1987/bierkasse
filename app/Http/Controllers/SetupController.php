@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Audit;
 use App\Support\DatabaseConnection;
 use App\Support\EnvEditor;
 use App\Support\UserRules;
@@ -106,6 +107,8 @@ class SetupController extends Controller
                     'status' => User::STATUS_ACTIVE,
                 ],
             );
+
+            Audit::try('setup', $user, [], ['username' => $user->username, 'role' => $user->role], $user);
 
             EnvEditor::set([
                 'APP_URL' => rtrim($data['app_url'], '/'),

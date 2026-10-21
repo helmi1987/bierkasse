@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\Audit;
 use App\Services\Ledger;
 use App\Services\LedgerException;
 use App\Services\Rounds;
@@ -12,6 +13,7 @@ use App\Support\Money;
 use App\Support\UserRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -57,7 +59,7 @@ class UserController extends Controller
             }
         }
 
-        $user->forceFill(['overdraft_limit' => $limit])->save();
+        Audit::save('user.limit', $user->forceFill(['overdraft_limit' => $limit]));
 
         return back()->with('status', __('users.limit_saved'));
     }
@@ -67,11 +69,11 @@ class UserController extends Controller
         $this->guardAdminTarget($request, $user);
         $data = $request->validate(['password' => UserRules::password()]);
 
-        $user->forceFill([
+        Audit::save('user.password_reset', $user->forceFill([
             'password' => $data['password'],
             'must_change_password' => $request->boolean('must_change'),
             'remember_token' => null,
-        ])->save();
+        ]), true);
 
         return back()->with('status', __('users.password_set'));
     }
@@ -79,7 +81,10 @@ class UserController extends Controller
     public function resetTotp(Request $request, User $user): RedirectResponse
     {
         $this->guardAdminTarget($request, $user);
-        $user->disableTotp();
+        DB::transaction(function () use ($user) {
+            $user->disableTotp();
+            Audit::log('user.totp_reset', $user);
+        });
 
         return back()->with('status', __('users.totp_reset_done'));
     }
@@ -103,10 +108,10 @@ class UserController extends Controller
             }
         }
 
-        $user->forceFill([
+        Audit::save('user.status', $user->forceFill([
             'status' => $active ? User::STATUS_ACTIVE : User::STATUS_LEFT,
             'left_at' => $active ? null : now(),
-        ])->save();
+        ]));
 
         return back()->with('status', $active ? __('users.reactivated') : __('users.deactivated'));
     }
@@ -162,9 +167,24 @@ class UserController extends Controller
             return back()->with('error', __('users.last_admin'));
         }
 
-        $user->forceFill(['role' => $data['role']])->save();
+        // "Nur Verwaltung" exists only for kassiers and admins.
+        Audit::save('user.role', $user->forceFill(['role' => $data['role']] + ($data['role'] === User::ROLE_USER ? ['admin_only' => false] : [])));
 
         return back()->with('status', __('users.role_saved'));
+    }
+
+    /** "Nur Verwaltung" on/off (admins only; also for the own account). */
+    public function adminOnly(Request $request, User $user): RedirectResponse
+    {
+        $on = $request->boolean('admin_only');
+
+        try {
+            Ledger::setAdminOnly($user, $on);
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', __($on ? 'account.admin_only_on' : 'account.admin_only_off'));
     }
 
     /** Kassiers must not take over admin accounts (password, TOTP, status). */

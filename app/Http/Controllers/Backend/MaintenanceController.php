@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\Audit;
 use App\Services\DatabaseBackup;
 use App\Support\AppSettings;
 use App\Support\SystemInfo;
@@ -104,7 +105,7 @@ class MaintenanceController extends Controller
         Setting::putMany([
             AppSettings::MAINTENANCE => $on,
             AppSettings::MAINTENANCE_MESSAGE => trim((string) ($data['maintenance_message'] ?? '')),
-        ]);
+        ], 'maintenance.mode');
         $this->log($request, $on ? 'maintenance mode on' : 'maintenance mode off');
 
         return back()->with('status', __($on ? 'maintenance.mode_on_done' : 'maintenance.mode_off_done'));
@@ -122,6 +123,7 @@ class MaintenanceController extends Controller
         }
         $name = DatabaseBackup::filename();
         $admin = $request->user()?->username;
+        $this->log($request, 'backup downloaded', ['file' => $name]);
 
         return response()->streamDownload(function () use ($name, $admin) {
             $gzip = deflate_init(ZLIB_ENCODING_GZIP, ['level' => 6]);
@@ -197,6 +199,21 @@ class MaintenanceController extends Controller
     private function log(Request $request, string $action, array $context = []): void
     {
         Log::info('Maintenance: '.$action, ['admin' => $request->user()?->username] + $context);
+
+        // Audit log (the maintenance mode switch is logged by Setting::putMany).
+        $audit = [
+            'cache cleared' => 'maintenance.cache',
+            'rate limits cleared' => 'maintenance.limits',
+            'optimization cache cleared' => 'maintenance.optimize',
+            'database migrated' => 'maintenance.migrate',
+            'backup downloaded' => 'backup.download',
+            'stored backup downloaded' => 'backup.download_stored',
+            'stored backup deleted' => 'backup.delete',
+            'stored backup delete failed' => 'backup.delete_failed',
+        ][$action] ?? (str_ends_with($action, ' failed') ? 'maintenance.failed' : null);
+        if ($audit !== null) {
+            Audit::try($audit, null, [], $audit === 'maintenance.failed' ? ['action' => $action] + $context : $context);
+        }
     }
 
     private function failed(Request $request, string $action, Throwable $e): RedirectResponse

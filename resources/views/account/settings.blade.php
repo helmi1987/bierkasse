@@ -59,6 +59,22 @@
     </section>
 </div>
 
+@if ($user->isKassier())
+    <section class="card" id="nur-verwaltung">
+        <h2>{{ __('account.admin_only') }}</h2>
+        <form method="post" action="{{ route('account.admin-only') }}" class="stack">
+            @csrf
+            <label class="switch">
+                <input type="checkbox" name="admin_only" value="1" @checked($user->isAdminOnly()) data-autosubmit>
+                <span>{{ __('account.admin_only_switch') }}</span>
+            </label>
+            <p class="hint">{{ __('account.admin_only_hint') }}</p>
+            <button type="submit" class="btn small" data-hide-js>{{ __('account.save') }}</button>
+        </form>
+    </section>
+@endif
+
+@if ($user->hasBeerAccount())
 <section class="card">
     <h2>{{ __('account.stats_heading') }}</h2>
     <form method="post" action="{{ route('account.stats') }}" class="stack">
@@ -72,7 +88,9 @@
     </form>
 </section>
 
-@if (\App\Support\AppSettings::roundsAllowed())
+@endif
+
+@if ($user->hasBeerAccount() && \App\Support\AppSettings::roundsAllowed())
     <section class="card">
         <h2>{{ __('round.heading') }}</h2>
         <form method="post" action="{{ route('account.round-mail') }}" class="stack">
@@ -327,9 +345,11 @@
     <p><a class="btn" href="{{ route('account.feedback') }}">{{ __('feedback.link') }} …</a></p>
 </section>
 
-<section class="card">
-    <h2>{{ __('account.leave') }}</h2>
-    <p class="muted">{{ __('account.leave_settings_hint') }}</p>
-    <p><a class="btn danger" href="{{ route('account.leave') }}">{{ __('account.leave') }} …</a></p>
-</section>
+@if ($user->hasBeerAccount())
+    <section class="card">
+        <h2>{{ __('account.leave') }}</h2>
+        <p class="muted">{{ __('account.leave_settings_hint') }}</p>
+        <p><a class="btn danger" href="{{ route('account.leave') }}">{{ __('account.leave') }} …</a></p>
+    </section>
+@endif
 @endsection

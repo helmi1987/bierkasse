@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\Feedback;
 use App\Models\Setting;
+use App\Services\Audit;
 use App\Services\FeedbackNotifier;
 use App\Support\AppSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -43,7 +46,14 @@ class FeedbackController extends Controller
 
     public function destroy(Feedback $feedback): RedirectResponse
     {
-        $feedback->delete();
+        DB::transaction(function () use ($feedback) {
+            $feedback->delete();
+            Audit::log('feedback.delete', $feedback, [
+                'user_id' => $feedback->user_id,
+                'type' => $feedback->type,
+                'message' => Str::limit((string) $feedback->message, 200),
+            ]);
+        });
 
         return back()->with('status', __('feedback.deleted'));
     }

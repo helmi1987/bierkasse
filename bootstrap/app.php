@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureActiveUser;
+use App\Http\Middleware\EnsureBeerAccount;
 use App\Http\Middleware\EnsureInstalled;
 use App\Http\Middleware\MaintenanceMode;
 use App\Http\Middleware\RequireRole;
@@ -35,12 +36,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', MaintenanceMode::class);
         $middleware->alias([
             'active' => EnsureActiveUser::class,
+            'beer' => EnsureBeerAccount::class,
             'role' => RequireRole::class,
         ]);
         // Guests hitting a protected page go to the login page "/".
         $middleware->redirectGuestsTo(fn () => route('login'));
         // Logged-in users hitting guest-only pages go to the dashboard.
-        $middleware->redirectUsersTo(fn () => route('account.dashboard'));
+        // ("Nur Verwaltung" accounts go to the backend.)
+        $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->homeUrl() ?? route('account.dashboard'));
         // Not installed yet: redirect to the wizard before "auth" touches the database.
         $middleware->prependToPriorityList(
             before: AuthenticatesRequests::class,

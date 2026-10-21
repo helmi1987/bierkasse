@@ -373,3 +373,8 @@ textarea { resize: vertical; line-height: 1.45; }
 .info-list { display: grid; grid-template-columns: minmax(8rem, max-content) 1fr; gap: .4rem 1rem; margin: 0; }
 .info-list dt { color: var(--muted); }
 .info-list dd { margin: 0; overflow-wrap: anywhere; }
+
+/* Audit log detail */
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; }
+.facts dt { font-weight: 600; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }

@@ -76,5 +76,7 @@
     @endif
 </section>
 
-<p><a href="{{ route('account.dashboard') }}">← {{ __('site.nav.account') }}</a></p>
+@if (auth()->user()->hasBeerAccount())
+    <p><a href="{{ route('account.dashboard') }}">← {{ __('site.nav.account') }}</a></p>
+@endif
 @endsection

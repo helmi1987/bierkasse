@@ -50,7 +50,8 @@ class Stats
             'total_amount' => (int) -$own->sum('amount') - (int) $rounds->amount,
             'per_week' => round($beers / $weeks, 1),
             'months' => self::months($rows),
-            'given' => (int) $rounds->beers,
+            // Paid for others: the own beer of "Runde inkl. mir" counts as own beer above.
+            'given' => (int) $rounds->beers - Rounds::ownBeers($user),
         ];
     }
 
@@ -147,7 +148,8 @@ class Stats
     private static function ranking(Collection $rows, int $top): array
     {
         $sums = $rows->groupBy('user_id')->map(fn ($g) => (int) $g->sum('quantity'));
-        $users = User::query()->whereIn('id', $sums->keys())->where('stats_opt_out', false)->get()->keyBy('id');
+        // "Nur Verwaltung" accounts are never ranked (older beers count in the totals only).
+        $users = User::query()->whereIn('id', $sums->keys())->where('stats_opt_out', false)->hasBeerAccount()->get()->keyBy('id');
         $pseudo = [self::GUESTS_ID => __('stats.guests'), self::INVITED_ID => __('stats.guests_invited')];
         $name = fn ($id) => $pseudo[(int) $id] ?? $users[$id]->displayName();
 

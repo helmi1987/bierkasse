@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\SsoProvider;
 use App\Models\User;
+use App\Services\Audit;
 use App\Services\Sso;
 use App\Support\AppSettings;
 use App\Support\Totp;
@@ -32,7 +33,7 @@ class LoginController extends Controller
     public function show(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('account.dashboard');
+            return redirect()->to(Auth::user()->homeUrl());
         }
 
         return view('auth.login', [
@@ -66,6 +67,8 @@ class LoginController extends Controller
         if (! $ok) {
             RateLimiter::hit($key, 300);
             RateLimiter::hit($ipKey, 900);
+            // The user name tried, never the password.
+            Audit::try('auth.login_failed', $user, [], ['username' => Str::limit($username, 100, '')]);
 
             return back()->onlyInput('username')->withErrors(['username' => __('auth.failed')]);
         }
@@ -109,6 +112,7 @@ class LoginController extends Controller
         if (! $user || ! Totp::verifyUser($user, (string) $request->input('code'))) {
             RateLimiter::hit($key, 300);
             RateLimiter::hit($ipKey, 900);
+            Audit::try('auth.totp_failed', $user);
 
             // After too many wrong codes the password has to be entered again.
             if (RateLimiter::tooManyAttempts($key, 5)) {
@@ -135,6 +139,9 @@ class LoginController extends Controller
 
     public function logout(Request $request): RedirectResponse
     {
+        if (Auth::check()) {
+            Audit::try('auth.logout', Auth::user());
+        }
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -175,6 +182,7 @@ class LoginController extends Controller
                     return redirect()->route('login')->withErrors(['username' => __('sso.error_state')]);
                 }
                 $sso->link($p, $user, $result['subject'], $result['label']);
+                Audit::try('user.sso_link', $user, [], ['sso_provider' => $p->slug]);
 
                 return redirect()->route('account.settings')->with('status', __('sso.linked', ['provider' => $p->name]));
             }
@@ -241,12 +249,20 @@ class LoginController extends Controller
         $request->session()->regenerate();
         $request->session()->put('auth.method', $method);
         $user->forceFill(['last_login_at' => now()])->save();
+        Audit::try('auth.login', $user, [], ['method' => $method], $user);
 
         if ($user->must_change_password) {
             return redirect()->route('account.settings')->with('warning', __('auth.must_change_password'));
         }
 
-        return redirect()->intended(route('account.dashboard'));
+        // "Nur Verwaltung": always to the backend (an intended /konto URL would only redirect there).
+        if ($user->isAdminOnly()) {
+            $request->session()->forget('url.intended');
+
+            return redirect()->to($user->homeUrl());
+        }
+
+        return redirect()->intended($user->homeUrl());
     }
 
     /** Active user by user name, or by e-mail address when the input contains "@" (only if unambiguous). */

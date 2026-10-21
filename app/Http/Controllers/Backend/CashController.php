@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\CashEntry;
 use App\Models\GuestSale;
 use App\Models\Transaction;
+use App\Services\Audit;
 use App\Services\BeerStock;
 use App\Services\CashBook;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -50,15 +52,18 @@ class CashController extends Controller
             throw ValidationException::withMessages(['amount' => __('ledger.amount_invalid')]);
         }
 
-        CashEntry::query()->create([
-            'type' => $data['type'],
-            'date' => $data['date'],
-            'amount' => CashBook::signedAmount($data['type'], $amount),
-            'beers' => $data['type'] === 'expense_beer' ? (int) $data['beers'] : null,
-            'method' => $data['method'],
-            'note' => $data['note'],
-            'created_by' => $request->user()->id,
-        ]);
+        DB::transaction(function () use ($data, $amount, $request) {
+            $entry = CashEntry::query()->create([
+                'type' => $data['type'],
+                'date' => $data['date'],
+                'amount' => CashBook::signedAmount($data['type'], $amount),
+                'beers' => $data['type'] === 'expense_beer' ? (int) $data['beers'] : null,
+                'method' => $data['method'],
+                'note' => $data['note'],
+                'created_by' => $request->user()->id,
+            ]);
+            Audit::log('cash_entry.create', $entry, [], self::auditValues($entry));
+        });
         BeerStock::rearm();
 
         return back()->with('status', __('cash.saved'));
@@ -66,9 +71,20 @@ class CashController extends Controller
 
     public function destroy(CashEntry $entry): RedirectResponse
     {
-        $entry->delete();
+        DB::transaction(function () use ($entry) {
+            $entry->delete();
+            Audit::log('cash_entry.delete', $entry, self::auditValues($entry));
+        });
         BeerStock::rearm();
 
         return back()->with('status', __('cash.deleted'));
+    }
+
+    private static function auditValues(CashEntry $entry): array
+    {
+        $values = $entry->only(['type', 'date', 'amount', 'beers', 'method', 'note']);
+        $values['date'] = $entry->date instanceof \DateTimeInterface ? $entry->date->format('Y-m-d') : (string) $entry->date;
+
+        return array_filter($values, fn ($v) => $v !== null);
     }
 }

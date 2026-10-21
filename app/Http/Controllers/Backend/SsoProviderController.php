@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\SsoProvider;
+use App\Services\Audit;
 use App\Services\Sso;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -75,7 +77,10 @@ class SsoProviderController extends Controller
     public function destroy(SsoProvider $ssoProvider): RedirectResponse
     {
         $this->guardGlobal($ssoProvider);
-        $ssoProvider->delete();
+        DB::transaction(function () use ($ssoProvider) {
+            $ssoProvider->delete();
+            Audit::log('sso_provider.delete', $ssoProvider, ['name' => $ssoProvider->name, 'slug' => $ssoProvider->slug]);
+        });
 
         return redirect()->route('backend.sso.index')->with('status', __('sso.deleted'));
     }
@@ -174,7 +179,14 @@ class SsoProviderController extends Controller
             }
         }
 
-        $provider->save();
+        $created = ! $provider->exists;
+        [$old, $new] = Audit::dirty($provider);
+        DB::transaction(function () use ($provider, $created, $old, $new) {
+            $provider->save();
+            if ($created || $new !== []) {
+                Audit::log($created ? 'sso_provider.create' : 'sso_provider.update', $provider, $old, $new);
+            }
+        });
 
         if (! $error && $provider->enabled && ! $provider->isUsable()) {
             $error = __('sso.saved_incomplete');

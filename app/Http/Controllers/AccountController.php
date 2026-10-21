@@ -139,6 +139,7 @@ class AccountController extends Controller
             'recipients.*' => ['integer', 'distinct'],
             'extra' => ['nullable', 'integer', 'between:0,'.Rounds::MAX_EXTRA],
             'message' => ['nullable', 'string', 'max:'.Rounds::MESSAGE_MAX],
+            'include_self' => ['nullable', 'boolean'],
         ]);
         $input = ['recipients', 'extra', 'message'];
         if (! FormToken::consume($request, 'round')) {
@@ -146,7 +147,7 @@ class AccountController extends Controller
         }
 
         try {
-            $tx = Ledger::giveRound($request->user(), array_map('intval', $data['recipients'] ?? []), (int) ($data['extra'] ?? 0), $data['message'] ?? null);
+            $tx = Ledger::giveRound($request->user(), array_map('intval', $data['recipients'] ?? []), (int) ($data['extra'] ?? 0), $data['message'] ?? null, $request->boolean('include_self'));
         } catch (LedgerException $e) {
             return back()->withInput($request->only($input))->with('error', $e->getMessage());
         }

@@ -39,7 +39,8 @@ class Rounds
     public static function colleagues(User $giver): Collection
     {
         // Most recent beer drinkers first (own consumption), then the others alphabetically.
-        $users = User::query()->where('status', User::STATUS_ACTIVE)->whereKeyNot($giver->id)
+        // "Nur Verwaltung" accounts have no beer account and get no beers.
+        $users = User::query()->where('status', User::STATUS_ACTIVE)->hasBeerAccount()->whereKeyNot($giver->id)
             ->addSelect(['last_beer_at' => Transaction::query()->select('created_at')
                 ->whereColumn('transactions.user_id', 'users.id')
                 ->where('type', Transaction::TYPE_CONSUMPTION)->confirmed()
@@ -64,15 +65,23 @@ class Rounds
     {
         return Transaction::query()->with('user')->confirmed()->where('type', Transaction::TYPE_ROUND)
             ->where('created_at', '>', now()->subDays(self::NOTICE_DAYS))
+            ->where('user_id', '!=', $user->id) // own beer in an own round ("inkl. mir")
             ->whereHas('roundItems', fn ($q) => $q->where('user_id', $user->id))
             ->latest('id')->limit(self::NOTICE_MAX)->get();
     }
 
-    /** Beers the user paid for others in rounds (KPI "spendiert"). */
+    /** Beers the user paid for others in rounds (KPI "spendiert"; the own beer of "inkl. mir" not counted). */
     public static function beersGiven(User $user): int
     {
         return (int) Transaction::query()->confirmed()->where('user_id', $user->id)
-            ->where('type', Transaction::TYPE_ROUND)->sum('quantity');
+            ->where('type', Transaction::TYPE_ROUND)->sum('quantity') - self::ownBeers($user);
+    }
+
+    /** Own beers of the user in own rounds ("Runde inkl. mir"). */
+    public static function ownBeers(User $user): int
+    {
+        return (int) RoundItem::query()->where('user_id', $user->id)
+            ->whereHas('round', fn ($q) => $q->confirmed()->where('user_id', $user->id))->sum('quantity');
     }
 
     /**
@@ -102,7 +111,7 @@ class Rounds
     {
         try {
             $recipients = User::query()
-                ->whereIn('id', $round->roundItems()->whereNotNull('user_id')->pluck('user_id'))
+                ->whereIn('id', $round->roundItems()->whereNotNull('user_id')->pluck('user_id'))->whereKeyNot($giver->id)
                 ->where('status', User::STATUS_ACTIVE)->where('round_mail', true)
                 ->whereNotNull('email')->where('email', '!=', '')
                 ->get();

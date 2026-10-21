@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\SsoProvider;
 use App\Models\UserIdentity;
+use App\Services\Audit;
+use App\Services\Ledger;
+use App\Services\LedgerException;
 use App\Services\Sso;
 use App\Support\AppSettings;
 use App\Support\Qr;
@@ -12,6 +15,7 @@ use App\Support\UserRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -65,7 +69,7 @@ class AccountSettingsController extends Controller
     {
         $user = $request->user();
         $data = $request->validate(UserRules::profile($user->id));
-        $user->fill($data)->save();
+        Audit::save('user.profile', $user->fill($data));
 
         return back()->with('status', __('account.profile_saved'));
     }
@@ -73,7 +77,7 @@ class AccountSettingsController extends Controller
     public function stats(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $user->forceFill(['stats_opt_out' => ! $request->boolean('show')])->save();
+        Audit::save('user.settings', $user->forceFill(['stats_opt_out' => ! $request->boolean('show')]));
 
         return back()->with('status', __('account.stats_saved'));
     }
@@ -81,9 +85,25 @@ class AccountSettingsController extends Controller
     /** Mail when a colleague pays the user a beer ("Runde spendieren"). */
     public function roundMail(Request $request): RedirectResponse
     {
-        $request->user()->forceFill(['round_mail' => $request->boolean('round_mail')])->save();
+        Audit::save('user.settings', $request->user()->forceFill(['round_mail' => $request->boolean('round_mail')]));
 
         return back()->with('status', __('round.mail_setting_saved'));
+    }
+
+    /** "Nur Verwaltung" on/off for the own account (kassiers and admins only). */
+    public function adminOnly(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->isKassier(), 403);
+        $on = $request->boolean('admin_only');
+
+        try {
+            Ledger::setAdminOnly($user, $on);
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('account.settings')->with('status', __($on ? 'account.admin_only_on' : 'account.admin_only_off'));
     }
 
     public function password(Request $request): RedirectResponse
@@ -99,7 +119,7 @@ class AccountSettingsController extends Controller
             return back()->withErrors(['current_password' => __('account.password_current_wrong')]);
         }
 
-        $user->forceFill(['password' => $request->input('password'), 'must_change_password' => false])->save();
+        Audit::save('user.password_change', $user->forceFill(['password' => $request->input('password'), 'must_change_password' => false]), true);
         // End all other sessions of this account (AuthenticateSession is on the route group).
         Auth::logoutOtherDevices((string) $request->input('password'));
 
@@ -126,11 +146,14 @@ class AccountSettingsController extends Controller
             return back()->withErrors(['code' => __('account.totp_code_invalid_setup')]);
         }
 
-        $user->forceFill([
-            'totp_secret' => $secret,
-            'totp_confirmed_at' => now(),
-            'totp_last_step' => $step,
-        ])->save();
+        DB::transaction(function () use ($user, $secret, $step) {
+            $user->forceFill([
+                'totp_secret' => $secret,
+                'totp_confirmed_at' => now(),
+                'totp_last_step' => $step,
+            ])->save();
+            Audit::log('user.totp_enable', $user);
+        });
         $request->session()->forget(self::SETUP);
 
         return redirect()->route('account.settings')
@@ -151,7 +174,10 @@ class AccountSettingsController extends Controller
             return $error;
         }
 
-        $request->user()->disableTotp();
+        DB::transaction(function () use ($request) {
+            $request->user()->disableTotp();
+            Audit::log('user.totp_disable', $request->user());
+        });
 
         return redirect()->route('account.settings')->with('status', __('account.totp_disabled'));
     }
@@ -161,6 +187,8 @@ class AccountSettingsController extends Controller
         if ($error = $this->checkCode($request)) {
             return $error;
         }
+
+        Audit::log('user.totp_recovery', $request->user());
 
         return redirect()->route('account.settings')
             ->with('status', __('account.recovery_regenerated'))
@@ -184,7 +212,10 @@ class AccountSettingsController extends Controller
     public function unlinkSso(Request $request, UserIdentity $identity): RedirectResponse
     {
         abort_unless($identity->user_id === $request->user()->id, 404);
-        $identity->delete();
+        DB::transaction(function () use ($identity) {
+            $identity->delete();
+            Audit::log('user.sso_unlink', $identity, ['sso_provider_id' => $identity->sso_provider_id]);
+        });
 
         return back()->with('status', __('sso.unlinked'));
     }

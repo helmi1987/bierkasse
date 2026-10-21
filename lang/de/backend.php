@@ -17,6 +17,7 @@ return [
         'qr' => 'Registrierungs-QR',
         'maintenance' => 'Wartung',
         'feedback' => 'Feedback',
+        'audit' => 'Protokoll',
     ],
     'invitations_title' => 'Einladungen',
     'invitations_mode' => 'Registrierungsmodus: :mode',

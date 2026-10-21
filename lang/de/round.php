@@ -3,7 +3,7 @@
 // "Runde spendieren": a user pays beers for colleagues and guests.
 return [
     'heading' => 'Runde spendieren',
-    'intro' => 'Du bezahlst die Biere, die Kollegen trinken sie. Jeder angehakte Kollege bekommt 1 Bier. Dein eigenes Bier streichst du wie immer oben ab.',
+    'intro' => 'Du bezahlst die Biere, die Kollegen trinken sie. Jeder angehakte Kollege bekommt 1 Bier. Mit «Runde inkl. mir» ist dein eigenes Bier gleich dabei.',
     'filter' => 'Kollegen suchen',
     'colleagues' => 'Kollegen',
     'no_colleagues' => 'Noch keine anderen aktiven Benutzer.',
@@ -13,7 +13,8 @@ return [
     'message_placeholder' => 'z. B. Prost zum Geburtstag!',
     'total' => 'Total',
     'total_hint' => 'Mindestens 1, höchstens :max Biere pro Runde, à :price.',
-    'submit' => 'Runde spendieren',
+    'submit' => 'Runde spendieren (:count)',
+    'submit_self' => 'Runde inkl. mir (:count)',
     'beers' => '{0} :count Biere|{1} :count Bier|[2,*] :count Biere',
     'guests_count' => '{1} :count Gast|[2,*] :count Gäste',
     'booked' => '{1} Runde spendiert: :count Bier (:amount). Prost!|[2,*] Runde spendiert: :count Biere (:amount). Prost!',

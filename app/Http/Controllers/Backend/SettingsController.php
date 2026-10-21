@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Support\AppSettings;
+use App\Support\FlyerSvg;
 use App\Support\Money;
 use App\Support\Qr;
 use App\Support\RegistrationLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -114,6 +116,26 @@ class SettingsController extends Controller
             'mode' => $mode,
             'open' => AppSettings::registrationOpen(),
             'appName' => AppSettings::appName(),
+        ]);
+    }
+
+    /** Flyer as A4 SVG image (preview, print, download); same options as the QR page (?code=0). */
+    public function flyerSvg(Request $request): Response
+    {
+        $mode = AppSettings::registrationMode();
+        $open = AppSettings::registrationOpen();
+        $withCode = $request->boolean('code', true) && $open;
+        $step2 = $withCode ? __('settings.flyer_step2_text')
+            : ($mode === AppSettings::MODE_INVITE ? __('settings.flyer_step2_text_invite') : __('settings.flyer_step2_text_no_code'));
+
+        $svg = FlyerSvg::render(AppSettings::appName(), RegistrationLink::url($withCode), route('register'), $step2, $open);
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return response($svg, 200, [
+            'Content-Type' => 'image/svg+xml; charset=UTF-8',
+            'Content-Disposition' => $disposition.'; filename="bierkasse-flyer.svg"',
+            // Contains the flyer code: never stored by shared caches.
+            'Cache-Control' => 'no-store, private',
         ]);
     }
 

@@ -321,56 +321,21 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .small-link { font-size: .875rem; }
 .small-link a { color: var(--muted); }
 
-/* Printable A4 flyer (registration). Sized in container units so the screen preview and the
-   printed page (210 mm wide) look the same. Always light, independent of the dark mode. */
-.flyer-frame { container-type: inline-size; max-width: 210mm; margin: 0 auto; }
-.flyer {
-    --accent: #d97706;
-    --accent-strong: #b45309;
-    --accent-soft: #fef3c7;
-    --text: #1f1a14;
-    --muted: #6b6152;
-    --bg: #fdf8ef;
-    --border: #eadfcb;
-    page: flyer;
-    display: flex; flex-direction: column;
-    aspect-ratio: 210 / 297; width: 100%;
-    background: #fff; color: var(--text);
-    border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden;
-    box-shadow: var(--shadow);
-    font-size: 2.1cqw; line-height: 1.35;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
-}
-.flyer-band { display: flex; align-items: center; justify-content: center; gap: 2.5cqw; background: var(--accent); color: #fff; padding: 2.6cqw 6cqw; font-size: 4.2cqw; font-weight: 800; letter-spacing: .01em; }
-.flyer-band img { width: 9cqw; height: 9cqw; background: #fff; border-radius: 50%; padding: .9cqw; }
-.flyer-body { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4.5cqw 7cqw 2cqw; background: linear-gradient(180deg, var(--accent-soft) 0, #fff 38%); }
-.flyer-headline { font-size: 6.4cqw; line-height: 1.1; margin: 0 0 1.6cqw; font-weight: 900; color: var(--text); }
-.flyer-subline { font-size: 3.3cqw; margin: 0 0 4cqw; color: var(--accent-strong); font-weight: 600; }
-.flyer-steps { list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3cqw; margin: 0 0 4cqw; padding: 0; width: 100%; }
-.flyer-steps li { counter-increment: step; display: flex; flex-direction: column; align-items: center; gap: .8cqw; }
-.flyer-steps li::before { content: counter(step); display: grid; place-items: center; width: 7.5cqw; height: 7.5cqw; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 800; font-size: 3.8cqw; margin-bottom: .6cqw; }
-.flyer-steps strong { font-size: 2.6cqw; }
-.flyer-steps span { font-size: 2cqw; color: var(--muted); }
-.flyer-qr { display: flex; flex-direction: column; align-items: center; background: #fff; border: .6cqw solid var(--accent); border-radius: 3cqw; padding: 2cqw 4cqw 2.2cqw; }
-.flyer-scan { margin: 0 0 1cqw; font-weight: 800; font-size: 2.8cqw; color: var(--accent-strong); text-transform: uppercase; letter-spacing: .12em; }
-.flyer-qr img { width: 37cqw; height: 37cqw; display: block; }
-.flyer-or { margin: 1cqw 0 0; font-size: 1.9cqw; color: var(--muted); }
-.flyer-url { margin: .3cqw 0 0; font-size: 2.1cqw; font-weight: 600; word-break: break-all; max-width: 60cqw; }
-.flyer-joke { margin: auto 0 0; padding-top: 2cqw; font-style: italic; color: var(--muted); font-size: 2.2cqw; }
-.flyer-footer { flex: none; display: flex; justify-content: space-between; gap: 3cqw; padding: 2.2cqw 5cqw; border-top: 1px solid var(--border); background: var(--bg); font-size: 1.85cqw; color: var(--muted); }
-.flyer-footer span:first-child { font-weight: 600; color: var(--text); white-space: nowrap; }
-.flyer-footer span:last-child { text-align: right; }
-/* Printed size 155 x 225 mm (same ratio as the content): stays on one A4 page even where a
-   browser ignores the @page rule and adds its own margins plus header/footer (iOS Safari leaves
-   only about 245 mm of height). */
-@page flyer { size: A4 portrait; margin: 12mm; }
+/* Registration flyer: an A4 SVG image (server-rendered), so every browser prints the same picture. */
+.flyer-image { max-width: 210mm; margin: 1rem auto 0; }
+.flyer-image img { display: block; width: 100%; height: auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow); }
+@page flyer { size: A4 portrait; }
 @media print {
     /* body min-height: 100vh is the screen height on iOS and pushed a blank second page. */
     html, body { margin: 0; padding: 0; height: auto !important; min-height: 0 !important; }
     .print-flyer .main { max-width: none; padding: 0; margin: 0; }
-    .print-flyer .main > :not(.flyer-frame) { display: none !important; }
-    .flyer-frame { width: 155mm; max-width: none; margin: 0 auto; }
-    .flyer { width: 155mm; height: 225mm; aspect-ratio: auto; border: 0; border-radius: 0; box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+    .print-flyer .main > :not(.flyer-image) { display: none !important; }
+    .flyer-image { page: flyer; max-width: none; margin: 0; break-inside: avoid; page-break-inside: avoid; }
+    /* width/height auto + max-width/max-height keep the A4 ratio of the image (replaced element) and
+       take the smaller limit. 92 % of the printable width alone would overflow the page height when the
+       top/bottom margins are large or the browser adds header/footer lines (iOS Safari leaves only about
+       245 mm), so the height is capped in mm as well. Centered horizontally. */
+    .flyer-image img { width: auto; height: auto; max-width: 92%; max-height: 235mm; margin: 0 auto; border: 0; border-radius: 0; box-shadow: none; }
 }
 
 /* Own pending deposit report: tap the row to change or withdraw it. */

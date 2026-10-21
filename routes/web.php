@@ -131,6 +131,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 Route::get('/einstellungen', [Backend\SettingsController::class, 'edit'])->name('settings');
                 Route::put('/einstellungen', [Backend\SettingsController::class, 'update'])->name('settings.update');
                 Route::get('/registrierung-qr', [Backend\SettingsController::class, 'registrationQr'])->name('registration.qr');
+                Route::get('/registrierung-qr/flyer.svg', [Backend\SettingsController::class, 'flyerSvg'])->name('registration.flyer-svg');
                 Route::post('/registrierung-qr/neuer-code', [Backend\SettingsController::class, 'regenerateFlyerCode'])->name('registration.flyer-code');
                 Route::get('/wartung', [Backend\MaintenanceController::class, 'index'])->name('maintenance');
                 Route::post('/wartung/cache', [Backend\MaintenanceController::class, 'clearCache'])->name('maintenance.cache');

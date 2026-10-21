@@ -116,6 +116,17 @@ class RoleAccessTest extends TestCase
         $this->assertTrue($user->fresh()->isActive());
     }
 
+    public function test_twint_settings_offer_kassier_names_and_require_a_recipient(): void
+    {
+        User::factory()->create(['role' => User::ROLE_KASSIER, 'first_name' => 'Phlipp', 'last_name' => 'Arnold']);
+        $this->actingAs($this->admin());
+        $this->get('/backend/einstellungen')->assertOk()->assertSee('<option value="Phlipp Arnold">', false);
+
+        $this->put('/backend/einstellungen', ['beer_price' => '1.50', 'default_limit' => '0', 'registration_mode' => 'invite',
+            'mail_transport' => 'sendmail', 'twint_enabled' => '1', 'twint' => [['name' => '', 'phone' => '']]])
+            ->assertSessionHasErrors('twint');
+    }
+
     public function test_admin_saves_settings(): void
     {
         $this->actingAs($this->admin());
@@ -124,8 +135,8 @@ class RoleAccessTest extends TestCase
             'beer_price' => '2.00',
             'default_limit' => '10',
             'app_name' => 'Büro-Bier',
-            'twint_phone' => '079 000 00 00',
-            'twint_name' => 'Max',
+            'twint_enabled' => '1',
+            'twint' => [['name' => 'Max', 'phone' => '079 000 00 00'], ['name' => '', 'phone' => ''], ['name' => 'Eva', 'phone' => '']],
             'registration_mode' => 'password',
             'registration_password' => 'prost',
             'notify_kassier' => '1',
@@ -141,6 +152,8 @@ class RoleAccessTest extends TestCase
         $this->assertSame(200, AppSettings::beerPrice());
         $this->assertSame(1000, AppSettings::defaultLimit());
         $this->assertSame('Büro-Bier', AppSettings::appName());
+        $this->assertSame([['name' => 'Max', 'phone' => '079 000 00 00'], ['name' => 'Eva', 'phone' => '']], AppSettings::twintRecipients());
+        $this->assertTrue(AppSettings::twintEnabled());
         $this->assertTrue(AppSettings::registrationOpen());
         $this->assertSame('smtp-secret', AppSettings::mail()['smtp_password']);
 

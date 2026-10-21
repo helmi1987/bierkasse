@@ -44,7 +44,7 @@
     </fieldset>
     @if ($twintEnabled)
         @include('partials.twint-number', ['id' => 'twint-phone', 'label' => __('guest.twint_to')])
-        <p class="hint">{{ __('guest.twint_hint') }}@if ($twintPhone !== '' && $twintName !== '') ({{ $twintName }})@endif</p>
+        <p class="hint">{{ __('guest.twint_hint') }}</p>
     @endif
     <button class="btn primary big" type="submit" @disabled($available === 0)>{{ __('guest.submit') }}</button>
 </form>

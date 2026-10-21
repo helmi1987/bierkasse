@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Models\User;
 use App\Support\AppSettings;
 use App\Support\FlyerSvg;
 use App\Support\Money;
@@ -28,9 +29,12 @@ class SettingsController extends Controller
             'beerPrice' => Money::plain(AppSettings::beerPrice()),
             'defaultLimit' => Money::plain(AppSettings::defaultLimit()),
             'appName' => (string) AppSettings::get(AppSettings::APP_NAME, ''),
-            'twintPhone' => AppSettings::twintPhone(),
-            'twintName' => AppSettings::twintName(),
-            'twintEnabled' => (bool) AppSettings::get(AppSettings::TWINT_ENABLED, AppSettings::twintPhone() !== ''),
+            'twintRecipients' => AppSettings::twintRecipients(),
+            'twintEnabled' => AppSettings::twintSwitch(),
+            // Proposals for the name; free text stays possible (datalist).
+            'twintNames' => User::query()->whereIn('role', [User::ROLE_ADMIN, User::ROLE_KASSIER])
+                ->where('status', User::STATUS_ACTIVE)->orderBy('first_name')->orderBy('last_name')->get()
+                ->map(fn (User $u) => $u->displayName())->unique()->values(),
             'registrationMode' => AppSettings::registrationMode(),
             'registrationPassword' => AppSettings::registrationPassword(),
             'notifyKassier' => AppSettings::notifyKassier(),
@@ -45,8 +49,9 @@ class SettingsController extends Controller
             'beer_price' => ['required', 'string', 'max:10'],
             'default_limit' => ['required', 'string', 'max:10'],
             'app_name' => ['nullable', 'string', 'max:60'],
-            'twint_phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+ ()\/-]*$/'],
-            'twint_name' => ['nullable', 'string', 'max:100'],
+            'twint' => ['nullable', 'array', 'max:'.AppSettings::TWINT_MAX],
+            'twint.*.name' => ['nullable', 'string', 'max:100'],
+            'twint.*.phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+ ()\/-]*$/'],
             'registration_mode' => ['required', Rule::in(AppSettings::REGISTRATION_MODES)],
             'registration_password' => ['nullable', 'string', 'min:4', 'max:100'],
             'mail_transport' => ['required', Rule::in(AppSettings::MAIL_TRANSPORTS)],
@@ -59,8 +64,15 @@ class SettingsController extends Controller
             'smtp_encryption' => ['nullable', Rule::in(AppSettings::MAIL_ENCRYPTIONS)],
         ]);
 
-        if ($request->boolean('twint_enabled') && trim((string) ($data['twint_phone'] ?? '')) === '' && trim((string) ($data['twint_name'] ?? '')) === '') {
-            throw ValidationException::withMessages(['twint_phone' => __('settings.twint_missing')]);
+        $twint = [];
+        foreach ($data['twint'] ?? [] as $r) {
+            $r = ['name' => trim((string) ($r['name'] ?? '')), 'phone' => trim((string) ($r['phone'] ?? ''))];
+            if ($r['name'] !== '' || $r['phone'] !== '') {
+                $twint[] = $r;
+            }
+        }
+        if ($request->boolean('twint_enabled') && $twint === []) {
+            throw ValidationException::withMessages(['twint' => __('settings.twint_missing')]);
         }
 
         $price = Money::parse($data['beer_price']);
@@ -82,8 +94,7 @@ class SettingsController extends Controller
             AppSettings::BEER_PRICE => $price,
             AppSettings::DEFAULT_LIMIT => $limit,
             AppSettings::APP_NAME => trim((string) ($data['app_name'] ?? '')),
-            AppSettings::TWINT_PHONE => trim((string) ($data['twint_phone'] ?? '')),
-            AppSettings::TWINT_NAME => trim((string) ($data['twint_name'] ?? '')),
+            AppSettings::TWINT_RECIPIENTS => $twint,
             AppSettings::TWINT_ENABLED => $request->boolean('twint_enabled'),
             AppSettings::REGISTRATION_MODE => $data['registration_mode'],
             AppSettings::REGISTRATION_PASSWORD => (string) ($data['registration_password'] ?? ''),

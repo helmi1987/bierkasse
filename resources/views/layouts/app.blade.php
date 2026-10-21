@@ -36,6 +36,9 @@
             <nav class="nav" aria-label="Hauptnavigation">
                 @if ($authUser->hasBeerAccount())
                     <a href="{{ route('account.dashboard') }}" @class(['active' => request()->routeIs('account.dashboard', 'account.history')])>{{ __('site.nav.account') }}</a>
+                @elseif (\App\Support\AppSettings::invitationsAllowed())
+                    {{-- Accounts without beer account have no dashboard: invite from the top bar. --}}
+                    <a href="{{ route('account.invite') }}" @class(['active' => request()->routeIs('account.invite*')])>{{ __('site.nav.invite') }}</a>
                 @endif
                 <a href="{{ route('stats') }}" @class(['active' => request()->routeIs('stats')])>{{ __('site.nav.stats') }}</a>
                 @if ($authUser->isKassier())

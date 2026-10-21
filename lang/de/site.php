@@ -4,6 +4,7 @@ return [
     'skip_to_content' => 'Zum Inhalt',
     'nav' => [
         'account' => 'Konto',
+        'invite' => 'Einladen',
         'stats' => 'Statistik',
         'backend' => 'Backend',
         'settings' => 'Einstellungen',

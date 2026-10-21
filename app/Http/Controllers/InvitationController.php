@@ -7,6 +7,7 @@ use App\Services\Audit;
 use App\Support\AppSettings;
 use App\Support\FormToken;
 use App\Support\Qr;
+use App\Support\RegistrationLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,7 +70,12 @@ class InvitationController extends Controller
         $user = $request->user();
         $newUrl = $token !== null ? Invitation::url($token) : null;
 
+        // Kassier/admin may also show the reusable flyer QR (only while registration is open).
+        $flyerUrl = $user->isKassier() && AppSettings::registrationOpen() ? RegistrationLink::url(true) : null;
+
         return view('account.invite', [
+            'flyerUrl' => $flyerUrl,
+            'flyerQr' => $flyerUrl !== null ? Qr::dataUri($flyerUrl, 480) : null,
             'new' => $new,
             'newUrl' => $newUrl,
             'newQr' => $newUrl !== null ? Qr::dataUri($newUrl, 480) : null,

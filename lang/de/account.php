@@ -47,6 +47,8 @@ return [
     'copied' => 'Kopiert',
     'invite_link' => 'Jemand Neues einladen',
     'invite_title' => 'Jemand Neues einladen',
+    'invite_flyer_title' => 'Flyer-QR zeigen (mehrfach gültig)',
+    'invite_flyer_intro' => 'Gleicher QR-Code wie auf dem Flyer: gilt für beliebig viele Personen, solange die Registrierung offen ist und der Flyer-Code nicht neu erzeugt wurde. Für einzelne Personen besser einen Einmal-Link erstellen.',
     'invite_url' => 'Oder den Link schicken:',
     'invite_share' => 'Teilen',
     'invite_share_title' => 'Einladung zur :app',

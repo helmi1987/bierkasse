@@ -106,6 +106,7 @@ class SettingsController extends Controller
         }
 
         return view('backend.registration-qr', [
+            'view' => $request->query('view') === 'flyer' ? 'flyer' : 'qr',
             'url' => $url,
             'qr' => Qr::dataUri($url, 480),
             'withCode' => $withCode,

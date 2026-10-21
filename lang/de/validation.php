@@ -90,5 +90,8 @@ return [
         'smtp_user' => 'SMTP-Benutzer',
         'smtp_password' => 'SMTP-Passwort',
         'smtp_encryption' => 'Verschlüsselung',
+        'message' => 'Nachricht',
+        'recipients' => 'E-Mail-Adressen',
+        'recipient_mode' => 'Empfänger',
     ],
 ];

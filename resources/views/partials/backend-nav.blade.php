@@ -11,6 +11,8 @@
         <a href="{{ route('backend.settings') }}" @class(['active' => request()->routeIs('backend.settings')])>{{ __('backend.nav.settings') }}</a>
         <a href="{{ route('backend.sso.index') }}" @class(['active' => request()->routeIs('backend.sso.*')])>{{ __('backend.nav.sso') }}</a>
         <a href="{{ route('backend.registration.qr') }}" @class(['active' => request()->routeIs('backend.registration.qr')])>{{ __('backend.nav.qr') }}</a>
+        @php($unreadFeedback = \App\Models\Feedback::unreadCount())
+        <a href="{{ route('backend.feedback') }}" @class(['active' => request()->routeIs('backend.feedback*')])>{{ __('backend.nav.feedback') }}@if ($unreadFeedback > 0) <span class="badge" title="{{ __('feedback.unread_count', ['count' => $unreadFeedback]) }}">{{ $unreadFeedback }}</span>@endif</a>
         <a href="{{ route('backend.maintenance') }}" @class(['active' => request()->routeIs('backend.maintenance*')])>{{ __('backend.nav.maintenance') }}</a>
     @endif
 </nav>

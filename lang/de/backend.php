@@ -15,6 +15,7 @@ return [
         'sso' => 'SSO',
         'qr' => 'Registrierungs-QR',
         'maintenance' => 'Wartung',
+        'feedback' => 'Feedback',
     ],
     'invitations_title' => 'Einladungen',
     'invitations_mode' => 'Registrierungsmodus: :mode',

@@ -1,6 +1,7 @@
 {{--
     Generic notice: title, paragraphs, key/value table, button, closing paragraphs.
-    Data: title, lines (list), rows (label => value), buttonUrl, buttonLabel, outro (list).
+    Data: title, lines (list), rows (label => value), textBlock (free text, escaped, line breaks kept),
+    buttonUrl, buttonLabel, outro (list).
 --}}
 @extends('mail.layout')
 
@@ -21,6 +22,9 @@
     </tr>
 @endforeach
 </table>
+@endif
+@if (($textBlock ?? '') !== '')
+<div style="margin:0 0 20px 0; padding:12px 14px; border-left:3px solid #b45309; background-color:#fbf3e2; font-size:15px; line-height:22px; color:#1f1a14; word-break:break-word;">{!! nl2br(e($textBlock), false) !!}</div>
 @endif
 @if (! empty($buttonUrl))
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 20px 0;">

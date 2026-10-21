@@ -69,6 +69,20 @@ class AppSettings
 
     public const MAINTENANCE_MESSAGE = 'maintenance_message';
 
+    /** Who gets the feedback mails, one of FEEDBACK_RECIPIENT_MODES. */
+    public const FEEDBACK_RECIPIENT_MODE = 'feedback_recipient_mode';
+
+    /** Fixed feedback recipients (list of e-mail addresses, used in mode "fixed"). */
+    public const FEEDBACK_RECIPIENTS = 'feedback_recipients';
+
+    /** All active admins with an e-mail address. */
+    public const FEEDBACK_TO_ADMINS = 'admins';
+
+    /** The fixed addresses in FEEDBACK_RECIPIENTS. */
+    public const FEEDBACK_TO_FIXED = 'fixed';
+
+    public const FEEDBACK_RECIPIENT_MODES = [self::FEEDBACK_TO_ADMINS, self::FEEDBACK_TO_FIXED];
+
     public const MAIL_TRANSPORTS = ['sendmail', 'smtp'];
 
     public const MAIL_ENCRYPTIONS = ['', 'tls', 'ssl'];
@@ -223,6 +237,27 @@ class AppSettings
     public static function maintenanceMessage(): string
     {
         return trim((string) self::get(self::MAINTENANCE_MESSAGE, ''));
+    }
+
+    /** Feedback recipient mode; default: all admins. */
+    public static function feedbackRecipientMode(): string
+    {
+        $mode = self::get(self::FEEDBACK_RECIPIENT_MODE, self::FEEDBACK_TO_ADMINS);
+
+        return in_array($mode, self::FEEDBACK_RECIPIENT_MODES, true) ? $mode : self::FEEDBACK_TO_ADMINS;
+    }
+
+    /**
+     * Stored fixed feedback recipients.
+     *
+     * @return list<string>
+     */
+    public static function feedbackRecipients(): array
+    {
+        return array_values(array_filter(array_map(
+            fn ($a) => trim((string) $a),
+            (array) self::get(self::FEEDBACK_RECIPIENTS, []),
+        ), fn (string $a) => $a !== ''));
     }
 
     public static function notifyKassier(): bool

@@ -165,7 +165,7 @@ class AppSettings
     }
 
     /**
-     * Recipients for a sentence ("an A oder B"): the name, the number only when no name is set
+     * Recipients for a sentence ("an A, B oder C"): the name, the number only when no name is set
      * (numbers are offered by copy buttons). With $html each one is escaped and wrapped in <strong>.
      */
     public static function twintRecipientText(bool $html = false): string
@@ -175,7 +175,10 @@ class AppSettings
             $parts = array_map(fn (string $p) => '<strong>'.e($p).'</strong>', $parts);
         }
 
-        return implode(' '.__('account.twint_or').' ', $parts);
+        // "A, B oder C": commas, "oder" only before the last one.
+        $last = array_pop($parts);
+
+        return $parts === [] ? (string) $last : implode(', ', $parts).' '.__('account.twint_or').' '.$last;
     }
 
     public static function registrationPassword(): string

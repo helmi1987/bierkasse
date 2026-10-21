@@ -98,6 +98,7 @@ class GuestBookingTest extends TestCase
         $this->get('/konto')->assertOk()->assertSee('per TWINT an <strong>Phlipp Arnold</strong> oder <strong>Eva</strong> senden.', false);
         Setting::put(AppSettings::TWINT_RECIPIENTS, [['name' => 'Phlipp Arnold', 'phone' => ''], ['name' => 'Eva', 'phone' => '078 000 00 00'], ['name' => 'Max', 'phone' => '079 000 00 00']]);
         $this->get('/konto')->assertOk()->assertSee('Nummer Eva kopieren')->assertSee('Nummer Max kopieren')
+            ->assertSee('an <strong>Phlipp Arnold</strong>, <strong>Eva</strong> oder <strong>Max</strong> senden.', false)
             ->assertDontSee('Nummer Phlipp Arnold kopieren')->assertDontSee('>078 000 00 00<', false);
         Setting::put(AppSettings::TWINT_RECIPIENTS, [['name' => 'Phlipp Arnold', 'phone' => '']]);
 

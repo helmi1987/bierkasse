@@ -2,14 +2,10 @@
 
 namespace App\Services;
 
-use App\Mail\KassierNotice;
 use App\Models\RoundItem;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Throwable;
 
 /**
  * "Runde spendieren": a user pays beers for colleagues (one each) and beers without a name
@@ -101,54 +97,5 @@ class Rounds
         }
 
         return $text;
-    }
-
-    /**
-     * Mail to the named recipients with an e-mail address and the mail switch on.
-     * Failures are logged and never break the booking.
-     */
-    public static function notifyRecipients(Transaction $round, User $giver): int
-    {
-        try {
-            $recipients = User::query()
-                ->whereIn('id', $round->roundItems()->whereNotNull('user_id')->pluck('user_id'))->whereKeyNot($giver->id)
-                ->where('status', User::STATUS_ACTIVE)->where('round_mail', true)
-                ->whereNotNull('email')->where('email', '!=', '')
-                ->get();
-            if ($recipients->isEmpty()) {
-                return 0;
-            }
-            MailSettings::apply();
-        } catch (Throwable $e) {
-            Log::warning('Round notification failed', ['round' => $round->id, 'error' => $e->getMessage()]);
-
-            return 0;
-        }
-
-        $name = $giver->displayName();
-        $sent = 0;
-        foreach ($recipients as $recipient) {
-            try {
-                Mail::to($recipient->email)->send(new KassierNotice(
-                    __('round.mail_subject', ['giver' => $name]),
-                    [__('round.mail_line', ['giver' => $name])],
-                    url: route('account.dashboard'),
-                    buttonLabel: __('round.mail_button'),
-                    rows: [
-                        __('round.mail_row_giver') => $name,
-                        __('round.mail_row_message') => (string) $round->note,
-                        __('round.mail_row_beers') => trans_choice('round.beers', (int) $round->quantity, ['count' => $round->quantity]),
-                        __('round.mail_row_time') => local_time($round->created_at ?? now()),
-                    ],
-                    title: __('round.mail_title', ['giver' => $name]),
-                    outro: [__('round.mail_hint')],
-                ));
-                $sent++;
-            } catch (Throwable $e) {
-                Log::warning('Round notification failed', ['round' => $round->id, 'to' => $recipient->id, 'error' => $e->getMessage()]);
-            }
-        }
-
-        return $sent;
     }
 }

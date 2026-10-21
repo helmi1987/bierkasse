@@ -93,21 +93,6 @@
 
 @endif
 
-@if ($user->hasBeerAccount() && \App\Support\AppSettings::roundsAllowed())
-    <section class="card">
-        <h2>{{ __('round.heading') }}</h2>
-        <form method="post" action="{{ route('account.round-mail') }}" class="stack">
-            @csrf
-            <label class="switch">
-                <input type="checkbox" name="round_mail" value="1" @checked($user->round_mail) data-autosubmit>
-                <span>{{ __('round.mail_setting') }}</span>
-            </label>
-            <p class="hint">{{ __('round.mail_setting_hint') }}</p>
-            <button type="submit" class="btn small" data-hide-js>{{ __('account.save') }}</button>
-        </form>
-    </section>
-@endif
-
 <section class="card">
     <h2>{{ __('account.totp_heading') }}
         @if ($user->hasTotp())

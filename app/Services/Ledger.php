@@ -167,9 +167,8 @@ class Ledger
             return $tx;
         });
 
-        // Outside the transaction: mails never delay or block the booking.
+        // Outside the transaction: the stock mail never delays or blocks the booking.
         BeerStock::afterConsumption($total);
-        Rounds::notifyRecipients($tx, $giver);
 
         return $tx;
     }

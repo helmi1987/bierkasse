@@ -191,20 +191,18 @@ class RoundTest extends TestCase
         $this->assertModelExists($late);
     }
 
-    public function test_recipients_see_a_notice_and_get_a_mail(): void
+    public function test_recipients_see_a_notice_but_get_no_mail(): void
     {
         $anna = $this->user(['first_name' => 'Anna', 'last_name' => 'A', 'email' => 'anna@example.test']);
-        $noMail = $this->user(['email' => 'nomail@example.test', 'round_mail' => false]);
+        $withMail = $this->user(['email' => 'withmail@example.test']);
         $noAddress = $this->user(['email' => null]);
         $other = $this->user(['email' => 'other@example.test']);
 
-        $this->actingAs($this->giver)->post('/konto/runde', $this->round(['recipients' => [$anna->id, $noMail->id, $noAddress->id], 'message' => 'Prost zum Geburtstag!']))
+        $this->actingAs($this->giver)->post('/konto/runde', $this->round(['recipients' => [$anna->id, $withMail->id, $noAddress->id], 'message' => 'Prost zum Geburtstag!']))
             ->assertSessionHas('status');
 
-        Mail::assertSent(KassierNotice::class, 1);
-        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => $m->hasTo('anna@example.test')
-            && $m->noticeSubject === 'Prost! Gabi Geber spendiert dir ein Bier'
-            && in_array('Prost zum Geburtstag!', $m->rows, true));
+        Mail::assertNothingSent();
+        Mail::assertNotSent(KassierNotice::class, fn (KassierNotice $m) => $m->hasTo('anna@example.test'));
 
         $this->actingAs($anna)->get('/konto')->assertOk()
             ->assertSee('🍺 Gabi Geber hat dir ein Bier spendiert – Prost zum Geburtstag!');
@@ -214,18 +212,6 @@ class RoundTest extends TestCase
         $this->travel(8)->days();
         $this->actingAs($anna)->get('/konto')->assertOk()->assertDontSee('hat dir ein Bier spendiert');
 
-        // Recipient switches the mail off in the settings.
-        $this->post('/konto/runden-mail', [])->assertSessionHas('status');
-        $this->assertFalse($anna->refresh()->round_mail);
-    }
-
-    public function test_a_failing_mail_never_breaks_the_booking(): void
-    {
-        $anna = $this->user(['email' => 'anna@example.test']);
-        Mail::shouldReceive('to')->andThrow(new \RuntimeException('smtp down'));
-
-        $this->actingAs($this->giver)->post('/konto/runde', $this->round(['recipients' => [$anna->id]]))->assertSessionHas('status');
-        $this->assertSame(1, Transaction::query()->where('type', Transaction::TYPE_ROUND)->count());
     }
 
     public function test_statistics_count_the_beers_at_the_drinker(): void

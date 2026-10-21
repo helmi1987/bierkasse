@@ -50,7 +50,7 @@ class AccountSettingsController extends Controller
 
         return view('account.settings', [
             'user' => $user,
-            'adminOnlySettled' => $user->isKassier() && \App\Services\Ledger::adminOnlySettled($user),
+            'adminOnlySettled' => $user->isKassier() && Ledger::adminOnlySettled($user),
             'secret' => $secret,
             'qr' => $uri ? Qr::dataUri($uri, 220) : null,
             'recoveryLeft' => $user->hasTotp() ? Totp::remainingRecoveryCodes($user) : 0,
@@ -81,14 +81,6 @@ class AccountSettingsController extends Controller
         Audit::save('user.settings', $user->forceFill(['stats_opt_out' => ! $request->boolean('show')]));
 
         return back()->with('status', __('account.stats_saved'));
-    }
-
-    /** Mail when a colleague pays the user a beer ("Runde spendieren"). */
-    public function roundMail(Request $request): RedirectResponse
-    {
-        Audit::save('user.settings', $request->user()->forceFill(['round_mail' => $request->boolean('round_mail')]));
-
-        return back()->with('status', __('round.mail_setting_saved'));
     }
 
     /** "Nur Verwaltung" on/off for the own account (kassiers and admins only). */

@@ -209,17 +209,21 @@ class AuditLogTest extends TestCase
         );
     }
 
-    public function test_audit_page_admin_only_with_filters_and_detail(): void
+    public function test_audit_page_for_kassier_and_admin_with_filters_and_detail(): void
     {
         $admin = $this->admin(['username' => 'chef']);
         $other = $this->kassier(['username' => 'kasse']);
         Audit::log('deposit.confirm', null, [], ['amount' => 1000], $admin);
         Audit::log('user.role', null, ['role' => 'user'], ['role' => 'admin'], $other);
 
-        $this->actingAs($other);
+        $this->actingAs($this->user());
         $this->get('/backend/protokoll')->assertForbidden();
         $this->post('/backend/protokoll/pruefen')->assertForbidden();
         $this->get('/backend/protokoll/export')->assertForbidden();
+
+        $this->actingAs($other);
+        $this->get('/backend')->assertOk()->assertSee(route('backend.audit'));
+        $this->get('/backend/protokoll')->assertOk()->assertSee('user.role');
 
         $this->actingAs($admin);
         $this->get('/backend/protokoll')->assertOk()->assertSee('deposit.confirm')->assertSee('user.role');

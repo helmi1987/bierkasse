@@ -69,7 +69,7 @@ class AccountSettingsController extends Controller
     public function profile(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $data = $request->validate(UserRules::profile($user->id));
+        $data = $request->validate(UserRules::profile($user->id, $user->isKassier()));
         Audit::save('user.profile', $user->fill($data));
 
         return back()->with('status', __('account.profile_saved'));

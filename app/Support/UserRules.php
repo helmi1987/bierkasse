@@ -30,15 +30,16 @@ class UserRules
     }
 
     /**
+     * @param  bool  $emailRequired  Kassiers and admins need an e-mail address.
      * @return array<string, list<mixed>>
      */
-    public static function profile(?int $ignoreId = null): array
+    public static function profile(?int $ignoreId = null, bool $emailRequired = false): array
     {
         return [
             'first_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['nullable', 'string', 'max:100'],
             // Unique, because the password reset identifies the account by its address.
-            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($ignoreId)],
+            'email' => [$emailRequired ? 'required' : 'nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($ignoreId)],
         ];
     }
 }

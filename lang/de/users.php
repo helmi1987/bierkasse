@@ -15,6 +15,7 @@ return [
     'none' => 'Keine Benutzer.',
     'details' => 'Details',
     'email' => 'E-Mail',
+    'role_email_required' => 'Rolle Kassier/Admin nur mit E-Mail-Adresse. Der Benutzer muss sie zuerst im Profil eintragen.',
     'totp' => 'TOTP',
     'stats_opt_out' => 'Nicht in Statistik',
     'last_login' => 'Letzte Anmeldung',

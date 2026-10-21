@@ -127,6 +127,37 @@ class RoleAccessTest extends TestCase
             ->assertSessionHasErrors('twint');
     }
 
+    public function test_top_bar_kassier_and_backend(): void
+    {
+        $this->actingAs($this->admin());
+        $this->get('/backend')->assertOk()->assertSeeText('Kassier')->assertSee(route('backend.settings'))
+            ->assertSee(route('backend.audit'))->assertDontSee(route('backend.maintenance'));
+        $this->get('/backend/einstellungen')->assertOk()->assertSee(route('backend.maintenance'))->assertDontSee(route('backend.cash'));
+
+        $this->actingAs($this->kassier());
+        $this->get('/backend')->assertOk()->assertSeeText('Kassier')->assertSee(route('backend.audit'))
+            ->assertDontSee(route('backend.settings'));
+    }
+
+    public function test_kassier_and_admin_need_an_email(): void
+    {
+        $plain = $this->user(['email' => null]);
+        $this->actingAs($this->admin());
+        $this->put("/backend/benutzer/{$plain->id}/rolle", ['role' => 'kassier'])->assertSessionHas('error');
+        $this->assertSame(User::ROLE_USER, $plain->fresh()->role);
+
+        $kassier = $this->kassier();
+        $this->actingAs($kassier);
+        $this->put('/konto/profil', ['email' => ''])->assertSessionHasErrors('email');
+        $this->assertNotNull($kassier->fresh()->email);
+        $this->actingAs($plain);
+        $this->put('/konto/profil', ['email' => ''])->assertSessionHasNoErrors();
+
+        // Existing kassier without e-mail: hint only, access stays.
+        $this->actingAs($this->kassier(['email' => null]));
+        $this->get('/backend')->assertOk()->assertSee(__('account.email_missing'));
+    }
+
     public function test_admin_saves_settings(): void
     {
         $this->actingAs($this->admin());

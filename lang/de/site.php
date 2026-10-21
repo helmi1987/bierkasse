@@ -6,6 +6,7 @@ return [
         'account' => 'Konto',
         'invite' => 'Einladen',
         'stats' => 'Statistik',
+        'kassier' => 'Kassier',
         'backend' => 'Backend',
         'settings' => 'Einstellungen',
         'logout' => 'Abmelden',

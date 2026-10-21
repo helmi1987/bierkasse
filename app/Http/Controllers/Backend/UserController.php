@@ -168,6 +168,11 @@ class UserController extends Controller
             return back()->with('error', __('users.last_admin'));
         }
 
+        // Kassiers and admins need an e-mail address (notifications, password reset).
+        if ($data['role'] !== User::ROLE_USER && (string) $user->email === '') {
+            return back()->with('error', __('users.role_email_required'));
+        }
+
         // "Nur Verwaltung" exists only for kassiers and admins.
         Audit::save('user.role', $user->forceFill(['role' => $data['role']] + ($data['role'] === User::ROLE_USER ? ['admin_only' => false] : [])));
 

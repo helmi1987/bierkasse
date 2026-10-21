@@ -137,8 +137,13 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/lager/korrektur', [Backend\StockController::class, 'correct'])->name('stock.correct');
             Route::get('/einzahlungsvorschlaege', [Backend\DepositSuggestionController::class, 'edit'])->name('deposit-suggestions');
             Route::put('/einzahlungsvorschlaege', [Backend\DepositSuggestionController::class, 'update'])->name('deposit-suggestions.update');
+            // Audit log: read-only (no route changes or deletes entries).
+            Route::get('/protokoll', [Backend\AuditController::class, 'index'])->name('audit');
+            Route::get('/protokoll/export', [Backend\AuditController::class, 'export'])->name('audit.export');
+            Route::get('/protokoll/{entry}', [Backend\AuditController::class, 'show'])->whereNumber('entry')->name('audit.show');
+            Route::post('/protokoll/pruefen', [Backend\AuditController::class, 'verify'])->name('audit.verify');
 
-            // Admin only
+            // Admin only ("Backend" in the top bar, see BackendNav)
             Route::middleware('role:admin')->group(function () {
                 Route::get('/einstellungen', [Backend\SettingsController::class, 'edit'])->name('settings');
                 Route::put('/einstellungen', [Backend\SettingsController::class, 'update'])->name('settings.update');
@@ -150,11 +155,6 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 Route::put('/feedback/empfaenger', [Backend\FeedbackController::class, 'recipients'])->name('feedback.recipients');
                 Route::post('/feedback/{feedback}/gelesen', [Backend\FeedbackController::class, 'read'])->whereNumber('feedback')->name('feedback.read');
                 Route::delete('/feedback/{feedback}', [Backend\FeedbackController::class, 'destroy'])->whereNumber('feedback')->name('feedback.destroy');
-                // Audit log: read-only (no route changes or deletes entries).
-                Route::get('/protokoll', [Backend\AuditController::class, 'index'])->name('audit');
-                Route::get('/protokoll/export', [Backend\AuditController::class, 'export'])->name('audit.export');
-                Route::get('/protokoll/{entry}', [Backend\AuditController::class, 'show'])->whereNumber('entry')->name('audit.show');
-                Route::post('/protokoll/pruefen', [Backend\AuditController::class, 'verify'])->name('audit.verify');
                 Route::get('/wartung', [Backend\MaintenanceController::class, 'index'])->name('maintenance');
                 Route::post('/wartung/cache', [Backend\MaintenanceController::class, 'clearCache'])->name('maintenance.cache');
                 Route::post('/wartung/sperren', [Backend\MaintenanceController::class, 'clearLimits'])->name('maintenance.limits');

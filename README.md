@@ -56,7 +56,7 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
    - Dann `php -d open_basedir= artisan migrate --force` als letzte Deploy-Aktion ergänzen (Updates mit neuen
      Migrationen).
 7. Nach dem Setup im Backend (`/backend/einstellungen`):
-   - Bierpreis (Standard CHF 1.50), Standard-Limit (Standard 0 = kein Minus), TWINT-Nummer und Name.
+   - Bierpreis (Standard CHF 1.50), Standard-Limit (Standard 0 = kein Minus), TWINT (Schalter, Empfänger: Name aus Kassier/Admin oder frei, Nummer optional).
    - Registrierung (Entscheid 2026-10-21): Registrierungsmodus wählen:
      - "Geschlossen": keine Registrierung, auch Einladungslinks sind ungültig.
      - "Nur per Einladung" (Standard bei Neuinstallation): nur mit gültigem Einladungslink, das
@@ -153,7 +153,11 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 ## Funktionen
 
 - Rollen: `admin`, `kassier`, `user`. Admin hat alle Kassier-Rechte; mehrere Kassiers möglich.
-  Admin/Kassier sehen im Kopf den Link "Backend" mit der Zahl offener Posten (Einzahlungen + Auszahlungen).
+  Kopfzeile: Kassier und Admin sehen "Kassier" (Kassier-Seiten inkl. Protokoll, mit der Zahl offener Posten),
+  Admins zusätzlich "Backend" (Einstellungen, SSO, Registrierungs-QR, Feedback mit Zahl ungelesener, Wartung).
+  So sieht der Admin unter "Kassier" dieselben Seiten wie ein Kassier (plus Rolle/Nur-Verwaltung in der Benutzer-Detailansicht).
+  Kassier und Admin brauchen eine E-Mail: Pflicht im Setup, im eigenen Profil nicht leerbar, Rolle kassier/admin
+  nur vergebbar mit E-Mail; bestehende Konten ohne E-Mail sehen einen Hinweis (Zugriff bleibt).
 - Anmeldung `/`: Benutzername oder E-Mail (nur wenn eindeutig) + Passwort, optional TOTP (im Konto einrichten, Wiederherstellungscodes).
   Auch nach einer SSO-Anmeldung wird TOTP verlangt, wenn der Benutzer es eingerichtet hat.
   Passwort vergessen per Mail (nur mit hinterlegter E-Mail; die E-Mail ist pro Konto eindeutig).
@@ -294,7 +298,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   "Alle Admins" (Standard, aktive Admins mit E-Mail) oder "Feste E-Mail-Adressen" (1–20, eine pro Zeile oder
   mit Komma getrennt). Die Feedback-Mail geht immer raus, unabhängig vom Schalter "Kassier-Benachrichtigung".
   Scheitert der Versand, wird das geloggt; das Feedback ist trotzdem gespeichert.
-- TWINT: Nummer mit Kopier-Knopf und Betragsvorschlag; es gibt keinen öffentlichen TWINT-Deep-Link für
+- TWINT: Satz "Bitte z.B. CHF x per TWINT an A, B oder C senden." (Betrag = Einzahlungs-Vorschlag inkl. Minus),
+  Nummern nicht angezeigt, nur Knöpfe "Nummer kopieren"; es gibt keinen öffentlichen TWINT-Deep-Link für
   Zahlungen an Privatpersonen.
 - Sicherheit: CSRF, CSP mit Nonce (keine Inline-Styles/-Handler), Rollen-Middleware, verschlüsselte
   Geheimnisse (Registrierungspasswort, SMTP-Passwort, SSO-Client-Secrets, TOTP), Rate-Limits auf Login,
@@ -326,7 +331,7 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
   Datenbankzugriff hat, kann Zeilen trotzdem ändern oder löschen; die Prüfung zeigt das an.
   **Annahme:** `actor_id` ist nicht Teil des Hashs (der Fremdschlüssel setzt ihn beim Löschen eines Benutzers auf
   null), `actor_ref` schon.
-- Backend `/backend/protokoll` (nur Admins, nur lesen): neueste zuerst, Filter Person, Aktion (Präfix, z. B.
+- Backend `/backend/protokoll` (Kassier und Admin, nur lesen): neueste zuerst, Filter Person, Aktion (Präfix, z. B.
   `deposit`), Datum von/bis, Freitext; Detailansicht mit alten/neuen Werten und Hashes; "Integrität prüfen"
   prüft die ganze Kette und nennt den ersten fehlerhaften Eintrag; CSV-Export (mit Filtern).
 - Backups (`db:backup`, Download in der Wartung) enthalten `audit_logs` und `audit_chain`; `db:restore` stellt beide

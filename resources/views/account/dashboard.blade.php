@@ -319,14 +319,25 @@
         <section class="card twint">
             <details>
             <summary><h2>{{ __('account.twint_heading') }}</h2></summary>
-            <p class="muted">{{ __('account.twint_intro') }}</p>
-            @include('partials.twint-number', ['id' => 'twint-phone'])
-            @if ($twintPhone !== '' && $twintName !== '')
-                <p>{{ $twintName }}</p>
-            @endif
-            @if ($suggested)
-                <p class="muted">{{ __('account.twint_suggested') }}</p>
-                @include('partials.beer-amount', ['s' => $suggested])
+            @if ($twintPhone === '')
+                {{-- No number configured: one sentence with the name (users know the number). --}}
+                @if ($suggested)
+                    <p class="lead">{{ __('account.twint_send_amount', ['amount' => chf($suggested['amount']), 'name' => $twintName]) }}</p>
+                    <p class="muted">{{ trans_choice('account.suggestion_beers', $suggested['beers'], ['count' => $suggested['beers']]) }}@if ($suggested['debt'] > 0) · {{ __('account.suggestion_debt') }}@endif · {{ __('account.twint_then_report') }}</p>
+                @else
+                    <p class="lead">{{ __('account.twint_send', ['name' => $twintName]) }}</p>
+                    <p class="muted">{{ __('account.twint_then_report') }}</p>
+                @endif
+            @else
+                <p class="muted">{{ __('account.twint_intro') }}</p>
+                @include('partials.twint-number', ['id' => 'twint-phone'])
+                @if ($twintName !== '')
+                    <p>{{ $twintName }}</p>
+                @endif
+                @if ($suggested)
+                    <p class="muted">{{ __('account.twint_suggested') }}</p>
+                    @include('partials.beer-amount', ['s' => $suggested])
+                @endif
             @endif
             </details>
         </section>

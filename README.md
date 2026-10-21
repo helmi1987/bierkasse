@@ -70,7 +70,7 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Rate-Limit pro IP: 10 Fehlversuche (falsches Passwort, ungültiger Einladungslink oder Flyer-Code oder
      Formularfehler) in 15 Minuten, max. 60 Anfragen in 10 Minuten (ein Büro teilt meist eine IP).
      QR-Code zum Aushängen unter `/backend/registrierung-qr` (Admin), dort auch als druckfertiger A4-Flyer
-     (Reiter "Flyer"). Der Flyer ist ein SVG-Bild in exakt A4 (`/backend/registrierung-qr/flyer.svg`, gleicher
+     (Reiter "Flyer"). Der Flyer ist ein SVG-Bild in exakt A4 (`/backend/registrierung-qr/flyer-bild`, gleicher
      Parameter `code`, `?download=1` zum Herunterladen; `app/Support/FlyerSvg.php`), damit jeder Browser gleich
      druckt. Auf der Seite: "Flyer drucken" (nur das Bild, zentriert, max. 92 % Breite bzw. 235 mm Höhe),
      "Als PNG herunterladen" (im Browser gerendert, 2480 x 3508 px = A4 300 dpi) und "Als SVG herunterladen".

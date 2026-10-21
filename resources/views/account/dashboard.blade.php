@@ -144,26 +144,6 @@
 @endif
 
 <div class="grid-2">
-    @if ($twintPhone !== '')
-        <section class="card twint">
-            <details>
-            <summary><h2>{{ __('account.twint_heading') }}</h2></summary>
-            <p class="muted">{{ __('account.twint_intro') }}</p>
-            <div class="twint-number">
-                <span id="twint-phone">{{ $twintPhone }}</span>
-                <button type="button" class="btn small" data-copy="#twint-phone" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
-            </div>
-            @if ($twintName !== '')
-                <p>{{ $twintName }}</p>
-            @endif
-            @if ($suggested)
-                <p class="muted">{{ __('account.twint_suggested') }}</p>
-                @include('partials.beer-amount', ['s' => $suggested])
-            @endif
-            </details>
-        </section>
-    @endif
-
     <section class="card">
         <details @if ($errors->hasAny(['amount', 'method', 'note']) || old('amount')) open @endif>
         <summary><h2>{{ __('account.deposit_heading') }}</h2></summary>
@@ -262,6 +242,26 @@
             </ul>
         @endif
     </section>
+
+    @if ($twintPhone !== '')
+        <section class="card twint">
+            <details>
+            <summary><h2>{{ __('account.twint_heading') }}</h2></summary>
+            <p class="muted">{{ __('account.twint_intro') }}</p>
+            <div class="twint-number">
+                <span id="twint-phone">{{ $twintPhone }}</span>
+                <button type="button" class="btn small" data-copy="#twint-phone" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
+            </div>
+            @if ($twintName !== '')
+                <p>{{ $twintName }}</p>
+            @endif
+            @if ($suggested)
+                <p class="muted">{{ __('account.twint_suggested') }}</p>
+                @include('partials.beer-amount', ['s' => $suggested])
+            @endif
+            </details>
+        </section>
+    @endif
 </div>
 
 <section class="card">
@@ -277,9 +277,11 @@
 </section>
 
 <section class="card">
-    <h2>{{ __('account.recent') }}</h2>
+    <details>
+    <summary><h2>{{ __('account.recent') }}</h2></summary>
     @include('account.tx-list', ['transactions' => $recent])
     <p><a href="{{ route('account.history') }}">{{ __('account.history') }} →</a></p>
+    </details>
 </section>
 
 @if ($canInvite)

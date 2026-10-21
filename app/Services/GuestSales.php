@@ -25,7 +25,7 @@ class GuestSales
         }
 
         // Lock so two guests cannot both take the last beers.
-        $sale = Cache::lock('guest-sales', 10)->block(5, function () use ($beers, $method, $name, $by) {
+        $sale = Cache::lock(BeerStock::LOCK, 10)->block(5, function () use ($beers, $method, $name, $by) {
             $available = max(0, BeerStock::current());
             if ($beers > $available) {
                 throw new LedgerException(trans_choice('guest.stock_short', $available));

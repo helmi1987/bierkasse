@@ -6,6 +6,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Support\AppSettings;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -115,7 +116,8 @@ class Ledger
             throw new LedgerException(__('round.message_too_long', ['max' => Rounds::MESSAGE_MAX]));
         }
 
-        $tx = DB::transaction(function () use ($giver, $recipientIds, $extra, $total, $message) {
+        // Rounds cannot exceed the stock (once it is maintained): locked like guest sales.
+        $tx = Cache::lock(BeerStock::LOCK, 10)->block(5, fn () => DB::transaction(function () use ($giver, $recipientIds, $extra, $total, $message) {
             self::lock($giver);
             self::assertActive($giver);
             if (self::hasPendingPayout($giver)) {
@@ -124,6 +126,10 @@ class Ledger
             if (in_array($giver->id, $recipientIds, true)
                 || User::query()->whereIn('id', $recipientIds)->where('status', User::STATUS_ACTIVE)->count() !== count($recipientIds)) {
                 throw new LedgerException(__('round.recipient_invalid'));
+            }
+
+            if (BeerStock::isTracked() && $total > max(0, BeerStock::current())) {
+                throw new LedgerException(trans_choice('guest.stock_short', max(0, BeerStock::current())));
             }
 
             $price = AppSettings::beerPrice();
@@ -152,7 +158,7 @@ class Ledger
             }
 
             return $tx;
-        });
+        }));
 
         // Outside the transaction: mails never delay or block the booking.
         BeerStock::afterConsumption($total);

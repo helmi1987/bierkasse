@@ -234,7 +234,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     Buchung Typ `round` (Betrag negativ, Anzahl, Preis gespeichert, Nachricht als Bemerkung). Die Biere stehen in
     `round_items` (pro Kollege 1 Zeile mit Anzahl 1, Biere ohne Namen als 1 Zeile ohne Benutzer). Der Spender kann
     die Runde 10 Minuten lang zurücknehmen. Unter "Offen" zählen Runden-Biere wie eigene Biere (alter Preis).
-    Kassenstand unverändert (wie Abstreichen); Lager sinkt um alle Biere der Runde (Lager-Mail wie beim Abstreichen).
+    Kassenstand unverändert (wie Abstreichen); Lager sinkt um alle Biere der Runde (Lager-Mail wie beim Abstreichen); nie mehr als der Lagerbestand
+    (sobald das Lager geführt wird), Kollegen-Liste sortiert nach letztem eigenem Bier.
   - Empfänger sehen 7 Tage lang im Dashboard "🍺 <Spender> hat dir ein Bier spendiert – <Nachricht>" (max. 3) und
     erhalten eine Mail "Prost! <Spender> spendiert dir ein Bier" (nur mit E-Mail und Schalter "Mail bei spendiertem
     Bier" unter Einstellungen, Standard an; unabhängig von der Kassier-Benachrichtigung). Fehler beim Versand werden

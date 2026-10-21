@@ -12,6 +12,8 @@ use App\Models\User;
 use App\Services\BeerStock;
 use App\Services\CashBook;
 use App\Services\Ledger;
+use App\Services\LedgerException;
+use App\Services\Rounds;
 use App\Services\Stats;
 use App\Support\AppSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -36,12 +38,57 @@ class RoundTest extends TestCase
         Ledger::bookDeposit($this->giver, 3000, 'cash', $this->kassier());
     }
 
+    public function test_round_cannot_exceed_the_stock(): void
+    {
+        $anna = $this->user(['first_name' => 'Anna']);
+        // Stock 30 from setUp; 28 consumed by others leaves 2.
+        $other = $this->user();
+        Ledger::bookDeposit($other, 6000, 'cash', $this->kassier());
+        Ledger::consume($other, 10);
+        Ledger::consume($other, 10);
+        Ledger::consume($other, 8);
+        $this->assertSame(2, BeerStock::current());
+
+        try {
+            Ledger::giveRound($this->giver, [$anna->id], 2);
+            $this->fail('Round above the stock must be refused.');
+        } catch (LedgerException $e) {
+            $this->assertSame('Nur noch 2 Biere an Lager.', $e->getMessage());
+        }
+        Ledger::giveRound($this->giver, [$anna->id], 1);
+        $this->assertSame(0, BeerStock::current());
+    }
+
+    public function test_colleagues_sorted_by_most_recent_beer_then_name(): void
+    {
+        $zora = $this->user(['first_name' => 'Zora', 'last_name' => 'Zeller']);
+        $anna = $this->user(['first_name' => 'Anna', 'last_name' => 'Ammann']);
+        $max = $this->user(['first_name' => 'Max', 'last_name' => 'Meier']);
+        $paul = $this->user(['first_name' => 'Paul', 'last_name' => 'Pfister']);
+        foreach ([$zora, $max] as $u) {
+            Ledger::bookDeposit($u, 1500, 'cash', $this->kassier());
+        }
+
+        $this->travelTo(now()->subHour());
+        Ledger::consume($max, 1);
+        $this->travelBack();
+        Ledger::consume($zora, 1);
+
+        $names = Rounds::colleagues($this->giver)->map->displayName()->all();
+        $this->assertSame(['Zora Zeller', 'Max Meier'], array_slice($names, 0, 2));
+        $this->assertLessThan(array_search('Paul Pfister', $names), array_search('Anna Ammann', $names));
+        $this->assertNotContains($this->giver->displayName(), $names);
+
+        $html = $this->actingAs($this->giver)->get('/konto')->getContent();
+        $this->assertLessThan(strpos($html, 'data-testid="guest-booking"'), strpos($html, 'data-testid="round"'));
+    }
+
     public function test_round_with_colleagues_and_guests_charges_the_giver_and_reduces_the_stock(): void
     {
         [$anna, $beat] = [$this->user(['first_name' => 'Anna', 'last_name' => 'A']), $this->user(['first_name' => 'Beat', 'last_name' => 'B'])];
 
         $this->actingAs($this->giver)->get('/konto')->assertOk()
-            ->assertSeeInOrder(['Bier für Gast', 'Runde spendieren', 'Einzahlung'])
+            ->assertSeeInOrder(['Runde spendieren', 'Bier für Gast', 'Einzahlung'])
             ->assertSee('Anna A')->assertSee('Beat B')->assertDontSee('name="recipients[]" value="'.$this->giver->id.'"', false)
             ->assertSee('name="recipients[]" value="'.$anna->id.'"', false);
 

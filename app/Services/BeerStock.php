@@ -20,6 +20,9 @@ use App\Support\AppSettings;
  */
 class BeerStock
 {
+    /** Cache lock for bookings that must not exceed the stock (guest sales, rounds). */
+    public const LOCK = 'beer-stock-bookings';
+
     public static function current(): int
     {
         $purchased = (int) CashEntry::query()->where('type', 'expense_beer')->sum('beers');

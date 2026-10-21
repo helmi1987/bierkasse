@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\Ledger;
 use App\Support\AppSettings;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -41,6 +42,7 @@ class User extends Authenticatable
         'stats_opt_out' => false,
         'round_mail' => true,
         'must_change_password' => false,
+        'admin_only' => false,
     ];
 
     protected function casts(): array
@@ -51,6 +53,7 @@ class User extends Authenticatable
             'stats_opt_out' => 'boolean',
             'round_mail' => 'boolean',
             'must_change_password' => 'boolean',
+            'admin_only' => 'boolean',
             'last_login_at' => 'datetime',
             'left_at' => 'datetime',
             'totp_secret' => 'encrypted',
@@ -98,6 +101,37 @@ class User extends Authenticatable
     public function isKassier(): bool
     {
         return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_KASSIER], true);
+    }
+
+    /**
+     * "Nur Verwaltung": backend account without a beer account (no balance, no beers, no rounds).
+     * Only kassiers and admins can have it; never set by registration (not fillable).
+     */
+    public function isAdminOnly(): bool
+    {
+        return $this->admin_only && $this->isKassier();
+    }
+
+    /** Has a beer account (dashboard /konto, beers, deposits, rounds, leaving). */
+    public function hasBeerAccount(): bool
+    {
+        return ! $this->isAdminOnly();
+    }
+
+    /**
+     * Accounts with a beer account (excludes "Nur Verwaltung").
+     *
+     * @param  Builder<User>  $query
+     */
+    public function scopeHasBeerAccount(Builder $query): void
+    {
+        $query->where(fn (Builder $q) => $q->where('admin_only', false)->orWhere('role', self::ROLE_USER));
+    }
+
+    /** Start page after login and target of the logo: backend for "Nur Verwaltung", else the dashboard. */
+    public function homeUrl(): string
+    {
+        return route($this->isAdminOnly() ? 'backend.dashboard' : 'account.dashboard');
     }
 
     public function displayName(): string

@@ -147,7 +147,8 @@ class Stats
     private static function ranking(Collection $rows, int $top): array
     {
         $sums = $rows->groupBy('user_id')->map(fn ($g) => (int) $g->sum('quantity'));
-        $users = User::query()->whereIn('id', $sums->keys())->where('stats_opt_out', false)->get()->keyBy('id');
+        // "Nur Verwaltung" accounts are never ranked (older beers count in the totals only).
+        $users = User::query()->whereIn('id', $sums->keys())->where('stats_opt_out', false)->hasBeerAccount()->get()->keyBy('id');
         $pseudo = [self::GUESTS_ID => __('stats.guests'), self::INVITED_ID => __('stats.guests_invited')];
         $name = fn ($id) => $pseudo[(int) $id] ?? $users[$id]->displayName();
 

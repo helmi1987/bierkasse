@@ -39,7 +39,8 @@ class Rounds
     public static function colleagues(User $giver): Collection
     {
         // Most recent beer drinkers first (own consumption), then the others alphabetically.
-        $users = User::query()->where('status', User::STATUS_ACTIVE)->whereKeyNot($giver->id)
+        // "Nur Verwaltung" accounts have no beer account and get no beers.
+        $users = User::query()->where('status', User::STATUS_ACTIVE)->hasBeerAccount()->whereKeyNot($giver->id)
             ->addSelect(['last_beer_at' => Transaction::query()->select('created_at')
                 ->whereColumn('transactions.user_id', 'users.id')
                 ->where('type', Transaction::TYPE_CONSUMPTION)->confirmed()

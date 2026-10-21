@@ -61,6 +61,7 @@ class Ledger
         $tx = DB::transaction(function () use ($user, $quantity) {
             self::lock($user);
             self::assertActive($user);
+            self::assertBeerAccount($user);
             if (self::hasPendingPayout($user)) {
                 throw new LedgerException(__('ledger.payout_pending'));
             }
@@ -118,11 +119,12 @@ class Ledger
         $tx = DB::transaction(function () use ($giver, $recipientIds, $extra, $total, $message) {
             self::lock($giver);
             self::assertActive($giver);
+            self::assertBeerAccount($giver);
             if (self::hasPendingPayout($giver)) {
                 throw new LedgerException(__('ledger.payout_pending'));
             }
             if (in_array($giver->id, $recipientIds, true)
-                || User::query()->whereIn('id', $recipientIds)->where('status', User::STATUS_ACTIVE)->count() !== count($recipientIds)) {
+                || User::query()->whereIn('id', $recipientIds)->where('status', User::STATUS_ACTIVE)->hasBeerAccount()->count() !== count($recipientIds)) {
                 throw new LedgerException(__('round.recipient_invalid'));
             }
 
@@ -178,6 +180,7 @@ class Ledger
     public static function reportDeposit(User $user, int $amount, string $method, ?string $note = null): Transaction
     {
         self::assertActive($user);
+        self::assertBeerAccount($user);
         self::assertAmount($amount);
         if (self::hasPendingPayout($user)) {
             throw new LedgerException(__('ledger.payout_pending'));
@@ -218,6 +221,7 @@ class Ledger
         return DB::transaction(function () use ($user, $amount, $method, $by, $note) {
             self::lock($user);
             self::assertActive($user);
+            self::assertBeerAccount($user);
 
             return Transaction::query()->create([
                 'user_id' => $user->id,
@@ -289,6 +293,7 @@ class Ledger
         return DB::transaction(function () use ($user, $amount, $note, $by) {
             self::lock($user);
             self::assertActive($user);
+            self::assertBeerAccount($user);
 
             return Transaction::query()->create([
                 'user_id' => $user->id,
@@ -372,6 +377,7 @@ class Ledger
     {
         $tx = DB::transaction(function () use ($user) {
             self::lock($user);
+            self::assertBeerAccount($user);
             self::assertCanLeave($user);
 
             return Transaction::query()->create([
@@ -436,6 +442,7 @@ class Ledger
     {
         return DB::transaction(function () use ($user) {
             self::lock($user);
+            self::assertBeerAccount($user);
             self::assertCanLeave($user);
 
             $balance = self::balance($user);
@@ -574,6 +581,34 @@ class Ledger
         }
     }
 
+    /** "Nur Verwaltung" accounts have no beer account: nothing is ever booked on them. */
+    private static function assertBeerAccount(User $user): void
+    {
+        if (! $user->hasBeerAccount()) {
+            throw new LedgerException(__('account.admin_only_blocked'));
+        }
+    }
+
+    /**
+     * Switches "Nur Verwaltung" on or off. Only kassiers/admins; switching on needs balance 0 and
+     * no pending bookings, so no money is stranded on an account without a beer account.
+     */
+    public static function setAdminOnly(User $user, bool $on): void
+    {
+        DB::transaction(function () use ($user, $on) {
+            self::lock($user);
+            if ($on) {
+                if (! $user->isKassier()) {
+                    throw new LedgerException(__('account.admin_only_role'));
+                }
+                if (self::balance($user) !== 0 || Transaction::query()->where('user_id', $user->id)->pending()->exists()) {
+                    throw new LedgerException(__('account.admin_only_settle_first'));
+                }
+            }
+            $user->forceFill(['admin_only' => $on])->save();
+        });
+    }
+
     private static function assertAmount(int $amount): void
     {
         if ($amount <= 0) {
@@ -620,7 +655,8 @@ class Ledger
     private static function lock(User $user): User
     {
         $fresh = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
-        $user->forceFill(['status' => $fresh->status])->syncOriginalAttribute('status');
+        $user->forceFill(['status' => $fresh->status, 'role' => $fresh->role, 'admin_only' => $fresh->admin_only])
+            ->syncOriginalAttributes(['status', 'role', 'admin_only']);
 
         return $user;
     }

@@ -162,9 +162,24 @@ class UserController extends Controller
             return back()->with('error', __('users.last_admin'));
         }
 
-        $user->forceFill(['role' => $data['role']])->save();
+        // "Nur Verwaltung" exists only for kassiers and admins.
+        $user->forceFill(['role' => $data['role']] + ($data['role'] === User::ROLE_USER ? ['admin_only' => false] : []))->save();
 
         return back()->with('status', __('users.role_saved'));
+    }
+
+    /** "Nur Verwaltung" on/off (admins only; also for the own account). */
+    public function adminOnly(Request $request, User $user): RedirectResponse
+    {
+        $on = $request->boolean('admin_only');
+
+        try {
+            Ledger::setAdminOnly($user, $on);
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', __($on ? 'account.admin_only_on' : 'account.admin_only_off'));
     }
 
     /** Kassiers must not take over admin accounts (password, TOTP, status). */

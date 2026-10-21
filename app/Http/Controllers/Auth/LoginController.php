@@ -32,7 +32,7 @@ class LoginController extends Controller
     public function show(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('account.dashboard');
+            return redirect()->to(Auth::user()->homeUrl());
         }
 
         return view('auth.login', [
@@ -246,7 +246,14 @@ class LoginController extends Controller
             return redirect()->route('account.settings')->with('warning', __('auth.must_change_password'));
         }
 
-        return redirect()->intended(route('account.dashboard'));
+        // "Nur Verwaltung": always to the backend (an intended /konto URL would only redirect there).
+        if ($user->isAdminOnly()) {
+            $request->session()->forget('url.intended');
+
+            return redirect()->to($user->homeUrl());
+        }
+
+        return redirect()->intended($user->homeUrl());
     }
 
     /** Active user by user name, or by e-mail address when the input contains "@" (only if unambiguous). */

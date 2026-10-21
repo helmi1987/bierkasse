@@ -171,7 +171,7 @@ class PersonalSsoController extends Controller
     {
         abort_unless(AppSettings::personalSsoAllowed(), 404);
         if (Auth::check()) {
-            return redirect()->route('account.dashboard');
+            return redirect()->to(Auth::user()->homeUrl());
         }
 
         return view('auth.personal-sso');
@@ -241,7 +241,7 @@ class PersonalSsoController extends Controller
     {
         abort_unless(AppSettings::personalSsoAllowed(), 404);
         if (Auth::check()) {
-            return redirect()->route('account.dashboard');
+            return redirect()->to(Auth::user()->homeUrl());
         }
 
         $username = Str::lower(trim($username));

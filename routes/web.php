@@ -56,24 +56,28 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     });
 
     Route::middleware(['auth', AuthenticateSession::class, 'active'])->group(function () {
-        // User dashboard
-        Route::get('/konto', [AccountController::class, 'dashboard'])->name('account.dashboard');
-        Route::post('/konto/bier', [AccountController::class, 'consume'])->middleware('throttle:30,1')->name('account.consume');
-        Route::post('/konto/bier/{transaction}/rueckgaengig', [AccountController::class, 'undo'])->whereNumber('transaction')->name('account.undo');
-        Route::post('/konto/gast', [AccountController::class, 'guest'])->middleware('throttle:30,1')->name('account.guest');
-        Route::post('/konto/gast/{sale}/rueckgaengig', [AccountController::class, 'undoGuest'])->whereNumber('sale')->name('account.guest.undo');
-        Route::post('/konto/runde', [AccountController::class, 'round'])->middleware('throttle:20,1')->name('account.round');
-        Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
-        Route::put('/konto/einzahlung/{transaction}', [AccountController::class, 'updateDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.update');
-        Route::delete('/konto/einzahlung/{transaction}', [AccountController::class, 'cancelDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.cancel');
+        // Beer account (balance, beers, deposits, rounds, guests, leaving); not for "Nur Verwaltung" accounts.
+        Route::middleware('beer')->group(function () {
+            Route::get('/konto', [AccountController::class, 'dashboard'])->name('account.dashboard');
+            Route::post('/konto/bier', [AccountController::class, 'consume'])->middleware('throttle:30,1')->name('account.consume');
+            Route::post('/konto/bier/{transaction}/rueckgaengig', [AccountController::class, 'undo'])->whereNumber('transaction')->name('account.undo');
+            Route::post('/konto/gast', [AccountController::class, 'guest'])->middleware('throttle:30,1')->name('account.guest');
+            Route::post('/konto/gast/{sale}/rueckgaengig', [AccountController::class, 'undoGuest'])->whereNumber('sale')->name('account.guest.undo');
+            Route::post('/konto/runde', [AccountController::class, 'round'])->middleware('throttle:20,1')->name('account.round');
+            Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
+            Route::put('/konto/einzahlung/{transaction}', [AccountController::class, 'updateDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.update');
+            Route::delete('/konto/einzahlung/{transaction}', [AccountController::class, 'cancelDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.cancel');
+            Route::get('/konto/verlauf', [AccountController::class, 'history'])->name('account.history');
+            Route::get('/konto/verlassen', [AccountController::class, 'leaveForm'])->name('account.leave');
+            Route::post('/konto/verlassen', [AccountController::class, 'leave'])->name('account.leave.store');
+        });
+
+        // Invitations and feedback (no money, also for "Nur Verwaltung" accounts)
         Route::get('/konto/einladen', [InvitationController::class, 'index'])->name('account.invite');
         Route::post('/konto/einladen', [InvitationController::class, 'store'])->middleware('throttle:20,1')->name('account.invite.store');
         Route::delete('/konto/einladungen/{invitation}', [InvitationController::class, 'destroy'])->whereNumber('invitation')->name('account.invite.destroy');
         Route::get('/konto/feedback', [FeedbackController::class, 'show'])->name('account.feedback');
         Route::post('/konto/feedback', [FeedbackController::class, 'store'])->middleware('throttle:20,1')->name('account.feedback.store');
-        Route::get('/konto/verlauf', [AccountController::class, 'history'])->name('account.history');
-        Route::get('/konto/verlassen', [AccountController::class, 'leaveForm'])->name('account.leave');
-        Route::post('/konto/verlassen', [AccountController::class, 'leave'])->name('account.leave.store');
 
         // Account settings
         Route::get('/konto/einstellungen', [AccountSettingsController::class, 'show'])->name('account.settings');
@@ -81,6 +85,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::put('/konto/passwort', [AccountSettingsController::class, 'password'])->name('account.password');
         Route::post('/konto/statistik', [AccountSettingsController::class, 'stats'])->name('account.stats');
         Route::post('/konto/runden-mail', [AccountSettingsController::class, 'roundMail'])->name('account.round-mail');
+        Route::post('/konto/nur-verwaltung', [AccountSettingsController::class, 'adminOnly'])->name('account.admin-only');
         Route::post('/konto/totp', [AccountSettingsController::class, 'enableTotp'])->name('account.totp.enable');
         Route::post('/konto/totp/neu', [AccountSettingsController::class, 'restartTotp'])->name('account.totp.restart');
         Route::post('/konto/totp/deaktivieren', [AccountSettingsController::class, 'disableTotp'])->name('account.totp.disable');
@@ -117,6 +122,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/benutzer/{user}/einzahlung', [Backend\UserController::class, 'deposit'])->whereNumber('user')->name('users.deposit');
             Route::post('/benutzer/{user}/korrektur', [Backend\UserController::class, 'correction'])->whereNumber('user')->name('users.correction');
             Route::put('/benutzer/{user}/rolle', [Backend\UserController::class, 'role'])->whereNumber('user')->middleware('role:admin')->name('users.role');
+            Route::put('/benutzer/{user}/nur-verwaltung', [Backend\UserController::class, 'adminOnly'])->whereNumber('user')->middleware('role:admin')->name('users.admin-only');
 
             Route::get('/statistik', [Backend\DashboardController::class, 'stats'])->name('stats');
             Route::get('/gaeste', [Backend\GuestController::class, 'index'])->name('guests');

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\SsoProvider;
 use App\Models\UserIdentity;
+use App\Services\Ledger;
+use App\Services\LedgerException;
 use App\Services\Sso;
 use App\Support\AppSettings;
 use App\Support\Qr;
@@ -84,6 +86,22 @@ class AccountSettingsController extends Controller
         $request->user()->forceFill(['round_mail' => $request->boolean('round_mail')])->save();
 
         return back()->with('status', __('round.mail_setting_saved'));
+    }
+
+    /** "Nur Verwaltung" on/off for the own account (kassiers and admins only). */
+    public function adminOnly(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->isKassier(), 403);
+        $on = $request->boolean('admin_only');
+
+        try {
+            Ledger::setAdminOnly($user, $on);
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('account.settings')->with('status', __($on ? 'account.admin_only_on' : 'account.admin_only_off'));
     }
 
     public function password(Request $request): RedirectResponse

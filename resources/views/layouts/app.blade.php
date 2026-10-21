@@ -29,12 +29,14 @@
 @if ($authUser)
     <header class="topbar">
         <div class="wrap topbar-inner">
-            <a class="brand" href="{{ route('account.dashboard') }}">
+            <a class="brand" href="{{ $authUser->homeUrl() }}">
                 <img src="{{ asset('logo.svg') }}" alt="" width="32" height="32">
                 <span>{{ $appName }}</span>
             </a>
             <nav class="nav" aria-label="Hauptnavigation">
-                <a href="{{ route('account.dashboard') }}" @class(['active' => request()->routeIs('account.dashboard', 'account.history')])>{{ __('site.nav.account') }}</a>
+                @if ($authUser->hasBeerAccount())
+                    <a href="{{ route('account.dashboard') }}" @class(['active' => request()->routeIs('account.dashboard', 'account.history')])>{{ __('site.nav.account') }}</a>
+                @endif
                 <a href="{{ route('stats') }}" @class(['active' => request()->routeIs('stats')])>{{ __('site.nav.stats') }}</a>
                 @if ($authUser->isKassier())
                     <a href="{{ route('backend.dashboard') }}" @class(['active' => request()->routeIs('backend.*')])>

@@ -25,7 +25,7 @@ class DashboardController extends Controller
     {
         $balances = Ledger::balances();
         $minusIds = array_keys(array_filter($balances, fn ($b) => $b < 0));
-        $minus = User::query()->whereIn('id', $minusIds)->get()
+        $minus = User::query()->whereIn('id', $minusIds)->hasBeerAccount()->get()
             ->map(fn (User $u) => ['user' => $u, 'balance' => $balances[$u->id]])
             ->sortBy('balance')->values();
 

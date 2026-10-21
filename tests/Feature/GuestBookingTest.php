@@ -94,6 +94,10 @@ class GuestBookingTest extends TestCase
         $this->post('/konto/gast', $this->sale(['guest_method' => 'twint']))
             ->assertSessionHas('status', '1 Bier für Gast erfasst – bitte CHF 1.50 per TWINT an Phlipp Arnold senden.');
 
+        Setting::put(AppSettings::TWINT_RECIPIENTS, [['name' => 'Phlipp Arnold', 'phone' => ''], ['name' => 'Eva', 'phone' => '']]);
+        $this->get('/konto')->assertOk()->assertSee('per TWINT an Phlipp Arnold oder Eva senden.');
+        Setting::put(AppSettings::TWINT_RECIPIENTS, [['name' => 'Phlipp Arnold', 'phone' => '']]);
+
         Setting::put(AppSettings::TWINT_PHONE, '079 123 45 67');
         Setting::put(AppSettings::TWINT_ENABLED, false);
         $this->get('/konto')->assertOk()->assertDontSee('name="guest_method" value="twint"', false)->assertDontSee('079 123 45 67');

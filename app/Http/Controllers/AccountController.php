@@ -86,8 +86,8 @@ class AccountController extends Controller
             'undoable' => $undoable,
             'pending' => Transaction::query()->where('user_id', $user->id)->pending()->latest('id')->get(),
             'twintEnabled' => AppSettings::twintEnabled(),
-            'twintPhone' => AppSettings::twintPhone(),
-            'twintName' => AppSettings::twintName(),
+            'twintRecipients' => AppSettings::twintRecipients(),
+            'twintText' => AppSettings::twintRecipientText(),
             'suggestions' => $suggestions,
             'suggested' => $suggested,
             'recent' => Transaction::query()->with('roundItems.user')->where('user_id', $user->id)->latest('id')->limit(5)->get(),
@@ -179,7 +179,7 @@ class AccountController extends Controller
             return back()->withInput($request->only(['guest_quantity', 'guest_method', 'guest_name']))->with('error', $e->getMessage());
         }
 
-        $replace = ['count' => $sale->beers, 'amount' => chf($sale->amount), 'phone' => AppSettings::twintRecipient()];
+        $replace = ['count' => $sale->beers, 'amount' => chf($sale->amount), 'phone' => AppSettings::twintRecipientText()];
 
         return back()->with('status', trans_choice($sale->method === 'twint' ? 'guest.booked_twint' : 'guest.booked_cash', $sale->beers, $replace));
     }

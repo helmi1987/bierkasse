@@ -32,8 +32,8 @@ class GuestController extends Controller
             'price' => AppSettings::beerPrice(),
             'available' => min(GuestSales::MAX_BEERS, max(0, BeerStock::current())),
             'twintEnabled' => AppSettings::twintEnabled(),
-            'twintPhone' => AppSettings::twintPhone(),
-            'twintName' => AppSettings::twintName(),
+            'twintRecipients' => AppSettings::twintRecipients(),
+            'twintText' => AppSettings::twintRecipientText(),
         ]);
     }
 
@@ -87,8 +87,8 @@ class GuestController extends Controller
         return view('guest.thanks', [
             'sale' => $sale,
             'twintEnabled' => AppSettings::twintEnabled(),
-            'twintPhone' => AppSettings::twintPhone(),
-            'twintName' => AppSettings::twintName(),
+            'twintRecipients' => AppSettings::twintRecipients(),
+            'twintText' => AppSettings::twintRecipientText(),
         ]);
     }
 }

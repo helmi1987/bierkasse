@@ -34,17 +34,29 @@
     <section class="card stack">
         <h2>{{ __('settings.twint') }}</h2>
         <label class="switch"><input type="checkbox" name="twint_enabled" value="1" @checked(old('twint_enabled', $twintEnabled))> <span>{{ __('settings.twint_enabled') }}</span></label>
-        <div class="grid-2">
-            <div class="field">
-                <label for="twint_phone">{{ __('settings.twint_phone') }}</label>
-                <input type="tel" id="twint_phone" name="twint_phone" value="{{ old('twint_phone', $twintPhone) }}">
-                <div class="hint">{{ __('settings.twint_phone_hint') }}</div>
+        <p class="hint">{{ __('settings.twint_hint') }}</p>
+        {{-- Configured recipients plus one empty row for a new one. --}}
+        @php($rows = array_values((array) old('twint', $twintRecipients)))
+        @if (count($rows) < \App\Support\AppSettings::TWINT_MAX)
+            @php($rows[] = ['name' => '', 'phone' => ''])
+        @endif
+        @foreach ($rows as $i => $r)
+            <div class="grid-2">
+                <div class="field">
+                    <label for="twint_{{ $i }}_name">{{ __('settings.twint_name') }}</label>
+                    <input type="text" id="twint_{{ $i }}_name" name="twint[{{ $i }}][name]" value="{{ $r['name'] ?? '' }}" list="twint-names" maxlength="100" autocomplete="off">
+                </div>
+                <div class="field">
+                    <label for="twint_{{ $i }}_phone">{{ __('settings.twint_phone') }}</label>
+                    <input type="tel" id="twint_{{ $i }}_phone" name="twint[{{ $i }}][phone]" value="{{ $r['phone'] ?? '' }}" maxlength="30" autocomplete="off">
+                </div>
             </div>
-            <div class="field">
-                <label for="twint_name">{{ __('settings.twint_name') }}</label>
-                <input type="text" id="twint_name" name="twint_name" value="{{ old('twint_name', $twintName) }}">
-            </div>
-        </div>
+        @endforeach
+        <datalist id="twint-names">
+            @foreach ($twintNames as $name)
+                <option value="{{ $name }}">
+            @endforeach
+        </datalist>
     </section>
 
     <section class="card stack">

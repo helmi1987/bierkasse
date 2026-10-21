@@ -16,9 +16,15 @@ class AppSettings
 
     public const APP_NAME = 'app_name';
 
+    /** Old single TWINT number/name, replaced by TWINT_RECIPIENTS (still read as fallback). */
     public const TWINT_PHONE = 'twint_phone';
 
     public const TWINT_NAME = 'twint_name';
+
+    /** TWINT recipients (kassiers): list of ['name' => string, 'phone' => string], at least one of both set. */
+    public const TWINT_RECIPIENTS = 'twint_recipients';
+
+    public const TWINT_MAX = 10;
 
     /** TWINT on/off; unset = on when a number is configured (installs before the switch). */
     public const TWINT_ENABLED = 'twint_enabled';
@@ -120,31 +126,54 @@ class AppSettings
         return $name !== '' ? $name : (string) config('app.name', 'Bierkasse');
     }
 
-    public static function twintPhone(): string
+    /**
+     * Configured TWINT recipients; falls back to the old single number/name.
+     *
+     * @return list<array{name: string, phone: string}>
+     */
+    public static function twintRecipients(): array
     {
-        return trim((string) self::get(self::TWINT_PHONE, ''));
+        $stored = self::get(self::TWINT_RECIPIENTS);
+        $list = is_array($stored) ? $stored : [[
+            'name' => (string) self::get(self::TWINT_NAME, ''),
+            'phone' => (string) self::get(self::TWINT_PHONE, ''),
+        ]];
+
+        $recipients = [];
+        foreach ($list as $r) {
+            $r = ['name' => trim((string) ($r['name'] ?? '')), 'phone' => trim((string) ($r['phone'] ?? ''))];
+            if ($r['name'] !== '' || $r['phone'] !== '') {
+                $recipients[] = $r;
+            }
+        }
+
+        return array_slice($recipients, 0, self::TWINT_MAX);
     }
 
-    public static function twintName(): string
+    /** TWINT switch as stored; unset = on when a number is configured (installs before the switch). */
+    public static function twintSwitch(): bool
     {
-        return trim((string) self::get(self::TWINT_NAME, ''));
+        $hasPhone = array_filter(self::twintRecipients(), fn (array $r) => $r['phone'] !== '') !== [];
+
+        return (bool) self::get(self::TWINT_ENABLED, $hasPhone);
     }
 
-    /** TWINT is offered: switched on and a number or a name is configured. */
+    /** TWINT is offered: switched on and at least one recipient is configured. */
     public static function twintEnabled(): bool
     {
-        $phone = self::twintPhone();
-        $enabled = (bool) self::get(self::TWINT_ENABLED, $phone !== '');
-
-        return $enabled && ($phone !== '' || self::twintName() !== '');
+        return self::twintSwitch() && self::twintRecipients() !== [];
     }
 
-    /** Where to send TWINT payments: the number, or only the name when no number is configured. */
-    public static function twintRecipient(): string
+    /** Recipients for a sentence ("an A oder B"): the number with the name, or only the name or number. */
+    public static function twintRecipientText(): string
     {
-        $phone = self::twintPhone();
+        $parts = array_map(fn (array $r) => match (true) {
+            $r['phone'] === '' => $r['name'],
+            $r['name'] === '' => $r['phone'],
+            default => $r['name'].' ('.$r['phone'].')',
+        }, self::twintRecipients());
 
-        return $phone !== '' ? $phone : self::twintName();
+        return implode(' '.__('account.twint_or').' ', $parts);
     }
 
     public static function registrationPassword(): string

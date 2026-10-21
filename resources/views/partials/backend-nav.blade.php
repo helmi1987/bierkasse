@@ -4,6 +4,7 @@
     <a href="{{ route('backend.users.index') }}" @class(['active' => request()->routeIs('backend.users.*')])>{{ __('backend.nav.users') }}</a>
     <a href="{{ route('backend.stats') }}" @class(['active' => request()->routeIs('backend.stats')])>{{ __('backend.nav.stats') }}</a>
     <a href="{{ route('backend.guests') }}" @class(['active' => request()->routeIs('backend.guests*')])>{{ __('backend.nav.guests') }}</a>
+    <a href="{{ route('backend.rounds') }}" @class(['active' => request()->routeIs('backend.rounds*')])>{{ __('backend.nav.rounds') }}</a>
     <a href="{{ route('backend.invitations') }}" @class(['active' => request()->routeIs('backend.invitations*')])>{{ __('backend.nav.invitations') }}</a>
     <a href="{{ route('backend.stock') }}" @class(['active' => request()->routeIs('backend.stock*')])>{{ __('backend.nav.stock') }}@if (\App\Services\BeerStock::isLow()) <span class="pill warn">{{ __('stock.low_badge') }}</span>@endif</a>
     <a href="{{ route('backend.deposit-suggestions') }}" @class(['active' => request()->routeIs('backend.deposit-suggestions')])>{{ __('backend.nav.deposit_suggestions') }}</a>

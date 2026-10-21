@@ -34,6 +34,11 @@
     @endif
 </section>
 
+@foreach ($roundsReceived as $round)
+    {{-- A colleague paid the user a beer in the last days ("Runde spendieren"). --}}
+    <div class="alert ok round-notice" data-testid="round-notice">🍺 {{ __('round.notice', ['giver' => $round->user?->displayName() ?? '?']) }}@if ($round->note) – {{ $round->note }}@endif</div>
+@endforeach
+
 @if ($pending->where('type', 'payout')->isNotEmpty())
     <div class="alert warn">{{ __('account.payout_pending') }}</div>
 @else
@@ -138,6 +143,74 @@
                     @endforeach
                 </ul>
                 <p class="hint">{{ __('guest.undo_hint', ['minutes' => \App\Models\Transaction::UNDO_MINUTES]) }}</p>
+            @endif
+        </details>
+    </section>
+@endif
+
+@if ($rounds && $pending->where('type', 'payout')->isEmpty())
+    {{-- Round for colleagues (one beer each) and beers without a name, paid by the user. --}}
+    {{-- Inline @php only: a @php block here would swallow the inline @php() above it. --}}
+    @php($roundOld = array_map('intval', (array) old('recipients', [])))
+    @php($roundExtra = max(0, (int) old('extra', 0)))
+    @php($roundCount = count($roundOld) + $roundExtra)
+    <section class="card round-card" data-testid="round">
+        <details @if ($roundUndoable->isNotEmpty() || $errors->hasAny(['recipients', 'recipients.*', 'extra', 'message']) || old('round_form')) open @endif>
+            <summary><h2>{{ __('round.heading') }}</h2></summary>
+            <p class="muted">{{ __('round.intro') }}</p>
+            <form method="post" action="{{ route('account.round') }}" class="stack" data-round data-price="{{ $price }}" data-max="{{ \App\Services\Rounds::MAX_BEERS }}"
+                data-one="{{ trans_choice('round.beers', 1, ['count' => 1]) }}" data-many="{{ trans_choice('round.beers', 2, ['count' => ':count']) }}">
+                @csrf
+                {!! \App\Support\FormToken::field('round') !!}
+                <input type="hidden" name="round_form" value="1">
+                <fieldset class="field">
+                    <legend>{{ __('round.colleagues') }}</legend>
+                    @if ($colleagues->isEmpty())
+                        <p class="hint">{{ __('round.no_colleagues') }}</p>
+                    @else
+                        <label class="sr-only" for="round-filter">{{ __('round.filter') }}</label>
+                        <input type="search" id="round-filter" placeholder="{{ __('round.filter') }}" autocomplete="off" data-round-filter hidden>
+                        <ul class="round-list">
+                            @foreach ($colleagues as $colleague)
+                                <li data-name="{{ mb_strtolower($colleague->displayName().' '.$colleague->username) }}">
+                                    <label class="check"><input type="checkbox" name="recipients[]" value="{{ $colleague->id }}" @checked(in_array($colleague->id, $roundOld, true))> <span>{{ $colleague->displayName() }}</span></label>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </fieldset>
+                <div class="field">
+                    <span class="label">{{ __('round.extra') }}</span>
+                    <div class="stepper" data-stepper>
+                        <button type="button" class="btn round" data-step="-1" aria-label="{{ __('account.less') }}">−</button>
+                        <label class="sr-only" for="round-extra">{{ __('round.extra') }}</label>
+                        <input type="number" id="round-extra" name="extra" value="{{ $roundExtra }}" min="0" max="{{ \App\Services\Rounds::MAX_EXTRA }}" inputmode="numeric">
+                        <button type="button" class="btn round" data-step="1" aria-label="{{ __('account.more') }}">+</button>
+                    </div>
+                    <p class="hint center">{{ __('round.extra_hint', ['max' => \App\Services\Rounds::MAX_EXTRA]) }}</p>
+                </div>
+                <div class="field">
+                    <label for="round-message">{{ __('round.message') }}</label>
+                    <input type="text" id="round-message" name="message" value="{{ old('message') }}" maxlength="{{ \App\Services\Rounds::MESSAGE_MAX }}" placeholder="{{ __('round.message_placeholder') }}" autocomplete="off">
+                </div>
+                <p class="round-total center" aria-live="polite">{{ __('round.total') }}: <strong data-round-count>{{ trans_choice('round.beers', $roundCount, ['count' => $roundCount]) }}</strong> · <strong data-round-amount>{{ chf($roundCount * $price) }}</strong></p>
+                <p class="hint center">{{ __('round.total_hint', ['max' => \App\Services\Rounds::MAX_BEERS, 'price' => chf($price)]) }}</p>
+                <button type="submit" class="btn primary big" data-round-submit>{{ __('round.submit') }}</button>
+            </form>
+
+            @if ($roundUndoable->isNotEmpty())
+                <ul class="undo-list">
+                    @foreach ($roundUndoable as $tx)
+                        <li>
+                            <span>{{ local_time($tx->created_at, 'H:i') }} · {{ trans_choice('round.beers', $tx->quantity, ['count' => $tx->quantity]) }} · {{ chf(-$tx->amount) }}<br><small class="muted">{{ __('round.tx_for', ['names' => \App\Services\Rounds::recipientsText($tx)]) }}</small></span>
+                            <form method="post" action="{{ route('account.undo', $tx) }}" class="inline">
+                                @csrf
+                                <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
+                            </form>
+                        </li>
+                    @endforeach
+                </ul>
+                <p class="hint">{{ __('round.undo_hint', ['minutes' => \App\Models\Transaction::UNDO_MINUTES]) }}</p>
             @endif
         </details>
     </section>
@@ -271,6 +344,9 @@
         <div class="kpi"><span>{{ __('account.total_beers') }}</span><strong>{{ $stats['total_beers'] }}</strong></div>
         <div class="kpi"><span>{{ __('account.total_amount') }}</span><strong>{{ chf($stats['total_amount']) }}</strong></div>
         <div class="kpi"><span>{{ __('account.per_week') }}</span><strong>{{ number_format($stats['per_week'], 1, '.', "'") }}</strong></div>
+        @if ($stats['given'] > 0)
+            <div class="kpi" data-testid="round-given"><span>{{ __('round.given_kpi') }}</span><strong>{{ $stats['given'] }}</strong></div>
+        @endif
     </div>
     {!! $chart !!}
     </details>

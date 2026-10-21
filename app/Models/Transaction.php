@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * One entry of a user's ledger. The balance is the sum of the confirmed amounts.
@@ -24,7 +25,13 @@ class Transaction extends Model
     /** Debt (negative) or credit (positive) carried over from the old paper tally list at registration. */
     public const TYPE_CARRYOVER = 'carryover';
 
-    public const TYPES = [self::TYPE_CONSUMPTION, self::TYPE_DEPOSIT, self::TYPE_PAYOUT, self::TYPE_DONATION, self::TYPE_CORRECTION, self::TYPE_CARRYOVER];
+    /** A round paid by the user for colleagues and/or guests ("Runde spendieren"); beers in round_items. */
+    public const TYPE_ROUND = 'round';
+
+    public const TYPES = [self::TYPE_CONSUMPTION, self::TYPE_DEPOSIT, self::TYPE_PAYOUT, self::TYPE_DONATION, self::TYPE_CORRECTION, self::TYPE_CARRYOVER, self::TYPE_ROUND];
+
+    /** Types that are beers paid by the user at the stored unit price (stock, open items). */
+    public const BEER_TYPES = [self::TYPE_CONSUMPTION, self::TYPE_ROUND];
 
     /** Limits of a carry-over entered at registration. */
     public const CARRYOVER_MAX_BEERS = 500;
@@ -39,7 +46,7 @@ class Transaction extends Model
 
     public const METHODS = ['cash', 'twint'];
 
-    /** Minutes a user can undo an own consumption. */
+    /** Minutes a user can undo an own consumption or round. */
     public const UNDO_MINUTES = 10;
 
     protected $fillable = [
@@ -71,6 +78,12 @@ class Transaction extends Model
     public function confirmer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmed_by');
+    }
+
+    /** Beers of a round (type "round"). */
+    public function roundItems(): HasMany
+    {
+        return $this->hasMany(RoundItem::class);
     }
 
     public function scopeConfirmed(Builder $query): Builder
@@ -106,7 +119,7 @@ class Transaction extends Model
 
     public function canBeUndoneBy(User $user): bool
     {
-        return $this->type === self::TYPE_CONSUMPTION
+        return in_array($this->type, self::BEER_TYPES, true)
             && $this->user_id === $user->id
             && $this->created_by === $user->id
             && $this->created_at !== null

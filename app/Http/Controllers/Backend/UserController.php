@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Ledger;
 use App\Services\LedgerException;
+use App\Services\Rounds;
 use App\Support\Money;
 use App\Support\UserRules;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +40,8 @@ class UserController extends Controller
             'balance' => $user->balance(),
             'personalSso' => $user->personalSsoProvider()->withCount('identities')->first(),
             'open' => Ledger::openItems($user),
-            'transactions' => Transaction::query()->with(['creator', 'confirmer'])->where('user_id', $user->id)->latest('id')->paginate(25),
+            'transactions' => Transaction::query()->with(['creator', 'confirmer', 'roundItems.user'])->where('user_id', $user->id)->latest('id')->paginate(25),
+            'roundsGiven' => Rounds::beersGiven($user),
         ]);
     }
 

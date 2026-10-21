@@ -9,6 +9,7 @@ return [
         'donation' => 'Spende an die Kasse',
         'correction' => 'Korrektur',
         'carryover' => 'Übertrag alte Strichliste',
+        'round' => 'Runde spendiert',
     ],
     'status' => [
         'pending' => 'offen',

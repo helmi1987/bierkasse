@@ -8,6 +8,7 @@ use App\Services\BeerStock;
 use App\Services\GuestSales;
 use App\Services\Ledger;
 use App\Services\LedgerException;
+use App\Services\Rounds;
 use App\Services\Stats;
 use App\Support\AppSettings;
 use App\Support\BarChart;
@@ -56,6 +57,13 @@ class AccountController extends Controller
             ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
             ->latest('id')->get();
 
+        // "Runde spendieren": colleagues to choose from, own rounds within the undo window, rounds received.
+        $rounds = AppSettings::roundsAllowed();
+        $roundUndoable = $rounds ? Transaction::query()->with('roundItems.user')->where('user_id', $user->id)
+            ->where('type', Transaction::TYPE_ROUND)->where('created_by', $user->id)
+            ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
+            ->latest('id')->get() : collect();
+
         // Beers left in the cellar (only once the kassier maintains the stock).
         $stock = BeerStock::isTracked() ? BeerStock::current() : null;
 
@@ -66,6 +74,10 @@ class AccountController extends Controller
             'guestBooking' => $guestBooking,
             'guestAvailable' => $guestBooking ? min(GuestSales::MAX_BEERS, max(0, $stock ?? BeerStock::current())) : 0,
             'guestUndoable' => $guestUndoable,
+            'rounds' => $rounds,
+            'colleagues' => $rounds ? Rounds::colleagues($user) : collect(),
+            'roundUndoable' => $roundUndoable,
+            'roundsReceived' => $rounds ? Rounds::receivedRecently($user) : collect(),
             'pendingDeposit' => $pendingDeposit,
             'pendingCarryover' => $pendingCarryover,
             'balance' => $balance,
@@ -77,7 +89,7 @@ class AccountController extends Controller
             'twintName' => AppSettings::twintName(),
             'suggestions' => $suggestions,
             'suggested' => $suggested,
-            'recent' => Transaction::query()->where('user_id', $user->id)->latest('id')->limit(5)->get(),
+            'recent' => Transaction::query()->with('roundItems.user')->where('user_id', $user->id)->latest('id')->limit(5)->get(),
             'stats' => $stats,
             'canInvite' => AppSettings::invitationsAllowed(),
             'chart' => BarChart::render(
@@ -112,7 +124,34 @@ class AccountController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('status', __('ledger.undone'));
+        return back()->with('status', $transaction->type === Transaction::TYPE_ROUND ? __('round.undone') : __('ledger.undone'));
+    }
+
+    /**
+     * "Runde spendieren": one beer for each chosen colleague plus beers without a name,
+     * paid by the logged-in user (same limit rules as own beers).
+     */
+    public function round(Request $request): RedirectResponse
+    {
+        abort_unless(AppSettings::roundsAllowed(), 404);
+        $data = $request->validate([
+            'recipients' => ['nullable', 'array', 'max:'.Rounds::MAX_BEERS],
+            'recipients.*' => ['integer', 'distinct'],
+            'extra' => ['nullable', 'integer', 'between:0,'.Rounds::MAX_EXTRA],
+            'message' => ['nullable', 'string', 'max:'.Rounds::MESSAGE_MAX],
+        ]);
+        $input = ['recipients', 'extra', 'message'];
+        if (! FormToken::consume($request, 'round')) {
+            return back()->with('warning', __('ledger.duplicate'));
+        }
+
+        try {
+            $tx = Ledger::giveRound($request->user(), array_map('intval', $data['recipients'] ?? []), (int) ($data['extra'] ?? 0), $data['message'] ?? null);
+        } catch (LedgerException $e) {
+            return back()->withInput($request->only($input))->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', trans_choice('round.booked', $tx->quantity, ['count' => $tx->quantity, 'amount' => chf(-$tx->amount)]));
     }
 
     /**
@@ -231,7 +270,7 @@ class AccountController extends Controller
         return view('account.history', [
             'user' => $user,
             'balance' => $user->balance(),
-            'transactions' => Transaction::query()->where('user_id', $user->id)->latest('id')->paginate(25),
+            'transactions' => Transaction::query()->with('roundItems.user')->where('user_id', $user->id)->latest('id')->paginate(25),
         ]);
     }
 

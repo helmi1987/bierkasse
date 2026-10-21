@@ -11,7 +11,8 @@ use App\Models\User;
 use App\Support\AppSettings;
 
 /**
- * Beer stock = purchased beers (cash book) + inventory corrections - confirmed consumption - guest sales.
+ * Beer stock = purchased beers (cash book) + inventory corrections - confirmed consumption (incl. rounds)
+ * - guest sales.
  * User consumption is never blocked by the stock (it may become negative); guest sales are (GuestSales).
  *
  * Low-stock mail: once when a consumption takes the stock from >= minimum to below it.
@@ -23,7 +24,8 @@ class BeerStock
     {
         $purchased = (int) CashEntry::query()->where('type', 'expense_beer')->sum('beers');
         $corrections = (int) StockCorrection::query()->sum('delta');
-        $consumed = (int) Transaction::query()->confirmed()->where('type', Transaction::TYPE_CONSUMPTION)->sum('quantity');
+        // Own consumption and paid rounds ("Runde spendieren", quantity = all beers of the round).
+        $consumed = (int) Transaction::query()->confirmed()->whereIn('type', Transaction::BEER_TYPES)->sum('quantity');
         $guests = (int) GuestSale::query()->sum('beers');
 
         return $purchased + $corrections - $consumed - $guests;

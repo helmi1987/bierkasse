@@ -81,13 +81,14 @@ class PagesTest extends TestCase
         $admin = $this->admin();
         $user = $this->user();
         Ledger::consume($user, 3);
+        Ledger::giveRound($user, [$admin->id], 2, 'Prost!');
         Ledger::reportDeposit($user, 1000, 'twint', 'via Handy');
         Ledger::bookDeposit($admin, 2000, 'cash', $admin);
         Ledger::requestPayout($admin);
 
         $this->actingAs($admin);
         foreach (['/konto', '/konto/verlauf', '/konto/verlassen', '/konto/einstellungen', '/statistik', '/backend', '/backend/kasse',
-            '/backend/benutzer', "/backend/benutzer/{$user->id}", '/backend/statistik', '/backend/einstellungen', '/backend/sso',
+            '/backend/benutzer', "/backend/benutzer/{$user->id}", '/backend/statistik', '/backend/runden', '/backend/einstellungen', '/backend/sso',
             '/backend/sso/create', '/backend/registrierung-qr'] as $url) {
             $this->get($url)->assertOk()->assertHeader('Cache-Control', 'no-store, private');
         }

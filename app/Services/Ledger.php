@@ -90,12 +90,87 @@ class Ledger
         return $tx;
     }
 
+    /**
+     * Round for colleagues and/or guests ("Runde spendieren"): the giver pays all beers at the
+     * current price (one transaction of type "round", same limit and payout rules as consume).
+     * Each named colleague gets one beer, $extra beers have no name (e.g. guests).
+     *
+     * @param  list<int>  $recipientIds  active colleagues (not the giver)
+     */
+    public static function giveRound(User $giver, array $recipientIds, int $extra, ?string $message = null): Transaction
+    {
+        $recipientIds = array_values(array_unique(array_map('intval', $recipientIds)));
+        $total = count($recipientIds) + $extra;
+        if ($extra < 0 || $extra > Rounds::MAX_EXTRA) {
+            throw new LedgerException(__('ledger.quantity_invalid'));
+        }
+        if ($total < 1) {
+            throw new LedgerException(__('round.none_selected'));
+        }
+        if ($total > Rounds::MAX_BEERS) {
+            throw new LedgerException(__('round.too_many', ['max' => Rounds::MAX_BEERS]));
+        }
+        $message = $message !== null && trim($message) !== '' ? trim($message) : null;
+        if ($message !== null && mb_strlen($message) > Rounds::MESSAGE_MAX) {
+            throw new LedgerException(__('round.message_too_long', ['max' => Rounds::MESSAGE_MAX]));
+        }
+
+        $tx = DB::transaction(function () use ($giver, $recipientIds, $extra, $total, $message) {
+            self::lock($giver);
+            self::assertActive($giver);
+            if (self::hasPendingPayout($giver)) {
+                throw new LedgerException(__('ledger.payout_pending'));
+            }
+            if (in_array($giver->id, $recipientIds, true)
+                || User::query()->whereIn('id', $recipientIds)->where('status', User::STATUS_ACTIVE)->count() !== count($recipientIds)) {
+                throw new LedgerException(__('round.recipient_invalid'));
+            }
+
+            $price = AppSettings::beerPrice();
+            $amount = -$total * $price;
+            if (self::balance($giver) + $amount < -$giver->effectiveLimit()) {
+                throw new LedgerException(__('ledger.limit_reached'));
+            }
+
+            $tx = Transaction::query()->create([
+                'user_id' => $giver->id,
+                'type' => Transaction::TYPE_ROUND,
+                'status' => Transaction::STATUS_CONFIRMED,
+                'quantity' => $total,
+                'unit_price' => $price,
+                'amount' => $amount,
+                'note' => $message,
+                'created_by' => $giver->id,
+                'confirmed_by' => $giver->id,
+                'confirmed_at' => now(),
+            ]);
+            foreach ($recipientIds as $id) {
+                $tx->roundItems()->create(['user_id' => $id, 'quantity' => 1]);
+            }
+            if ($extra > 0) {
+                $tx->roundItems()->create(['user_id' => null, 'quantity' => $extra]);
+            }
+
+            return $tx;
+        });
+
+        // Outside the transaction: mails never delay or block the booking.
+        BeerStock::afterConsumption($total);
+        Rounds::notifyRecipients($tx, $giver);
+
+        return $tx;
+    }
+
+    /** Undo of an own consumption or round within the undo window (a round with its beers). */
     public static function undo(Transaction $tx, User $user): void
     {
         if (! $tx->canBeUndoneBy($user)) {
             throw new LedgerException(__('ledger.undo_expired'));
         }
-        $tx->delete();
+        DB::transaction(function () use ($tx) {
+            $tx->roundItems()->delete();
+            $tx->delete();
+        });
         BeerStock::rearm();
     }
 
@@ -413,7 +488,7 @@ class Ledger
             }
 
             $price = (int) $row->unit_price;
-            $beerRow = in_array($row->type, [Transaction::TYPE_CONSUMPTION, Transaction::TYPE_CARRYOVER], true);
+            $beerRow = in_array($row->type, [...Transaction::BEER_TYPES, Transaction::TYPE_CARRYOVER], true);
             if (! $beerRow || $price <= 0 || (int) $row->quantity * $price !== $debit) {
                 $other += $debit - $covered;
 

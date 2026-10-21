@@ -57,12 +57,59 @@
         };
         stepper.querySelectorAll('[data-step]').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                var value = (parseInt(input.value || '1', 10) || 1) + parseInt(btn.dataset.step, 10);
+                var current = parseInt(input.value, 10);
+                var value = (isNaN(current) ? min : current) + parseInt(btn.dataset.step, 10);
                 input.value = String(Math.min(max, Math.max(min, value)));
                 render();
+                // Let other widgets (e.g. the round total) see the new value.
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             });
         });
         input.addEventListener('input', render);
+        render();
+    });
+
+    // "Runde spendieren": search filter for the colleague list and live total (beers and amount).
+    document.querySelectorAll('form[data-round]').forEach(function (form) {
+        var price = parseInt(form.dataset.price || '0', 10);
+        var max = parseInt(form.dataset.max || '30', 10);
+        var count = form.querySelector('[data-round-count]');
+        var amount = form.querySelector('[data-round-amount]');
+        var submit = form.querySelector('[data-round-submit]');
+        var extra = form.querySelector('input[name=extra]');
+        var filter = form.querySelector('[data-round-filter]');
+        var render = function () {
+            var n = form.querySelectorAll('input[name="recipients[]"]:checked').length;
+            var e = extra ? parseInt(extra.value, 10) : 0;
+            n += isNaN(e) ? 0 : Math.max(0, e);
+            var rappen = n * price;
+            count.textContent = n === 1 ? form.dataset.one : form.dataset.many.replace(':count', String(n));
+            amount.textContent = 'CHF ' + Math.floor(rappen / 100) + '.' + String(rappen % 100).padStart(2, '0');
+            submit.disabled = n < 1 || n > max;
+        };
+        form.addEventListener('change', render);
+        form.addEventListener('input', function (e) {
+            if (e.target !== filter) {
+                render();
+            }
+        });
+        if (filter) {
+            filter.hidden = false;
+            filter.addEventListener('input', function () {
+                var q = filter.value.trim().toLowerCase();
+                form.querySelectorAll('.round-list li').forEach(function (li) {
+                    // Checked colleagues stay visible.
+                    var checked = li.querySelector('input:checked');
+                    li.hidden = q !== '' && !checked && li.dataset.name.indexOf(q) === -1;
+                });
+            });
+            // Enter in the search field must not send the form.
+            filter.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            });
+        }
         render();
     });
 

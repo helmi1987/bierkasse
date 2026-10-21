@@ -2,6 +2,9 @@
 <span class="tx-what">
     @if ($tx->type === 'consumption')
         {{ trans_choice('ledger.beers', $tx->quantity, ['count' => $tx->quantity, 'price' => chf((int) $tx->unit_price)]) }}
+    @elseif ($tx->type === 'round')
+        {{ trans_choice('round.tx_label', (int) $tx->quantity, ['count' => $tx->quantity]) }} à {{ chf((int) $tx->unit_price) }}
+        <span class="tx-note">{{ __('round.tx_for', ['names' => \App\Services\Rounds::recipientsText($tx)]) }}</span>
     @elseif ($tx->type === 'carryover')
         {{ __('ledger.type.carryover') }}@if ($tx->quantity && $tx->unit_price) · {{ trans_choice('ledger.beers', $tx->quantity, ['count' => $tx->quantity, 'price' => chf((int) $tx->unit_price)]) }}@endif
     @else

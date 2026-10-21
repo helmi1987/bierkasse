@@ -11,6 +11,7 @@ use App\Services\KassierNotifier;
 use App\Services\Ledger;
 use App\Support\AppSettings;
 use App\Support\Money;
+use App\Support\RegistrationLink;
 use App\Support\UserRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,8 +27,9 @@ use Illuminate\View\View;
  * Self registration, depending on the registration mode (setting):
  * - closed: no registration (invitation links are invalid too),
  * - invite: only with a valid one-time invitation link (?einladung=<token>),
- * - password: with the registration password (the backend QR code may carry it as ?code=…)
- *   or with a valid invitation link.
+ * - password: with the registration password, with the flyer code of the backend QR/flyer
+ *   (?flyer=…, replaces the password field) or with a valid invitation link.
+ *   Old printed QR codes with ?code=<password> still prefill the password field.
  */
 class RegisterController extends Controller
 {
@@ -56,10 +58,26 @@ class RegisterController extends Controller
             }
         }
 
-        // Form: with a valid invitation (no password field) or in password mode (password field).
+        // Flyer code (only in mode "password"): counts like a wrong password when invalid.
+        $flyer = $this->flyer($request);
+        $flyerValid = false;
+        if ($invitation === null && $flyer !== '' && AppSettings::registrationOpen()) {
+            $key = $this->limiterKey($request);
+            if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
+                $tokenState = 'throttled';
+            } elseif (AppSettings::flyerCodeValid($flyer)) {
+                $flyerValid = true;
+            } else {
+                RateLimiter::hit($key, self::DECAY);
+                $tokenState = 'flyer_invalid';
+            }
+        }
+
+        // Form: with a valid invitation or flyer code (no password field) or in password mode.
         $state = match (true) {
             $mode === AppSettings::MODE_CLOSED => 'closed',
             $invitation !== null => 'invited',
+            $flyerValid => 'flyer',
             AppSettings::registrationOpen() => 'password',
             $tokenState !== null => 'invalid',
             default => 'invite_only',
@@ -71,6 +89,7 @@ class RegisterController extends Controller
             'throttle' => $tokenState === 'throttled' ? __('auth.throttle', ['seconds' => RateLimiter::availableIn($this->limiterKey($request))]) : null,
             'inviter' => $invitation?->creator?->username,
             'token' => $invitation ? $token : '',
+            'flyer' => $flyerValid ? $flyer : '',
             'code' => (string) $request->query('code', ''),
             'price' => AppSettings::beerPrice(),
         ]);
@@ -83,7 +102,7 @@ class RegisterController extends Controller
 
         $key = $this->limiterKey($request);
         $back = fn (string $field, string $message) => back()
-            ->withInput($request->except(['password', 'password_confirmation', 'code']))
+            ->withInput($request->except(['password', 'password_confirmation', 'code', RegistrationLink::FLYER_QUERY]))
             ->withErrors([$field => $message]);
 
         // Only failed attempts count; an office shares one IP, so keep it moderate.
@@ -108,11 +127,21 @@ class RegisterController extends Controller
 
                 return $back('code', __('register.invite_only'));
             }
-            $code = $request->input('code');
-            if (! is_string($code) || $code === '' || ! hash_equals(AppSettings::registrationPassword(), $code)) {
-                RateLimiter::hit($key, self::DECAY);
+            $flyer = $this->flyer($request);
+            if ($flyer !== '') {
+                // Flyer code instead of the registration password.
+                if (! AppSettings::flyerCodeValid($flyer)) {
+                    RateLimiter::hit($key, self::DECAY);
 
-                return $back('code', __('register.code_wrong'));
+                    return $back('code', __('register.flyer_invalid'));
+                }
+            } else {
+                $code = $request->input('code');
+                if (! is_string($code) || $code === '' || ! hash_equals(AppSettings::registrationPassword(), $code)) {
+                    RateLimiter::hit($key, self::DECAY);
+
+                    return $back('code', __('register.code_wrong'));
+                }
             }
         }
 
@@ -168,6 +197,13 @@ class RegisterController extends Controller
         $token = $request->input(Invitation::QUERY, $request->query(Invitation::QUERY, ''));
 
         return is_string($token) ? trim($token) : '';
+    }
+
+    private function flyer(Request $request): string
+    {
+        $flyer = $request->input(RegistrationLink::FLYER_QUERY, $request->query(RegistrationLink::FLYER_QUERY, ''));
+
+        return is_string($flyer) ? trim($flyer) : '';
     }
 
     private function limiterKey(Request $request): string

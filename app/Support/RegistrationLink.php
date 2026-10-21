@@ -3,16 +3,18 @@
 namespace App\Support;
 
 /**
- * Registration URL, optionally with the registration password as ?code=… (prefills the form).
+ * Registration URL, optionally with the flyer code as ?flyer=… (registration without password).
+ * The registration password itself is never put into a link.
  */
 class RegistrationLink
 {
-    public static function url(bool $withCode): string
+    public const FLYER_QUERY = 'flyer';
+
+    public static function url(bool $withFlyerCode): string
     {
         $url = route('register');
-        $code = AppSettings::registrationPassword();
-        if ($withCode && $code !== '') {
-            $url .= '?'.http_build_query(['code' => $code]);
+        if ($withFlyerCode) {
+            $url .= '?'.http_build_query([self::FLYER_QUERY => AppSettings::flyerCode()]);
         }
 
         return $url;

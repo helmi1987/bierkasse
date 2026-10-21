@@ -7,6 +7,7 @@ use App\Models\Invitation;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\AppSettings;
+use App\Support\Qr;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -83,14 +84,18 @@ class InviteTest extends TestCase
         $this->get('/konto/einladen')->assertOk()->assertDontSee($token)->assertSee('Offen');
     }
 
-    public function test_password_mode_shows_password_qr_as_second_option(): void
+    public function test_password_mode_offers_only_invitation_links(): void
     {
         $this->mode(AppSettings::MODE_PASSWORD);
         $this->actingAs($this->user());
 
         $this->get('/konto/einladen')->assertOk()
             ->assertSee('Neuen Einladungslink erstellen')
-            ->assertSee(route('register').'?code=durst');
+            ->assertDontSee('code=durst')->assertDontSee('flyer=')
+            ->assertDontSee('Registrierungspasswort');
+        $this->post('/konto/einladen', $this->tokened('invite'))->assertOk()
+            ->assertSee(route('register').'?einladung=', false)
+            ->assertDontSee('code=durst')->assertDontSee('flyer=');
     }
 
     public function test_invite_mode_never_shows_password_qr(): void
@@ -347,6 +352,8 @@ class InviteTest extends TestCase
         $this->get('/backend/registrierung-qr')->assertOk()
             ->assertSee('Nur per Einladung')
             ->assertDontSee('code=durst')
+            ->assertDontSee('Flyer-Code neu erzeugen')
+            ->assertSee(Qr::dataUri(route('register'), 480), false)
             ->assertSee(route('register'));
         $this->get('/backend/registrierung-qr?view=flyer')->assertOk()
             ->assertDontSee('code=durst')

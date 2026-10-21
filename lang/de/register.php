@@ -32,6 +32,8 @@ return [
     'carryover_chf_invalid' => 'Betrag: grösser als 0 und höchstens :max.',
     'submit' => 'Konto erstellen',
     'back' => 'Zurück zur Anmeldung',
+    'intro_flyer' => 'Neues Konto für die Bierkasse. Über den QR-Code brauchst du kein Registrierungspasswort.',
+    'flyer_invalid' => 'Dieser QR-Code ist nicht mehr gültig (vielleicht ein alter Flyer). Das Registrierungspasswort gibt es beim Kassier.',
     'code_wrong' => 'Registrierungspasswort falsch.',
     'done' => 'Willkommen! Dein Konto ist bereit.',
 ];

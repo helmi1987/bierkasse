@@ -39,6 +39,9 @@ class AppSettings
 
     public const REGISTRATION_PASSWORD = 'registration_password';
 
+    /** Random code in the flyer/backend registration QR (replaces the password there). */
+    public const FLYER_CODE = 'registration_flyer_code';
+
     public const NOTIFY_KASSIER = 'notify_kassier';
 
     public const PERSONAL_SSO = 'personal_sso_enabled';
@@ -110,6 +113,31 @@ class AppSettings
     public static function registrationPassword(): string
     {
         return (string) self::get(self::REGISTRATION_PASSWORD, '');
+    }
+
+    /** Flyer code; generated on first use (random, URL-safe, 32 characters). */
+    public static function flyerCode(): string
+    {
+        $code = (string) self::get(self::FLYER_CODE, '');
+
+        return $code !== '' ? $code : self::regenerateFlyerCode();
+    }
+
+    /** New flyer code; QR codes printed with the old one stop working. */
+    public static function regenerateFlyerCode(): string
+    {
+        $code = rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=');
+        Setting::put(self::FLYER_CODE, $code);
+
+        return $code;
+    }
+
+    /** Valid flyer code: only in mode "password" (open registration); never generates one. */
+    public static function flyerCodeValid(string $code): bool
+    {
+        $stored = (string) self::get(self::FLYER_CODE, '');
+
+        return self::registrationOpen() && $stored !== '' && $code !== '' && hash_equals($stored, $code);
     }
 
     /** Registration mode; default for new installs: invitation only. */

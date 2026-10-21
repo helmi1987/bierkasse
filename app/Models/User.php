@@ -71,6 +71,12 @@ class User extends Authenticatable
         return $this->hasMany(UserIdentity::class);
     }
 
+    /** The invitation this user registered with (null = password, backend or setup). */
+    public function invitation(): HasOne
+    {
+        return $this->hasOne(Invitation::class, 'used_by');
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);

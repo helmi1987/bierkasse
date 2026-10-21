@@ -28,7 +28,7 @@ class SettingsController extends Controller
             'appName' => (string) AppSettings::get(AppSettings::APP_NAME, ''),
             'twintPhone' => AppSettings::twintPhone(),
             'twintName' => AppSettings::twintName(),
-            'registrationEnabled' => (bool) AppSettings::get(AppSettings::REGISTRATION_ENABLED, true),
+            'registrationMode' => AppSettings::registrationMode(),
             'registrationPassword' => AppSettings::registrationPassword(),
             'notifyKassier' => AppSettings::notifyKassier(),
             'personalSso' => AppSettings::personalSsoAllowed(),
@@ -44,6 +44,7 @@ class SettingsController extends Controller
             'app_name' => ['nullable', 'string', 'max:60'],
             'twint_phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+ ()\/-]*$/'],
             'twint_name' => ['nullable', 'string', 'max:100'],
+            'registration_mode' => ['required', Rule::in(AppSettings::REGISTRATION_MODES)],
             'registration_password' => ['nullable', 'string', 'min:4', 'max:100'],
             'mail_transport' => ['required', Rule::in(AppSettings::MAIL_TRANSPORTS)],
             'mail_from_address' => ['nullable', 'email', 'max:255'],
@@ -76,7 +77,7 @@ class SettingsController extends Controller
             AppSettings::APP_NAME => trim((string) ($data['app_name'] ?? '')),
             AppSettings::TWINT_PHONE => trim((string) ($data['twint_phone'] ?? '')),
             AppSettings::TWINT_NAME => trim((string) ($data['twint_name'] ?? '')),
-            AppSettings::REGISTRATION_ENABLED => $request->boolean('registration_enabled'),
+            AppSettings::REGISTRATION_MODE => $data['registration_mode'],
             AppSettings::REGISTRATION_PASSWORD => (string) ($data['registration_password'] ?? ''),
             AppSettings::NOTIFY_KASSIER => $request->boolean('notify_kassier'),
             AppSettings::PERSONAL_SSO => $request->boolean('personal_sso'),
@@ -97,10 +98,12 @@ class SettingsController extends Controller
 
     /**
      * Printable page with the QR code of the registration URL; includes the password unless ?code=0.
+     * The password is only embedded in mode "password" (in mode "invite" it is not accepted).
      */
     public function registrationQr(Request $request): View
     {
-        $withCode = $request->boolean('code', true) && AppSettings::registrationPassword() !== '';
+        $mode = AppSettings::registrationMode();
+        $withCode = $request->boolean('code', true) && $mode === AppSettings::MODE_PASSWORD && AppSettings::registrationPassword() !== '';
         $url = RegistrationLink::url($withCode);
 
         return view('backend.registration-qr', [
@@ -108,6 +111,7 @@ class SettingsController extends Controller
             'url' => $url,
             'qr' => Qr::dataUri($url, 480),
             'withCode' => $withCode,
+            'mode' => $mode,
             'open' => AppSettings::registrationOpen(),
             'appName' => AppSettings::appName(),
         ]);

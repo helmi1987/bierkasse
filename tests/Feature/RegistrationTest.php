@@ -27,22 +27,33 @@ class RegistrationTest extends TestCase
 
     private function open(): void
     {
-        Setting::put(AppSettings::REGISTRATION_ENABLED, true);
+        Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
         Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
     }
 
-    public function test_registration_without_password_setting_is_closed(): void
+    public function test_default_mode_is_invitation_only(): void
     {
-        $this->get('/registrieren')->assertOk()->assertSee('geschlossen');
-        $this->post('/registrieren', $this->data())->assertForbidden();
+        $this->assertSame(AppSettings::MODE_INVITE, AppSettings::registrationMode());
+        $this->get('/registrieren')->assertOk()->assertSee('nur mit einem persönlichen Einladungslink')->assertDontSee('name="username"', false);
+        $this->post('/registrieren', $this->data())->assertSessionHasErrors('code');
+        $this->assertSame(0, User::query()->count());
+    }
+
+    public function test_password_mode_without_password_setting_rejects_passwords(): void
+    {
+        Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
+
+        $this->get('/registrieren')->assertOk()->assertDontSee('name="username"', false);
+        $this->post('/registrieren', $this->data(['code' => '']))->assertSessionHasErrors('code');
         $this->assertSame(0, User::query()->count());
     }
 
     public function test_registration_can_be_switched_off(): void
     {
         $this->open();
-        Setting::put(AppSettings::REGISTRATION_ENABLED, false);
+        Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_CLOSED);
 
+        $this->get('/registrieren')->assertOk()->assertSee('geschlossen');
         $this->post('/registrieren', $this->data())->assertForbidden();
     }
 
@@ -92,7 +103,7 @@ class RegistrationTest extends TestCase
         $passwords = ['asdf33.?_2%', '!Bier#2026&', '#start', 'ende#', '&a=b', '+plus+', '%20x%', '"quote"', "<tag>'", 'Ümlaut€?', 'a\\b/c', '?frage?'];
 
         foreach ($passwords as $i => $password) {
-            Setting::put(AppSettings::REGISTRATION_ENABLED, true);
+            Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
             Setting::put(AppSettings::REGISTRATION_PASSWORD, $password);
             Setting::flushCache();
 

@@ -23,7 +23,7 @@ class CarryoverTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Setting::put(AppSettings::REGISTRATION_ENABLED, true);
+        Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
         Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
         Setting::put(AppSettings::BEER_PRICE, 150);
     }

@@ -36,6 +36,7 @@ return [
 
     'attributes' => [
         'token' => 'Setup-Token',
+        'registration_mode' => 'Registrierungsmodus',
         'app_url' => 'Webseiten-URL',
         'driver' => 'Datenbanktyp',
         'host' => 'Host',

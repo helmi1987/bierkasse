@@ -14,16 +14,20 @@
         <a href="{{ route('backend.registration.qr', $codeParam + ['view' => 'flyer']) }}" @class(['active' => $view === 'flyer'])>{{ __('settings.qr_tab_flyer') }}</a>
     </nav>
     <div class="row-buttons">
-        <a href="{{ route('backend.registration.qr', $view === 'flyer' ? ['view' => 'flyer'] : []) }}" @class(['btn', 'primary' => $withCode])>{{ __('settings.qr_with_code') }}</a>
-        <a href="{{ route('backend.registration.qr', ['code' => 0] + ($view === 'flyer' ? ['view' => 'flyer'] : [])) }}" @class(['btn', 'primary' => ! $withCode])>{{ __('settings.qr_without_code') }}</a>
+        @if ($mode === \App\Support\AppSettings::MODE_PASSWORD)
+            <a href="{{ route('backend.registration.qr', $view === 'flyer' ? ['view' => 'flyer'] : []) }}" @class(['btn', 'primary' => $withCode])>{{ __('settings.qr_with_code') }}</a>
+            <a href="{{ route('backend.registration.qr', ['code' => 0] + ($view === 'flyer' ? ['view' => 'flyer'] : [])) }}" @class(['btn', 'primary' => ! $withCode])>{{ __('settings.qr_without_code') }}</a>
+        @endif
         <button type="button" class="btn" data-print>{{ $view === 'flyer' ? __('settings.flyer_print') : __('settings.qr_print') }}</button>
     </div>
     @if ($withCode)
         <div class="alert warn">{{ __('settings.qr_warning') }}</div>
     @endif
-    @unless ($open)
+    @if ($mode === \App\Support\AppSettings::MODE_INVITE)
+        <div class="alert warn">{{ __('settings.qr_invite_mode') }}</div>
+    @elseif (! $open)
         <div class="alert bad">{{ __('settings.qr_closed') }}</div>
-    @endunless
+    @endif
     @if ($view === 'flyer')
         <p class="muted">{{ __('settings.flyer_hint') }}</p>
     @endif
@@ -47,7 +51,7 @@
                     </li>
                     <li>
                         <strong>{{ __('settings.flyer_step2_title') }}</strong>
-                        <span>{{ $withCode ? __('settings.flyer_step2_text') : __('settings.flyer_step2_text_no_code') }}</span>
+                        <span>{{ $withCode ? __('settings.flyer_step2_text') : ($mode === \App\Support\AppSettings::MODE_INVITE ? __('settings.flyer_step2_text_invite') : __('settings.flyer_step2_text_no_code')) }}</span>
                     </li>
                     <li>
                         <strong>{{ __('settings.flyer_step3_title') }}</strong>

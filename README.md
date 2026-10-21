@@ -57,21 +57,45 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Migrationen).
 7. Nach dem Setup im Backend (`/backend/einstellungen`):
    - Bierpreis (Standard CHF 1.50), Standard-Limit (Standard 0 = kein Minus), TWINT-Nummer und Name.
-   - Registrierung: Registrierungspasswort setzen (ohne Passwort ist keine Registrierung möglich). Sonderzeichen
-     erlaubt (min. 4, max. 100 Zeichen); Leerzeichen am Anfang/Ende werden entfernt. Änderung gilt sofort, kein Cron.
-     Rate-Limit pro IP: 10 Fehlversuche (falsches Passwort oder Formularfehler) in 15 Minuten, max. 60 Anfragen in
-     10 Minuten (ein Büro teilt meist eine IP).
-     QR-Code zum Aushängen unter `/backend/registrierung-qr` (füllt das Registrierungspasswort automatisch aus; Variante ohne Passwort wählbar), dort auch als druckfertiger A4-Flyer (Reiter "Flyer").
+   - Registrierung (Entscheid 2026-10-21): Registrierungsmodus wählen:
+     - "Geschlossen": keine Registrierung, auch Einladungslinks sind ungültig.
+     - "Nur per Einladung" (Standard bei Neuinstallation): nur mit gültigem Einladungslink, das
+       Registrierungspasswort wird nicht akzeptiert.
+     - "Offen mit Registrierungspasswort": wie bisher mit Passwort; gültige Einladungslinks funktionieren auch.
+     Der frühere Schalter "Registrierung offen" wird beim Migrieren übernommen: aus → "Geschlossen",
+     an (oder nie gespeichert, alter Standard an) → "Offen mit Registrierungspasswort".
+     Registrierungspasswort (nur im Modus "Offen mit Registrierungspasswort" nötig, ohne Passwort geht dort nur die
+     Einladung): Sonderzeichen erlaubt (min. 4, max. 100 Zeichen); Leerzeichen am Anfang/Ende werden entfernt.
+     Änderung gilt sofort, kein Cron.
+     Rate-Limit pro IP: 10 Fehlversuche (falsches Passwort, ungültiger Einladungslink oder Formularfehler) in
+     15 Minuten, max. 60 Anfragen in 10 Minuten (ein Büro teilt meist eine IP).
+     QR-Code zum Aushängen unter `/backend/registrierung-qr` (füllt das Registrierungspasswort automatisch aus; Variante
+     ohne Passwort wählbar), dort auch als druckfertiger A4-Flyer (Reiter "Flyer"). Im Modus "Nur per Einladung"
+     enthält der QR-Code nie das Passwort und führt nur zur Registrierungsseite (Hinweis auf der Seite und im Flyer);
+     für einen Flyer, mit dem sich jeder registrieren kann, den Modus "Offen mit Registrierungspasswort" wählen.
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.
    - SSO (`/backend/sso`): Google, Microsoft (Tenant, Standard `common`), GitHub, Facebook oder generisches OIDC
      (Discovery-URL). Redirect-URI beim Anbieter: `https://<domain>/login/sso/{kuerzel}/callback`.
      Anmelden per SSO kann nur, wer den Anbieter vorher unter Konto > Einstellungen verknüpft hat.
      Einrichtung pro Anbieter: siehe "SSO-Anbieter einrichten".
-   - Einladen: Jeder angemeldete aktive Benutzer sieht unter `/konto/einladen` ("Jemand Neues einladen", kleiner Link
-    unten im Dashboard) den Registrierungs-QR-Code mit eingebettetem Registrierungspasswort, Link mit Kopier- und
-    Teilen-Knopf. Damit kann jeder Benutzer das Registrierungspasswort sehen (bewusst so, Entscheid 2026-10-21).
-    Nur solange die Registrierung offen ist (eingeschaltet und Passwort gesetzt), sonst 404 und Link ausgeblendet.
+   - Einladen (Entscheid 2026-10-21): Jeder angemeldete aktive Benutzer erstellt unter `/konto/einladen`
+     ("Jemand Neues einladen", kleiner Link unten im Dashboard) einmalige Einladungslinks
+     `/registrieren?einladung=<token>` (enthält kein Passwort): QR-Code, Link mit Kopier- und Teilen-Knopf.
+     Gültig 7 Tage (`Invitation::VALID_DAYS`), nur für 1 Registrierung; max. 10 offene (unbenutzt, nicht abgelaufen)
+     Links pro Benutzer (`Invitation::MAX_OPEN_PER_USER`). Gespeichert wird nur der SHA-256-Hash des Tokens
+     (Tabelle `invitations`), der Link wird nur direkt nach dem Erstellen angezeigt. Liste der eigenen Einladungen
+     (letzte 20) mit Status, unbenutzte lassen sich zurückziehen. Mit gültigem Link zeigt die Registrierung
+     "Eingeladen von <Benutzername>" ohne Passwortfeld; ungültig, abgelaufen oder benutzt → Hinweis ohne Formular
+     (im Modus "Offen mit Registrierungspasswort" normales Formular mit Passwortfeld). Der Link wird in der
+     Registrierungs-Transaktion atomar verbraucht (bedingtes Update), doppelte Nutzung ist ausgeschlossen.
+     Wer wen eingeladen hat: `invitations.used_by`; die Registrierungs-Mail nennt "Eingeladen von".
+     **Annahme:** Links von nicht mehr aktiven (ausgetretenen) Benutzern sind ungültig.
+     Im Modus "Offen mit Registrierungspasswort" zeigt die Seite darunter zusätzlich den Registrierungs-QR-Code mit
+     eingebettetem Passwort (jeder Benutzer kann es sehen, bewusst so); im Modus "Nur per Einladung" nirgends.
+     Im Modus "Geschlossen" 404 und Link ausgeblendet.
+     Backend `/backend/einladungen` (Kassier und Admin): alle Einladungen mit Ersteller, Status
+     (offen / benutzt von X / abgelaufen), unbenutzte zurückziehen.
   - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
 8. Steht ein Reverse-Proxy vor PHP, dessen IP in `.env` als `TRUSTED_PROXIES` (kommagetrennt, Standard: keine)
    eintragen, sonst werden `X-Forwarded-*`-Header ignoriert. Wichtig: Die Rate-Limits (Login, TOTP, Gäste,

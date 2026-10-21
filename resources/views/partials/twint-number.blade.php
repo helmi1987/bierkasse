@@ -1,13 +1,9 @@
-{{-- TWINT recipients: number with copy button and name, or only the name when no number is configured. --}}
-@foreach ($twintRecipients as $i => $r)
-    <div class="twint-number">
-        @if ($loop->first && isset($label))<span class="muted">{{ $label }}</span>@endif
-        @if ($r['phone'] !== '')
-            <span id="{{ $id }}-{{ $i }}">{{ $r['phone'] }}</span>
-            <button type="button" class="btn small" data-copy="#{{ $id }}-{{ $i }}" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button>
-            @if ($r['name'] !== '')<small class="muted">{{ $r['name'] }}</small>@endif
-        @else
-            <span>{{ $r['name'] }}</span>
-        @endif
+{{-- Copy buttons for the TWINT numbers (numbers are not shown); recipients without a number get none. --}}
+@php($withPhone = array_values(array_filter($twintRecipients, fn ($r) => $r['phone'] !== '')))
+@if ($withPhone !== [])
+    <div class="row-buttons">
+        @foreach ($withPhone as $r)
+            <button type="button" class="btn small" data-copy-text="{{ $r['phone'] }}" data-copied="{{ __('account.copied') }}">{{ count($withPhone) > 1 && $r['name'] !== '' ? __('account.copy_number_of', ['name' => $r['name']]) : __('account.copy_number') }}</button>
+        @endforeach
     </div>
-@endforeach
+@endif

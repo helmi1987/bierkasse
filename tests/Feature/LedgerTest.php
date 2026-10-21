@@ -189,7 +189,7 @@ class LedgerTest extends TestCase
         Setting::put(AppSettings::TWINT_NAME, 'Kassier Max');
 
         $this->actingAs($this->user())->get('/konto')->assertOk()
-            ->assertSee('079 123 45 67')->assertSee('Kassier Max')->assertSee('data-copy', false);
+            ->assertSee('<strong>Kassier Max</strong>', false)->assertSee('data-copy-text="079 123 45 67"', false)->assertSee('Nummer kopieren');
     }
 
     public function test_history_is_paginated(): void

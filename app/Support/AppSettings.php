@@ -165,16 +165,12 @@ class AppSettings
     }
 
     /**
-     * Recipients for a sentence ("an A oder B"): the number with the name, or only the name or number.
-     * With $html each recipient is escaped and wrapped in <strong>.
+     * Recipients for a sentence ("an A oder B"): the name, the number only when no name is set
+     * (numbers are offered by copy buttons). With $html each one is escaped and wrapped in <strong>.
      */
     public static function twintRecipientText(bool $html = false): string
     {
-        $parts = array_map(fn (array $r) => match (true) {
-            $r['phone'] === '' => $r['name'],
-            $r['name'] === '' => $r['phone'],
-            default => $r['name'].' ('.$r['phone'].')',
-        }, self::twintRecipients());
+        $parts = array_map(fn (array $r) => $r['name'] !== '' ? $r['name'] : $r['phone'], self::twintRecipients());
         if ($html) {
             $parts = array_map(fn (string $p) => '<strong>'.e($p).'</strong>', $parts);
         }

@@ -36,7 +36,7 @@ class GuestBookingTest extends TestCase
 
         $this->actingAs($this->user())->get('/konto')->assertOk()
             ->assertSee('Bier für Gast')->assertSee('name="guest_method" value="twint"', false)
-            ->assertSee('guest-twint-phone', false);
+            ->assertSee('data-copy-text="079 123 45 67"', false);
     }
 
     public function test_user_books_cash_and_twint_without_touching_the_balance(): void
@@ -90,12 +90,15 @@ class GuestBookingTest extends TestCase
         Setting::put(AppSettings::TWINT_NAME, 'Phlipp Arnold');
         Setting::put(AppSettings::TWINT_ENABLED, true);
         $this->actingAs($this->user())->get('/konto')->assertOk()
-            ->assertSee('name="guest_method" value="twint"', false)->assertSee('per TWINT an <strong>Phlipp Arnold</strong> senden.', false)->assertDontSee('guest-twint-phone', false);
+            ->assertSee('name="guest_method" value="twint"', false)->assertSee('per TWINT an <strong>Phlipp Arnold</strong> senden.', false)->assertDontSee('data-copy-text', false);
         $this->post('/konto/gast', $this->sale(['guest_method' => 'twint']))
             ->assertSessionHas('status', '1 Bier für Gast erfasst – bitte CHF 1.50 per TWINT an Phlipp Arnold senden.');
 
         Setting::put(AppSettings::TWINT_RECIPIENTS, [['name' => 'Phlipp Arnold', 'phone' => ''], ['name' => 'Eva', 'phone' => '']]);
         $this->get('/konto')->assertOk()->assertSee('per TWINT an <strong>Phlipp Arnold</strong> oder <strong>Eva</strong> senden.', false);
+        Setting::put(AppSettings::TWINT_RECIPIENTS, [['name' => 'Phlipp Arnold', 'phone' => ''], ['name' => 'Eva', 'phone' => '078 000 00 00'], ['name' => 'Max', 'phone' => '079 000 00 00']]);
+        $this->get('/konto')->assertOk()->assertSee('Nummer Eva kopieren')->assertSee('Nummer Max kopieren')
+            ->assertDontSee('Nummer Phlipp Arnold kopieren')->assertDontSee('>078 000 00 00<', false);
         Setting::put(AppSettings::TWINT_RECIPIENTS, [['name' => 'Phlipp Arnold', 'phone' => '']]);
 
         Setting::put(AppSettings::TWINT_PHONE, '079 123 45 67');

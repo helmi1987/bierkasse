@@ -46,7 +46,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     // Registration and password reset (guests only)
     Route::middleware('guest')->group(function () {
         Route::get('/registrieren', [RegisterController::class, 'show'])->name('register');
-        Route::post('/registrieren', [RegisterController::class, 'store'])->middleware('throttle:10,10')->name('register.store');
+        Route::post('/registrieren', [RegisterController::class, 'store'])->middleware('throttle:60,10')->name('register.store');
         Route::get('/passwort-vergessen', [PasswordResetController::class, 'request'])->name('password.request');
         Route::post('/passwort-vergessen', [PasswordResetController::class, 'email'])->middleware('throttle:5,10')->name('password.email');
         Route::get('/passwort-zuruecksetzen/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');

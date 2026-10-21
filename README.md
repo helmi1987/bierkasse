@@ -57,7 +57,10 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Migrationen).
 7. Nach dem Setup im Backend (`/backend/einstellungen`):
    - Bierpreis (Standard CHF 1.50), Standard-Limit (Standard 0 = kein Minus), TWINT-Nummer und Name.
-   - Registrierung: Registrierungspasswort setzen (ohne Passwort ist keine Registrierung möglich).
+   - Registrierung: Registrierungspasswort setzen (ohne Passwort ist keine Registrierung möglich). Sonderzeichen
+     erlaubt (min. 4, max. 100 Zeichen); Leerzeichen am Anfang/Ende werden entfernt. Änderung gilt sofort, kein Cron.
+     Rate-Limit pro IP: 10 Fehlversuche (falsches Passwort oder Formularfehler) in 15 Minuten, max. 60 Anfragen in
+     10 Minuten (ein Büro teilt meist eine IP).
      QR-Code zum Aushängen unter `/backend/registrierung-qr` (füllt das Registrierungspasswort automatisch aus; Variante ohne Passwort wählbar), dort auch als druckfertiger A4-Flyer (Reiter "Flyer").
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.

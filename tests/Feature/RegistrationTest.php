@@ -87,11 +87,40 @@ class RegistrationTest extends TestCase
             ->assertSee('Nur nötig für Passwort-Reset per Mail');
     }
 
+    public function test_special_characters_in_registration_password(): void
+    {
+        $passwords = ['!Bier#2026&', '#start', 'ende#', '&a=b', '+plus+', '%20x%', '"quote"', "<tag>'", 'Ümlaut€?', 'a\\b/c', '?frage?'];
+
+        foreach ($passwords as $i => $password) {
+            Setting::put(AppSettings::REGISTRATION_ENABLED, true);
+            Setting::put(AppSettings::REGISTRATION_PASSWORD, $password);
+            Setting::flushCache();
+
+            $this->get('/registrieren?'.http_build_query(['code' => $password]))->assertOk()
+                ->assertSee('value="'.e($password).'"', false);
+            $this->post('/registrieren', $this->data(['code' => $password, 'username' => 'sonder'.$i]))
+                ->assertRedirect(route('account.dashboard'));
+            $this->app['auth']->guard()->logout();
+        }
+        $this->assertSame(count($passwords), User::query()->where('username', 'like', 'sonder%')->count());
+    }
+
+    public function test_many_newcomers_from_one_office_ip_can_register(): void
+    {
+        $this->open();
+
+        for ($i = 0; $i < 20; $i++) {
+            $this->post('/registrieren', $this->data(['username' => 'kollege'.$i]))->assertRedirect(route('account.dashboard'));
+            $this->app['auth']->guard()->logout();
+        }
+        $this->assertSame(20, User::query()->count());
+    }
+
     public function test_registration_is_rate_limited(): void
     {
         $this->open();
 
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 10; $i++) {
             $this->post('/registrieren', $this->data(['code' => 'falsch', 'username' => 'user'.$i]));
         }
         $this->post('/registrieren', $this->data())->assertSessionHasErrors('code');

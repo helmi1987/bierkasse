@@ -44,7 +44,8 @@ class RegisterController extends Controller
             ->withInput($request->except(['password', 'password_confirmation', 'code']))
             ->withErrors([$field => $message]);
 
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        // Only wrong registration passwords count; an office shares one IP, so keep it moderate.
+        if (RateLimiter::tooManyAttempts($key, 10)) {
             return $back('code', __('auth.throttle', ['seconds' => RateLimiter::availableIn($key)]));
         }
 

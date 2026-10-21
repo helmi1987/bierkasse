@@ -121,6 +121,23 @@ class AdminOnlyTest extends TestCase
         }
     }
 
+    public function test_switch_is_locked_unless_balance_is_zero(): void
+    {
+        $kassier = $this->kassier();
+        Ledger::bookDeposit($kassier, 300, 'cash', $this->admin());
+        $this->actingAs($kassier);
+        $this->get('/konto/einstellungen')->assertOk()
+            ->assertSee('name="admin_only" value="1"  disabled', false)
+            ->assertSee(__('account.admin_only_locked', ['amount' => chf(300)]));
+        $this->post('/konto/nur-verwaltung', ['admin_only' => 1])->assertSessionHas('error');
+        $this->assertFalse($kassier->fresh()->admin_only);
+
+        Ledger::consume($kassier, 2);
+        $this->get('/konto/einstellungen')->assertDontSee(__('account.admin_only_locked', ['amount' => chf(0)]));
+        $this->post('/konto/nur-verwaltung', ['admin_only' => 1])->assertSessionHas('status');
+        $this->assertTrue($kassier->fresh()->isAdminOnly());
+    }
+
     public function test_plain_user_cannot_toggle_flag(): void
     {
         $user = $this->user();

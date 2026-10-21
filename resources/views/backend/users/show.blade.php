@@ -137,9 +137,12 @@
             <form method="post" action="{{ route('backend.users.admin-only', $user) }}" class="stack" id="nur-verwaltung">
                 @csrf
                 @method('PUT')
-                <label class="check"><input type="checkbox" name="admin_only" value="1" @checked($user->isAdminOnly())> {{ __('users.admin_only_heading') }}</label>
+                <label class="check"><input type="checkbox" name="admin_only" value="1" @checked($user->isAdminOnly()) @disabled(! $adminOnlySettled)> {{ __('users.admin_only_heading') }}</label>
                 <p class="hint">{{ __('users.admin_only_hint') }}</p>
-                <button type="submit" class="btn small">{{ __('users.admin_only_save') }}</button>
+                @unless ($adminOnlySettled)
+                    <p class="alert warn">{{ __('account.admin_only_locked', ['amount' => chf($balance)]) }}</p>
+                @endunless
+                <button type="submit" class="btn small" @disabled(! $adminOnlySettled)>{{ __('users.admin_only_save') }}</button>
             </form>
         @endif
     @endif

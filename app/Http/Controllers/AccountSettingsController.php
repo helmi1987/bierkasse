@@ -50,6 +50,7 @@ class AccountSettingsController extends Controller
 
         return view('account.settings', [
             'user' => $user,
+            'adminOnlySettled' => $user->isKassier() && \App\Services\Ledger::adminOnlySettled($user),
             'secret' => $secret,
             'qr' => $uri ? Qr::dataUri($uri, 220) : null,
             'recoveryLeft' => $user->hasTotp() ? Totp::remainingRecoveryCodes($user) : 0,

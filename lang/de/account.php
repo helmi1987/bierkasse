@@ -87,7 +87,8 @@ return [
 
     'admin_only' => 'Nur Verwaltung',
     'admin_only_switch' => 'Nur Verwaltung (kein Bierkonto)',
-    'admin_only_hint' => 'Für ein reines Admin- bzw. Kassier-Konto: kein Guthaben, kein Abstreichen, keine Einzahlungen und Runden. Nach der Anmeldung geht es direkt ins Backend. Einladen, Feedback und Einstellungen bleiben. Einschalten nur mit Saldo 0 und ohne offene Posten; ausschalten jederzeit hier.',
+    'admin_only_hint' => 'Für ein reines Admin- bzw. Kassier-Konto: kein Guthaben, kein Abstreichen, keine Einzahlungen und Runden. Nach der Anmeldung geht es direkt ins Backend. Einladen, Feedback und Einstellungen bleiben. Umschalten nur mit Saldo 0 und ohne offene Posten.',
+    'admin_only_locked' => 'Gesperrt: Saldo :amount bzw. offene Posten. Erst bei Saldo 0 ohne offene Posten umschaltbar (Kassier gleicht aus).',
     'admin_only_on' => 'Nur Verwaltung eingeschaltet: dieses Konto hat kein Bierkonto mehr.',
     'admin_only_off' => 'Nur Verwaltung ausgeschaltet: das Bierkonto ist wieder verfügbar.',
     'admin_only_settle_first' => 'Nur Verwaltung nicht möglich: Saldo ist nicht 0 oder es gibt offene Posten. Bitte zuerst den Saldo ausgleichen.',

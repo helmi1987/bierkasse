@@ -50,7 +50,7 @@ return [
     'role_saved' => 'Rolle gespeichert.',
     'last_admin' => 'Der letzte Admin kann die Rolle nicht abgeben.',
     'admin_only_heading' => 'Nur Verwaltung',
-    'admin_only_hint' => 'Kein Bierkonto (kein Guthaben, keine Buchungen), nach der Anmeldung direkt ins Backend. Nur für Admins und Kassiers; einschalten nur mit Saldo 0 und ohne offene Posten.',
+    'admin_only_hint' => 'Kein Bierkonto (kein Guthaben, keine Buchungen), nach der Anmeldung direkt ins Backend. Nur für Admins und Kassiers; umschalten nur mit Saldo 0 und ohne offene Posten.',
     'admin_only_save' => 'Speichern',
     'admin_only_no_money' => 'Dieses Konto ist «Nur Verwaltung»: keine Einzahlungen, Korrekturen oder Limits.',
     'history' => 'Buchungen',

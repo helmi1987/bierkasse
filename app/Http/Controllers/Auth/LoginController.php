@@ -59,7 +59,7 @@ class LoginController extends Controller
             }
         }
 
-        $user = User::query()->where('username', $username)->where('status', User::STATUS_ACTIVE)->first();
+        $user = $this->findLoginUser($username);
         // Always hash once so response times do not reveal existing user names.
         $ok = Hash::check($data['password'], $user?->password ?: '$2y$12$'.str_repeat('a', 53)) && $user?->password;
 
@@ -247,5 +247,18 @@ class LoginController extends Controller
         }
 
         return redirect()->intended(route('account.dashboard'));
+    }
+
+    /** Active user by user name, or by e-mail address when the input contains "@" (only if unambiguous). */
+    private function findLoginUser(string $login): ?User
+    {
+        $query = User::query()->where('status', User::STATUS_ACTIVE);
+        if (! str_contains($login, '@')) {
+            return $query->where('username', $login)->first();
+        }
+
+        $matches = $query->whereRaw('LOWER(email) = ?', [$login])->limit(2)->get();
+
+        return $matches->count() === 1 ? $matches->first() : null;
     }
 }

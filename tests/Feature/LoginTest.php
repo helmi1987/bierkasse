@@ -11,6 +11,26 @@ class LoginTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_login_with_email_address(): void
+    {
+        $user = $this->user(['username' => 'max', 'email' => 'Max.Muster@Example.org', 'password' => 'secret-123']);
+        $this->user(['username' => 'ohne', 'email' => null]);
+
+        $this->post('/anmelden', ['username' => ' max.muster@example.ORG ', 'password' => 'secret-123'])
+            ->assertRedirect(route('account.dashboard'));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_login_with_unknown_or_ambiguous_email_fails(): void
+    {
+        $this->user(['username' => 'a1', 'email' => 'doppelt@example.org', 'password' => 'secret-123']);
+        $this->user(['username' => 'a2', 'email' => 'DOPPELT@example.org', 'password' => 'secret-123']);
+
+        $this->post('/anmelden', ['username' => 'doppelt@example.org', 'password' => 'secret-123'])->assertSessionHasErrors('username');
+        $this->post('/anmelden', ['username' => 'niemand@example.org', 'password' => 'secret-123'])->assertSessionHasErrors('username');
+        $this->assertGuest();
+    }
+
     public function test_root_is_the_login_page(): void
     {
         $this->get('/')->assertOk()->assertSee('Anmelden')->assertSee('Passwort vergessen');

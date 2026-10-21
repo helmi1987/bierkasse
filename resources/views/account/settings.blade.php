@@ -65,11 +65,14 @@
         <form method="post" action="{{ route('account.admin-only') }}" class="stack">
             @csrf
             <label class="switch">
-                <input type="checkbox" name="admin_only" value="1" @checked($user->isAdminOnly()) data-autosubmit>
+                <input type="checkbox" name="admin_only" value="1" @checked($user->isAdminOnly()) @disabled(! $adminOnlySettled) data-autosubmit>
                 <span>{{ __('account.admin_only_switch') }}</span>
             </label>
             <p class="hint">{{ __('account.admin_only_hint') }}</p>
-            <button type="submit" class="btn small" data-hide-js>{{ __('account.save') }}</button>
+            @unless ($adminOnlySettled)
+                <p class="alert warn">{{ __('account.admin_only_locked', ['amount' => chf($user->balance())]) }}</p>
+            @endunless
+            <button type="submit" class="btn small" data-hide-js @disabled(! $adminOnlySettled)>{{ __('account.save') }}</button>
         </form>
     </section>
 @endif

@@ -39,6 +39,7 @@ class UserController extends Controller
     {
         return view('backend.users.show', [
             'user' => $user,
+            'adminOnlySettled' => \App\Services\Ledger::adminOnlySettled($user),
             'balance' => $user->balance(),
             'personalSso' => $user->personalSsoProvider()->withCount('identities')->first(),
             'open' => Ledger::openItems($user),

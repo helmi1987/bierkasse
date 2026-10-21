@@ -166,7 +166,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 - "Nur Verwaltung" (Entscheid 2026-10-22, `users.admin_only`): Admin- oder Kassier-Konto ohne Bierkonto, z. B. ein
   reines Admin-Konto neben dem eigenen Benutzerkonto. Jeder Admin/Kassier schaltet es selbst unter Konto >
   Einstellungen (Karte "Nur Verwaltung", bleibt immer erreichbar, so geht es auch wieder aus); Admins zusätzlich in
-  der Benutzer-Detailansicht im Backend (auch für sich selbst). Einschalten nur mit Saldo 0 und ohne offene Posten
+  der Benutzer-Detailansicht im Backend (auch für sich selbst). Umschalten (ein und aus) nur mit Saldo 0 und ohne offene Posten, sonst Schalter gesperrt mit Saldo-Hinweis
   ("bitte zuerst den Saldo ausgleichen"); Rolle auf `user` setzt es zurück; Registrierung/Einladung/Setup setzen es
   nie (nicht fillable).
   Wirkung: `/konto` leitet ins Backend, Anmeldung und Logo führen ins Backend, Link "Konto" ausgeblendet. Alle

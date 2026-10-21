@@ -631,17 +631,21 @@ class Ledger
      * Switches "Nur Verwaltung" on or off. Only kassiers/admins; switching on needs balance 0 and
      * no pending bookings, so no money is stranded on an account without a beer account.
      */
+    /** "Nur Verwaltung" can only be switched (either way) while the balance is 0 and nothing is pending. */
+    public static function adminOnlySettled(User $user): bool
+    {
+        return self::balance($user) === 0 && ! Transaction::query()->where('user_id', $user->id)->pending()->exists();
+    }
+
     public static function setAdminOnly(User $user, bool $on): void
     {
         DB::transaction(function () use ($user, $on) {
             self::lock($user);
-            if ($on) {
-                if (! $user->isKassier()) {
-                    throw new LedgerException(__('account.admin_only_role'));
-                }
-                if (self::balance($user) !== 0 || Transaction::query()->where('user_id', $user->id)->pending()->exists()) {
-                    throw new LedgerException(__('account.admin_only_settle_first'));
-                }
+            if ($on && ! $user->isKassier()) {
+                throw new LedgerException(__('account.admin_only_role'));
+            }
+            if (! self::adminOnlySettled($user)) {
+                throw new LedgerException(__('account.admin_only_settle_first'));
             }
             $was = (bool) $user->admin_only;
             $user->forceFill(['admin_only' => $on])->save();

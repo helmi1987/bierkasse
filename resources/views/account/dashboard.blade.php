@@ -187,7 +187,8 @@
                     @endforeach
                 </fieldset>
                 @if ($twintEnabled)
-                    @include('partials.twint-number', ['id' => 'guest-twint-phone', 'label' => __('guest.twint_to')])
+                    <p>{!! __('guest.twint_to', ['name' => $twintHtml]) !!}</p>
+                    @include('partials.twint-number')
                     <p class="hint">{{ __('guest.twint_hint') }}</p>
                 @endif
                 <div class="field">
@@ -319,23 +320,14 @@
         <section class="card twint">
             <details>
             <summary><h2>{{ __('account.twint_heading') }}</h2></summary>
-            @if (collect($twintRecipients)->every(fn ($r) => $r['phone'] === ''))
-                {{-- No number configured: one sentence with the names (users know the numbers). --}}
-                @if ($suggested)
-                    <p class="lead">{!! __('account.twint_send_amount', ['amount' => e(chf($suggested['amount'])), 'name' => $twintHtml]) !!}</p>
-                    <p class="muted">{{ trans_choice('account.suggestion_beers', $suggested['beers'], ['count' => $suggested['beers']]) }}@if ($suggested['debt'] > 0) · {{ __('account.suggestion_debt') }}@endif · {{ __('account.twint_then_report') }}</p>
-                @else
-                    <p class="lead">{!! __('account.twint_send', ['name' => $twintHtml]) !!}</p>
-                    <p class="muted">{{ __('account.twint_then_report') }}</p>
-                @endif
+            @if ($suggested)
+                <p class="lead">{!! __('account.twint_send_amount', ['amount' => e(chf($suggested['amount'])), 'name' => $twintHtml]) !!}</p>
+                <p class="muted">{{ trans_choice('account.suggestion_beers', $suggested['beers'], ['count' => $suggested['beers']]) }}@if ($suggested['debt'] > 0) · {{ __('account.suggestion_debt') }}@endif · {{ __('account.twint_then_report') }}</p>
             @else
-                <p class="muted">{{ __('account.twint_intro') }}</p>
-                @include('partials.twint-number', ['id' => 'twint-phone'])
-                @if ($suggested)
-                    <p class="muted">{{ __('account.twint_suggested') }}</p>
-                    @include('partials.beer-amount', ['s' => $suggested])
-                @endif
+                <p class="lead">{!! __('account.twint_send', ['name' => $twintHtml]) !!}</p>
+                <p class="muted">{{ __('account.twint_then_report') }}</p>
             @endif
+            @include('partials.twint-number')
             </details>
         </section>
     @endif

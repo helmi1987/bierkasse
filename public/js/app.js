@@ -121,14 +121,15 @@
         render();
     });
 
-    // Copy buttons: data-copy="#selector".
-    document.querySelectorAll('[data-copy]').forEach(function (btn) {
+    // Copy buttons: data-copy="#selector" (text of that element) or data-copy-text="value".
+    document.querySelectorAll('[data-copy], [data-copy-text]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            var source = document.querySelector(btn.dataset.copy);
-            if (!source || !navigator.clipboard) {
+            var source = btn.dataset.copy ? document.querySelector(btn.dataset.copy) : null;
+            var text = btn.dataset.copyText || (source ? source.textContent.trim() : '');
+            if (!text || !navigator.clipboard) {
                 return;
             }
-            navigator.clipboard.writeText(source.textContent.trim()).then(function () {
+            navigator.clipboard.writeText(text).then(function () {
                 var label = btn.textContent;
                 btn.textContent = btn.dataset.copied || '✓';
                 window.setTimeout(function () { btn.textContent = label; }, 1500);

@@ -43,7 +43,8 @@
         @endforeach
     </fieldset>
     @if ($twintEnabled)
-        @include('partials.twint-number', ['id' => 'twint-phone', 'label' => __('guest.twint_to')])
+        <p>{!! __('guest.twint_to', ['name' => $twintHtml]) !!}</p>
+        @include('partials.twint-number')
         <p class="hint">{{ __('guest.twint_hint') }}</p>
     @endif
     <button class="btn primary big" type="submit" @disabled($available === 0)>{{ __('guest.submit') }}</button>

@@ -50,7 +50,7 @@
         <label class="switch"><input type="checkbox" name="registration_enabled" value="1" @checked(old('registration_enabled', $registrationEnabled))> <span>{{ __('settings.registration_enabled') }}</span></label>
         <div class="field">
             <label for="registration_password">{{ __('settings.registration_password') }}</label>
-            <input type="text" id="registration_password" name="registration_password" value="{{ old('registration_password', $registrationPassword) }}" maxlength="100">
+            <input type="text" id="registration_password" name="registration_password" value="{{ old('registration_password', $registrationPassword) }}" maxlength="100" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
             <div class="hint">{{ __('settings.registration_password_hint') }}</div>
         </div>
         <p><a href="{{ route('backend.registration.qr') }}">{{ __('settings.registration_qr') }} →</a></p>

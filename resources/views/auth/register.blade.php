@@ -13,7 +13,7 @@
         @csrf
         <div class="field">
             <label for="code">{{ __('register.code') }}</label>
-            <input type="password" id="code" name="code" value="{{ $code }}" required>
+            <input type="text" id="code" name="code" value="{{ $code }}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" required>
         </div>
         <div class="field">
             <label for="username">{{ __('register.username') }}</label>

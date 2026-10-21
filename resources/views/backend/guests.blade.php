@@ -15,7 +15,7 @@
     <label class="switch"><input type="checkbox" name="guest_enabled" value="1" @checked(old('guest_enabled', $enabled))> <span>{{ __('guest.enabled') }}</span></label>
     <div class="field">
         <label for="guest_password">{{ __('guest.password') }}</label>
-        <input type="text" id="guest_password" name="guest_password" value="{{ old('guest_password', $password) }}" maxlength="100">
+        <input type="text" id="guest_password" name="guest_password" value="{{ old('guest_password', $password) }}" maxlength="100" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
         <div class="hint">{{ __('guest.password_hint') }}</div>
     </div>
     <div class="row-buttons">

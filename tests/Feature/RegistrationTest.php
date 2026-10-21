@@ -89,7 +89,7 @@ class RegistrationTest extends TestCase
 
     public function test_special_characters_in_registration_password(): void
     {
-        $passwords = ['!Bier#2026&', '#start', 'ende#', '&a=b', '+plus+', '%20x%', '"quote"', "<tag>'", 'Ümlaut€?', 'a\\b/c', '?frage?'];
+        $passwords = ['asdf33.?_2%', '!Bier#2026&', '#start', 'ende#', '&a=b', '+plus+', '%20x%', '"quote"', "<tag>'", 'Ümlaut€?', 'a\\b/c', '?frage?'];
 
         foreach ($passwords as $i => $password) {
             Setting::put(AppSettings::REGISTRATION_ENABLED, true);
@@ -103,6 +103,13 @@ class RegistrationTest extends TestCase
             $this->app['auth']->guard()->logout();
         }
         $this->assertSame(count($passwords), User::query()->where('username', 'like', 'sonder%')->count());
+    }
+
+    public function test_code_fields_are_not_altered_by_phone_keyboards(): void
+    {
+        $this->open();
+        $this->get('/registrieren')->assertSee('id="code" name="code" value="" autocomplete="off" autocapitalize="none" autocorrect="off"', false);
+        $this->actingAs($this->admin())->get('/backend/einstellungen')->assertSee('autocapitalize="none" autocorrect="off"', false);
     }
 
     public function test_many_newcomers_from_one_office_ip_can_register(): void

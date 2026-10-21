@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\EnsureInstalled;
+use App\Http\Middleware\MaintenanceMode;
 use App\Http\Middleware\RequireRole;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -30,6 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
             return config('app.installed') && $host !== '' ? ['^'.preg_quote($host).'$'] : [];
         }, subdomains: false);
         $middleware->append(SecurityHeaders::class);
+        // Maintenance mode for users (backend setting): after the session, so admins are recognized.
+        $middleware->appendToGroup('web', MaintenanceMode::class);
         $middleware->alias([
             'active' => EnsureActiveUser::class,
             'role' => RequireRole::class,

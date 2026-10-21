@@ -382,3 +382,10 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .carryover { border: 1.5px dashed var(--border); border-radius: var(--radius-sm); padding: 0 .85rem; }
 .carryover[open] { padding-bottom: .85rem; }
 .carryover .segmented span { text-align: center; padding: .25rem .5rem; }
+
+/* Backend maintenance page */
+.cmd-output { margin: 0; padding: .75rem; max-height: 24rem; overflow: auto; white-space: pre-wrap; word-break: break-word;
+    font-size: .85rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.info-list { display: grid; grid-template-columns: minmax(8rem, max-content) 1fr; gap: .4rem 1rem; margin: 0; }
+.info-list dt { color: var(--muted); }
+.info-list dd { margin: 0; overflow-wrap: anywhere; }

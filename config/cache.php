@@ -93,6 +93,15 @@ return [
             'endpoint' => env('DYNAMODB_ENDPOINT'),
         ],
 
+        // Rate limiter only (login, registration, TOTP, throttle middleware), so the backend
+        // can lift lockouts without clearing the whole application cache. Must not share a
+        // directory/table with another store: "Sperren aufheben" flushes this store.
+        'limiter' => [
+            'driver' => env('CACHE_LIMITER_DRIVER', 'file'),
+            'path' => storage_path('framework/cache/limiter'),
+            'lock_path' => storage_path('framework/cache/limiter'),
+        ],
+
         'octane' => [
             'driver' => 'octane',
         ],
@@ -117,6 +126,12 @@ return [
     | that reason, you may prefix every cache key to avoid collisions.
     |
     */
+
+    /*
+    | Store used by the RateLimiter (see the "limiter" store above).
+    */
+
+    'limiter' => env('CACHE_LIMITER_STORE', 'limiter'),
 
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 

@@ -97,23 +97,32 @@ class SettingsController extends Controller
     }
 
     /**
-     * Printable page with the QR code of the registration URL; includes the password unless ?code=0.
-     * The password is only embedded in mode "password" (in mode "invite" it is not accepted).
+     * Printable page with the QR code of the registration URL; includes the flyer code unless
+     * ?code=0. Only in mode "password" (the flyer code is not accepted otherwise). The registration
+     * password is never put into the QR code, and the URL with the flyer code is not printed.
      */
     public function registrationQr(Request $request): View
     {
         $mode = AppSettings::registrationMode();
-        $withCode = $request->boolean('code', true) && $mode === AppSettings::MODE_PASSWORD && AppSettings::registrationPassword() !== '';
-        $url = RegistrationLink::url($withCode);
+        $withCode = $request->boolean('code', true) && AppSettings::registrationOpen();
 
         return view('backend.registration-qr', [
             'view' => $request->query('view') === 'flyer' ? 'flyer' : 'qr',
-            'url' => $url,
-            'qr' => Qr::dataUri($url, 480),
+            'url' => route('register'),
+            'qr' => Qr::dataUri(RegistrationLink::url($withCode), 480),
             'withCode' => $withCode,
             'mode' => $mode,
             'open' => AppSettings::registrationOpen(),
             'appName' => AppSettings::appName(),
         ]);
+    }
+
+    /** New flyer code: every printed flyer/QR code with the old code stops working. */
+    public function regenerateFlyerCode(Request $request): RedirectResponse
+    {
+        AppSettings::regenerateFlyerCode();
+
+        return redirect()->route('backend.registration.qr', $request->query('view') === 'flyer' ? ['view' => 'flyer'] : [])
+            ->with('status', __('settings.flyer_code_regenerated'));
     }
 }

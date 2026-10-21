@@ -73,14 +73,16 @@ class NotificationTest extends TestCase
         Mail::assertSent(KassierNotice::class, fn ($m) => $m->hasTo('admin@example.org'));
         Mail::assertNotSent(KassierNotice::class, fn ($m) => $m->hasTo('user@example.org'));
         Mail::assertSent(KassierNotice::class, function (KassierNotice $m) use ($user) {
-            $text = $m->render();
+            $html = $m->render();
 
             return str_contains($m->envelope()->subject, 'Neue Registrierung: neu.user')
-                && str_contains($text, 'Benutzername: neu.user')
-                && str_contains($text, 'Name: Neu Ling')
-                && str_contains($text, 'E-Mail: neu@example.org')
-                && str_contains($text, local_time($user->created_at))
-                && str_contains($text, route('backend.users.show', $user));
+                && ($m->rows['Benutzername'] ?? null) === 'neu.user'
+                && ($m->rows['Name'] ?? null) === 'Neu Ling'
+                && ($m->rows['E-Mail'] ?? null) === 'neu@example.org'
+                && ($m->rows['Registriert am'] ?? null) === local_time($user->created_at)
+                && str_contains($html, 'neu@example.org')
+                && str_contains($html, local_time($user->created_at))
+                && str_contains($html, e(route('backend.users.show', $user)));
         });
     }
 
@@ -98,7 +100,7 @@ class NotificationTest extends TestCase
         ];
 
         $this->post('/registrieren', $data)->assertRedirect(route('account.dashboard'));
-        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => ! str_contains($m->render(), 'E-Mail:'));
+        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => ($m->rows['E-Mail'] ?? '') === '' && ! str_contains($m->render(), '>E-Mail<'));
 
         auth()->logout();
         Setting::put(AppSettings::NOTIFY_KASSIER, false);

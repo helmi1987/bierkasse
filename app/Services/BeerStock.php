@@ -74,7 +74,15 @@ class BeerStock
             Setting::put(AppSettings::STOCK_LOW_WARNED, true);
             KassierNotifier::send(
                 __('stock.mail_subject', ['stock' => $after]),
-                [__('stock.mail_line', ['stock' => $after, 'min' => $min])],
+                [__('stock.mail_line')],
+                [
+                    __('stock.mail_row_stock') => __('stock.mail_beers', ['count' => $after]),
+                    __('stock.mail_row_min') => __('stock.mail_beers', ['count' => $min]),
+                ],
+                url: route('backend.cash'),
+                buttonLabel: __('stock.mail_button'),
+                title: __('stock.mail_title'),
+                outro: [__('stock.mail_hint')],
             );
         }
     }

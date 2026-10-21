@@ -1,18 +1,37 @@
 <?php
 
-// Mails to the kassiers.
+// Mails (layout and notices to the kassiers).
 return [
+    // Layout
+    'automatic' => 'Diese Mail wurde automatisch von :app gesendet.',
+    'button_fallback' => 'Falls der Button nicht funktioniert, diesen Link im Browser öffnen:',
+    'button_backend' => 'Im Backend öffnen',
+    'button_confirm' => 'Im Backend bestätigen',
+
+    // Table labels
+    'row_user' => 'Benutzer',
+    'row_amount' => 'Betrag',
+    'row_method' => 'Art',
+    'row_note' => 'Bemerkung',
+    'row_time' => 'Zeit',
+
     'deposit_subject' => 'Neue Einzahlung von :user',
-    'deposit_line' => ':user meldet eine Einzahlung von :amount (:method).',
+    'deposit_title' => 'Neue Einzahlung gemeldet',
+    'deposit_line' => ':user meldet eine Einzahlung. Sie zählt erst, wenn ein Kassier sie bestätigt.',
+
     'payout_subject' => 'Auszahlung beantragt: :user',
-    'payout_line' => ':user verlässt das Haus und möchte :amount ausbezahlt haben.',
+    'payout_title' => 'Auszahlung beantragt',
+    'payout_line' => ':user verlässt das Haus und möchte das Guthaben ausbezahlt haben.',
+
     'register_subject' => 'Neue Registrierung: :user',
-    'register_line' => ':name hat sich am :time registriert.',
-    'register_username' => 'Benutzername: :username',
-    'register_name' => 'Name: :name',
-    'register_invited_by' => 'Eingeladen von: :user',
-    'register_email' => 'E-Mail: :email',
-    'register_carryover' => 'Übertrag von der alten Strichliste: :text – bitte im Backend bestätigen.',
-    'register_footer' => 'Benutzer im Backend ansehen:',
-    'footer' => 'Bestätigen im Backend:',
+    'register_title' => 'Neue Registrierung',
+    'register_line' => ':name hat sich registriert.',
+    'register_username' => 'Benutzername',
+    'register_name' => 'Name',
+    'register_email' => 'E-Mail',
+    'register_invited_by' => 'Eingeladen von',
+    'register_time' => 'Registriert am',
+    'register_carryover' => 'Übertrag',
+    'register_carryover_hint' => 'Der Übertrag von der alten Strichliste muss im Backend bestätigt werden.',
+    'register_button' => 'Benutzer im Backend ansehen',
 ];

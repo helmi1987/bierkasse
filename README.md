@@ -67,14 +67,20 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Registrierungspasswort (nur im Modus "Offen mit Registrierungspasswort" nötig, ohne Passwort geht dort nur die
      Einladung): Sonderzeichen erlaubt (min. 4, max. 100 Zeichen); Leerzeichen am Anfang/Ende werden entfernt.
      Änderung gilt sofort, kein Cron.
-     Rate-Limit pro IP: 10 Fehlversuche (falsches Passwort, ungültiger Einladungslink oder Formularfehler) in
-     15 Minuten, max. 60 Anfragen in 10 Minuten (ein Büro teilt meist eine IP).
-     QR-Code zum Aushängen unter `/backend/registrierung-qr` (füllt das Registrierungspasswort automatisch aus; Variante
-     ohne Passwort wählbar), dort auch als druckfertiger A4-Flyer (Reiter "Flyer"). Im Modus "Nur per Einladung"
-     enthält der QR-Code nie das Passwort und führt nur zur Registrierungsseite (Hinweis auf der Seite und im Flyer);
-     für einen Flyer, mit dem sich jeder registrieren kann, den Modus "Offen mit Registrierungspasswort" wählen.
+     Rate-Limit pro IP: 10 Fehlversuche (falsches Passwort, ungültiger Einladungslink oder Flyer-Code oder
+     Formularfehler) in 15 Minuten, max. 60 Anfragen in 10 Minuten (ein Büro teilt meist eine IP).
+     QR-Code zum Aushängen unter `/backend/registrierung-qr` (Admin), dort auch als druckfertiger A4-Flyer
+     (Reiter "Flyer"). Entscheid 2026-10-21: Der QR-Code enthält nie das Registrierungspasswort, sondern einen
+     eigenen zufälligen Flyer-Code (`/registrieren?flyer=<code>`, 32 Zeichen URL-sicher, Setting
+     `registration_flyer_code`, verschlüsselt, beim ersten Aufruf erzeugt). Gültig nur im Modus "Offen mit
+     Registrierungspasswort"; dann zeigt die Registrierung kein Passwortfeld. Falscher Code zählt wie ein falsches
+     Passwort. "Flyer-Code neu erzeugen" macht alle gedruckten Flyer/QR-Codes mit Code ungültig. Variante
+     "Ohne Code" wählbar. Gedruckt wird als Text nur `/registrieren` plus Hinweis "Registrierungspasswort beim
+     Kassier", nie die URL mit Code. Alte QR-Codes mit `?code=<passwort>` füllen das Passwortfeld weiterhin aus.
+     Im Modus "Nur per Einladung" enthält der QR-Code keinen Code und führt nur zur Registrierungsseite.
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.
+     Alle Mails (auch Passwort-Reset) nutzen ein gemeinsames HTML-Layout (`resources/views/mail/layout.blade.php`, Inline-CSS, Logo `public/icon-192.png` als CID eingebettet, fehlt es, entfällt das Logo) plus Textversion; Fakten als Tabelle, Link als Button.
    - SSO (`/backend/sso`): Google, Microsoft (Tenant, Standard `common`), GitHub, Facebook oder generisches OIDC
      (Discovery-URL). Redirect-URI beim Anbieter: `https://<domain>/login/sso/{kuerzel}/callback`.
      Anmelden per SSO kann nur, wer den Anbieter vorher unter Konto > Einstellungen verknüpft hat.
@@ -91,8 +97,8 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Registrierungs-Transaktion atomar verbraucht (bedingtes Update), doppelte Nutzung ist ausgeschlossen.
      Wer wen eingeladen hat: `invitations.used_by`; die Registrierungs-Mail nennt "Eingeladen von".
      **Annahme:** Links von nicht mehr aktiven (ausgetretenen) Benutzern sind ungültig.
-     Im Modus "Offen mit Registrierungspasswort" zeigt die Seite darunter zusätzlich den Registrierungs-QR-Code mit
-     eingebettetem Passwort (jeder Benutzer kann es sehen, bewusst so); im Modus "Nur per Einladung" nirgends.
+     Benutzer laden in jedem Modus nur per Einladungslink ein (Entscheid 2026-10-21: kein Registrierungs-QR-Code
+     mit Passwort auf dieser Seite).
      Im Modus "Geschlossen" 404 und Link ausgeblendet.
      Backend `/backend/einladungen` (Kassier und Admin): alle Einladungen mit Ersteller, Status
      (offen / benutzt von X / abgelaufen), unbenutzte zurückziehen.

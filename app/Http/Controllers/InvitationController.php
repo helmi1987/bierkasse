@@ -6,7 +6,6 @@ use App\Models\Invitation;
 use App\Support\AppSettings;
 use App\Support\FormToken;
 use App\Support\Qr;
-use App\Support\RegistrationLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,8 +13,8 @@ use Illuminate\View\View;
 /**
  * "Invite someone new" (every active user, while the registration mode is not "closed"):
  * one-time invitation links valid for Invitation::VALID_DAYS. The plain link is only shown
- * right after creation (only its hash is stored). In mode "password" the registration QR code
- * with the embedded password is offered as well (user decision 2026-10-21).
+ * right after creation (only its hash is stored). Users invite only via these links, in every
+ * mode (user decision 2026-10-21: no registration password QR code here).
  */
 class InvitationController extends Controller
 {
@@ -63,14 +62,11 @@ class InvitationController extends Controller
     {
         $user = $request->user();
         $newUrl = $token !== null ? Invitation::url($token) : null;
-        $passwordUrl = AppSettings::registrationOpen() ? RegistrationLink::url(true) : null;
 
         return view('account.invite', [
             'new' => $new,
             'newUrl' => $newUrl,
             'newQr' => $newUrl !== null ? Qr::dataUri($newUrl, 480) : null,
-            'passwordUrl' => $passwordUrl,
-            'passwordQr' => $passwordUrl !== null ? Qr::dataUri($passwordUrl, 480) : null,
             'invitations' => Invitation::query()->with('usedBy')->where('created_by', $user->id)
                 ->latest('id')->limit(self::LIST_LIMIT)->get(),
             'openCount' => Invitation::openCountFor($user),

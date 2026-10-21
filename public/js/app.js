@@ -258,6 +258,32 @@
         }
     })();
 
+    // Horizontally scrolling menus (backend subnav, tabs): keep the scroll position across page
+    // loads instead of jumping back to the start, and make sure the active entry is visible.
+    document.querySelectorAll('.subnav, .tabs').forEach(function (nav, i) {
+        var key = 'navscroll:' + (nav.getAttribute('aria-label') || nav.className + i);
+        try {
+            var saved = window.sessionStorage.getItem(key);
+            if (saved !== null) {
+                nav.scrollLeft = parseInt(saved, 10) || 0;
+            }
+        } catch (err) { /* storage blocked */ }
+        var active = nav.querySelector('a.active');
+        if (active) {
+            var left = active.offsetLeft - nav.offsetLeft;
+            if (left < nav.scrollLeft || left + active.offsetWidth > nav.scrollLeft + nav.clientWidth) {
+                nav.scrollLeft = Math.max(0, left - (nav.clientWidth - active.offsetWidth) / 2);
+            }
+        }
+        var store = function () {
+            try {
+                window.sessionStorage.setItem(key, String(Math.round(nav.scrollLeft)));
+            } catch (err) { /* storage blocked */ }
+        };
+        nav.addEventListener('scroll', store, { passive: true });
+        nav.addEventListener('click', store);
+    });
+
     // PWA: register the (network-only) service worker.
     if ('serviceWorker' in navigator && window.isSecureContext) {
         navigator.serviceWorker.register('/sw.js').catch(function () {});

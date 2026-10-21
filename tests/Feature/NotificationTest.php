@@ -49,6 +49,63 @@ class NotificationTest extends TestCase
         Mail::assertNothingSent();
     }
 
+    public function test_kassiers_and_admins_get_mail_on_registration(): void
+    {
+        Mail::fake();
+        Setting::put(AppSettings::REGISTRATION_ENABLED, true);
+        Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
+        $this->kassier(['email' => 'kassier@example.org']);
+        $this->admin(['email' => 'admin@example.org']);
+        $this->user(['email' => 'user@example.org']);
+
+        $this->post('/registrieren', [
+            'code' => 'durst',
+            'username' => 'neu.user',
+            'first_name' => 'Neu',
+            'last_name' => 'Ling',
+            'email' => 'neu@example.org',
+            'password' => 'password-123',
+            'password_confirmation' => 'password-123',
+        ])->assertRedirect(route('account.dashboard'));
+
+        $user = User::query()->where('username', 'neu.user')->firstOrFail();
+        Mail::assertSent(KassierNotice::class, 2);
+        Mail::assertSent(KassierNotice::class, fn ($m) => $m->hasTo('admin@example.org'));
+        Mail::assertNotSent(KassierNotice::class, fn ($m) => $m->hasTo('user@example.org'));
+        Mail::assertSent(KassierNotice::class, function (KassierNotice $m) use ($user) {
+            $text = $m->render();
+
+            return str_contains($m->envelope()->subject, 'Neue Registrierung: neu.user')
+                && str_contains($text, 'Benutzername: neu.user')
+                && str_contains($text, 'Name: Neu Ling')
+                && str_contains($text, 'E-Mail: neu@example.org')
+                && str_contains($text, local_time($user->created_at))
+                && str_contains($text, route('backend.users.show', $user));
+        });
+    }
+
+    public function test_registration_mail_respects_switch_and_skips_missing_email(): void
+    {
+        Mail::fake();
+        Setting::put(AppSettings::REGISTRATION_ENABLED, true);
+        Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
+        $this->kassier(['email' => 'kassier@example.org']);
+        $data = [
+            'code' => 'durst',
+            'username' => 'ohne.mail',
+            'password' => 'password-123',
+            'password_confirmation' => 'password-123',
+        ];
+
+        $this->post('/registrieren', $data)->assertRedirect(route('account.dashboard'));
+        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => ! str_contains($m->render(), 'E-Mail:'));
+
+        auth()->logout();
+        Setting::put(AppSettings::NOTIFY_KASSIER, false);
+        $this->post('/registrieren', ['username' => 'zweiter'] + $data)->assertRedirect(route('account.dashboard'));
+        Mail::assertSent(KassierNotice::class, 1);
+    }
+
     public function test_password_reset_by_mail(): void
     {
         Notification::fake();

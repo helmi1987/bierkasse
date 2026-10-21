@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\KassierNotifier;
 use App\Support\AppSettings;
 use App\Support\UserRules;
 use Illuminate\Http\RedirectResponse;
@@ -73,10 +74,37 @@ class RegisterController extends Controller
             'status' => User::STATUS_ACTIVE,
         ]);
 
+        $this->notifyKassiers($user);
+
         Auth::login($user);
         $request->session()->regenerate();
         $request->session()->put('auth.method', 'local');
 
         return redirect()->route('account.dashboard')->with('status', __('register.done'));
+    }
+
+    /**
+     * Tells kassiers and admins about the new account (only self registration, not accounts
+     * created in the backend). Respects the notification switch; failures never block.
+     */
+    private function notifyKassiers(User $user): void
+    {
+        $name = trim(($user->first_name ?? '').' '.($user->last_name ?? ''));
+        $lines = [
+            __('mail.register_line', ['name' => $user->displayName(), 'time' => local_time($user->created_at ?? now())]),
+            '',
+            __('mail.register_username', ['username' => $user->username]),
+            __('mail.register_name', ['name' => $name !== '' ? $name : '–']),
+        ];
+        if (($user->email ?? '') !== '') {
+            $lines[] = __('mail.register_email', ['email' => $user->email]);
+        }
+
+        KassierNotifier::send(
+            __('mail.register_subject', ['user' => $user->username]),
+            $lines,
+            route('backend.users.show', $user),
+            __('mail.register_footer'),
+        );
     }
 }

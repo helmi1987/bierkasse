@@ -2,5 +2,5 @@
 {!! $line !!}
 @endforeach
 
-{!! __('mail.footer') !!}
+{!! $footer !!}
 {!! $url !!}

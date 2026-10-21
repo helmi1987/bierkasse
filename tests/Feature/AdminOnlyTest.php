@@ -4,12 +4,15 @@ namespace Tests\Feature;
 
 use App\Mail\KassierNotice;
 use App\Models\GuestSale;
+use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Ledger;
 use App\Services\LedgerException;
 use App\Services\Rounds;
 use App\Services\Stats;
+use App\Support\AppSettings;
+use App\Support\RegistrationLink;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -197,6 +200,32 @@ class AdminOnlyTest extends TestCase
 
         $this->actingAs($this->admin());
         $this->get('/backend')->assertOk()->assertSee('class="brand" href="'.route('account.dashboard').'"', false);
+    }
+
+    public function test_nav_shows_invite_and_flyer_qr_for_admin_only(): void
+    {
+        Setting::putMany([
+            AppSettings::REGISTRATION_MODE => AppSettings::MODE_INVITE,
+        ]);
+        $admin = $this->admin(['admin_only' => true]);
+        $this->actingAs($admin);
+        $this->get('/backend')->assertSee('href="'.route('account.invite').'"', false)->assertSee('Einladen');
+        // Invite mode: only one-time links, no reusable flyer QR.
+        $this->get('/konto/einladen')->assertOk()->assertDontSee('Flyer-QR zeigen');
+
+        Setting::putMany([
+            AppSettings::REGISTRATION_MODE => AppSettings::MODE_PASSWORD,
+            AppSettings::REGISTRATION_PASSWORD => 'durst',
+        ]);
+        $this->get('/konto/einladen')->assertOk()->assertSee('Flyer-QR zeigen')
+            ->assertSee(e(RegistrationLink::url(true)), false);
+
+        // Plain users never see the flyer QR; closed mode hides the nav entry.
+        $this->actingAs($this->user());
+        $this->get('/konto/einladen')->assertOk()->assertDontSee('Flyer-QR zeigen');
+        Setting::putMany([AppSettings::REGISTRATION_MODE => AppSettings::MODE_CLOSED]);
+        $this->actingAs($admin);
+        $this->get('/backend')->assertDontSee('href="'.route('account.invite').'"', false);
     }
 
     public function test_login_redirects_to_backend(): void

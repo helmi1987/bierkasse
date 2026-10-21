@@ -25,6 +25,23 @@
     </section>
 @endif
 
+@if ($flyerQr && ! $new)
+    <section class="card invite">
+        <details>
+            <summary><h2>{{ __('account.invite_flyer_title') }}</h2></summary>
+            <p class="muted">{{ __('account.invite_flyer_intro') }}</p>
+            <img src="{{ $flyerQr }}" alt="QR" width="480" height="480" class="qr invite-qr">
+            <div class="row-buttons">
+                <button type="button" class="btn primary" data-share="#invite-flyer-url"
+                        data-share-title="{{ __('account.invite_share_title', ['app' => $appName]) }}"
+                        data-share-text="{{ __('account.invite_share_text', ['app' => $appName]) }}"
+                        data-copied="{{ __('account.copied') }}">{{ __('account.invite_share') }}</button>
+            </div>
+            <span id="invite-flyer-url" hidden>{{ $flyerUrl }}</span>
+        </details>
+    </section>
+@endif
+
 <section class="card stack">
     @unless ($new)
         <p>{{ __('account.invitation_intro', ['days' => $days]) }}</p>

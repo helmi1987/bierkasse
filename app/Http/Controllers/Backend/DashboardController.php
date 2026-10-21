@@ -10,13 +10,14 @@ use App\Services\BeerStock;
 use App\Services\CashBook;
 use App\Services\Ledger;
 use App\Services\LedgerException;
+use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Kassier dashboard: open deposits and payouts, users in minus, cash box overview.
+ * Kassier dashboard: open deposits, payouts and carry-overs, users in minus, cash box overview.
  */
 class DashboardController extends Controller
 {
@@ -31,6 +32,7 @@ class DashboardController extends Controller
         return view('backend.dashboard', [
             'deposits' => Ledger::pendingDeposits(),
             'payouts' => Ledger::pendingPayouts(),
+            'carryovers' => Ledger::pendingCarryovers(),
             'minus' => $minus,
             'overview' => CashBook::overview(),
             'stock' => BeerStock::current(),
@@ -58,6 +60,26 @@ class DashboardController extends Controller
     public function cancelPayout(Request $request, Transaction $transaction): RedirectResponse
     {
         return $this->run(fn () => Ledger::cancelPayout($transaction, $request->user()), __('ledger.payout_cancelled'));
+    }
+
+    /** Carry-over from the old tally list; the kassier may correct the signed amount (CHF) before confirming. */
+    public function confirmCarryover(Request $request, Transaction $transaction): RedirectResponse
+    {
+        $data = $request->validate(['amount' => ['nullable', 'string', 'max:20']]);
+        $amount = null;
+        if (trim((string) ($data['amount'] ?? '')) !== '') {
+            $amount = Money::parse($data['amount']);
+            if ($amount === null || $amount === 0) {
+                return back()->with('error', __('ledger.amount_invalid'));
+            }
+        }
+
+        return $this->run(fn () => Ledger::confirmCarryover($transaction, $request->user(), $amount), __('ledger.carryover_confirmed'));
+    }
+
+    public function rejectCarryover(Request $request, Transaction $transaction): RedirectResponse
+    {
+        return $this->run(fn () => Ledger::rejectCarryover($transaction, $request->user()), __('ledger.carryover_rejected'));
     }
 
     public function stats(): View

@@ -86,6 +86,36 @@
     @endif
 </section>
 
+@if ($carryovers->isNotEmpty())
+    <section class="card">
+        <h2>{{ __('backend.carryovers') }} <span class="pill">{{ $carryovers->count() }}</span></h2>
+        <p class="hint">{{ __('backend.carryover_hint') }}</p>
+        <ul class="list">
+            @foreach ($carryovers as $tx)
+                <li class="wrap-row" data-testid="carryover">
+                    <span>
+                        <a href="{{ route('backend.users.show', $tx->user) }}"><strong>{{ $tx->user->displayName() }}</strong></a>
+                        <span class="muted">· {{ local_time($tx->created_at) }}</span><br>
+                        <span>{{ $tx->carryoverText() }}</span>
+                    </span>
+                    <strong @class(['amount', 'neg' => $tx->amount < 0])>{{ chf($tx->amount) }}</strong>
+                    <span class="row-buttons">
+                        <form method="post" action="{{ route('backend.carryovers.confirm', $tx) }}" class="inline">
+                            @csrf
+                            <input type="text" name="amount" value="{{ \App\Support\Money::plain($tx->amount) }}" inputmode="decimal" maxlength="20" size="8" aria-label="{{ __('backend.carryover_amount') }}" title="{{ __('backend.carryover_amount') }}">
+                            <button type="submit" class="btn small primary">{{ __('backend.confirm') }}</button>
+                        </form>
+                        <form method="post" action="{{ route('backend.carryovers.reject', $tx) }}" class="inline" data-confirm="{{ __('backend.reject_confirm') }}">
+                            @csrf
+                            <button type="submit" class="btn small ghost">{{ __('backend.reject') }}</button>
+                        </form>
+                    </span>
+                </li>
+            @endforeach
+        </ul>
+    </section>
+@endif
+
 <section class="card">
     <h2>{{ __('backend.minus') }}</h2>
     @if ($minus->isEmpty())

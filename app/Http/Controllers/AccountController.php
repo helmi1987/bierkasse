@@ -14,6 +14,8 @@ use App\Support\BarChart;
 use App\Support\DepositSuggestions;
 use App\Support\FormToken;
 use App\Support\Money;
+use App\Support\Qr;
+use App\Support\RegistrationLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -46,6 +48,10 @@ class AccountController extends Controller
         $pendingDeposit = (int) Transaction::query()->where('user_id', $user->id)->pending()
             ->where('type', Transaction::TYPE_DEPOSIT)->sum('amount');
 
+        // Carry-over from the old tally list waiting for the kassier (not editable by the user).
+        $pendingCarryover = Transaction::query()->where('user_id', $user->id)->pending()
+            ->where('type', Transaction::TYPE_CARRYOVER)->latest('id')->first();
+
         // Booking for guests (own guest sales within the undo window can be undone).
         $guestBooking = AppSettings::guestUserBooking();
         $guestUndoable = GuestSale::query()->where('booked_by', $user->id)
@@ -58,6 +64,7 @@ class AccountController extends Controller
             'guestAvailable' => $guestBooking ? min(GuestSales::MAX_BEERS, max(0, BeerStock::current())) : 0,
             'guestUndoable' => $guestUndoable,
             'pendingDeposit' => $pendingDeposit,
+            'pendingCarryover' => $pendingCarryover,
             'balance' => $balance,
             'price' => $price,
             'open' => Ledger::openItems($user),
@@ -69,11 +76,29 @@ class AccountController extends Controller
             'suggested' => $suggested,
             'recent' => Transaction::query()->where('user_id', $user->id)->latest('id')->limit(5)->get(),
             'stats' => $stats,
+            'canInvite' => AppSettings::registrationOpen(),
             'chart' => BarChart::render(
                 array_column($stats['months'], 'label'),
                 array_column($stats['months'], 'beers'),
                 __('stats.chart_my_months'),
             ),
+        ]);
+    }
+
+    /**
+     * "Invite someone new": registration QR with the embedded registration password, shown on the
+     * phone of any active user (by design, user decision 2026-10-21). 404 while registration is closed.
+     */
+    public function invite(): View
+    {
+        abort_unless(AppSettings::registrationOpen(), 404);
+
+        $url = RegistrationLink::url(true);
+
+        return view('account.invite', [
+            'url' => $url,
+            'qr' => Qr::dataUri($url, 480),
+            'appName' => AppSettings::appName(),
         ]);
     }
 

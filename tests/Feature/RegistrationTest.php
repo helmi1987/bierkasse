@@ -98,6 +98,21 @@ class RegistrationTest extends TestCase
         $this->assertSame(0, User::query()->count());
     }
 
+    public function test_admin_sees_printable_flyer(): void
+    {
+        $this->open();
+        $this->actingAs($this->admin());
+
+        $this->get('/backend/registrierung-qr?view=flyer')->assertOk()
+            ->assertSee('class="flyer"', false)->assertSee('Die Bierkasse ist jetzt digital!')
+            ->assertSee('Schluss mit Strichliste und Münzsuche.')->assertSee('code=durst')
+            ->assertSee('Zum Home-Bildschirm')->assertSee('data-print', false);
+        $this->get('/backend/registrierung-qr?view=flyer&code=0')->assertOk()
+            ->assertSee('class="flyer"', false)->assertDontSee('code=durst')
+            ->assertSee('Registrierungspasswort gibt');
+        $this->get('/backend/registrierung-qr')->assertOk()->assertDontSee('class="flyer"', false);
+    }
+
     public function test_admin_sees_registration_qr(): void
     {
         $this->open();

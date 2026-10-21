@@ -17,8 +17,10 @@ class KassierNotifier
 {
     /**
      * @param  list<string>  $lines
+     * @param  string|null  $url  Link at the end of the mail (default: backend dashboard)
+     * @param  string|null  $footer  Text before the link (default: mail.footer)
      */
-    public static function send(string $subject, array $lines): int
+    public static function send(string $subject, array $lines, ?string $url = null, ?string $footer = null): int
     {
         if (! AppSettings::notifyKassier()) {
             return 0;
@@ -38,7 +40,7 @@ class KassierNotifier
         $sent = 0;
         foreach ($recipients as $email) {
             try {
-                Mail::to($email)->send(new KassierNotice($subject, $lines));
+                Mail::to($email)->send(new KassierNotice($subject, $lines, $url, $footer));
                 $sent++;
             } catch (Throwable $e) {
                 Log::warning('Kassier notification failed', ['to' => $email, 'error' => $e->getMessage()]);

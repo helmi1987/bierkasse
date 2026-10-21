@@ -63,6 +63,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
         Route::put('/konto/einzahlung/{transaction}', [AccountController::class, 'updateDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.update');
         Route::delete('/konto/einzahlung/{transaction}', [AccountController::class, 'cancelDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.cancel');
+        Route::get('/konto/einladen', [AccountController::class, 'invite'])->name('account.invite');
         Route::get('/konto/verlauf', [AccountController::class, 'history'])->name('account.history');
         Route::get('/konto/verlassen', [AccountController::class, 'leaveForm'])->name('account.leave');
         Route::post('/konto/verlassen', [AccountController::class, 'leave'])->name('account.leave.store');
@@ -91,6 +92,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/einzahlungen/{transaction}/ablehnen', [Backend\DashboardController::class, 'rejectDeposit'])->whereNumber('transaction')->name('deposits.reject');
             Route::post('/auszahlungen/{transaction}/bestaetigen', [Backend\DashboardController::class, 'confirmPayout'])->whereNumber('transaction')->name('payouts.confirm');
             Route::post('/auszahlungen/{transaction}/ablehnen', [Backend\DashboardController::class, 'cancelPayout'])->whereNumber('transaction')->name('payouts.cancel');
+
+            Route::post('/uebertraege/{transaction}/bestaetigen', [Backend\DashboardController::class, 'confirmCarryover'])->whereNumber('transaction')->name('carryovers.confirm');
+            Route::post('/uebertraege/{transaction}/ablehnen', [Backend\DashboardController::class, 'rejectCarryover'])->whereNumber('transaction')->name('carryovers.reject');
 
             Route::get('/kasse', [Backend\CashController::class, 'index'])->name('cash');
             Route::post('/kasse', [Backend\CashController::class, 'store'])->name('cash.store');

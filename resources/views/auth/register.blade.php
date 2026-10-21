@@ -43,6 +43,31 @@
             <label for="password_confirmation">{{ __('register.password_confirmation') }}</label>
             <input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password" minlength="8" required>
         </div>
+        <details class="carryover" @if (old('carryover_value') || $errors->has('carryover_value')) open @endif>
+            <summary>{{ __('register.carryover') }}</summary>
+            <div class="stack">
+                <p class="hint">{{ __('register.carryover_intro') }}</p>
+                <fieldset class="segmented">
+                    <legend>{{ __('register.carryover_direction') }}</legend>
+                    @foreach (['debt', 'credit'] as $dir)
+                        <label><input type="radio" name="carryover_direction" value="{{ $dir }}" @checked(old('carryover_direction', 'debt') === $dir)> <span>{{ __('register.carryover_'.$dir) }}</span></label>
+                    @endforeach
+                </fieldset>
+                <fieldset class="segmented">
+                    <legend>{{ __('register.carryover_unit') }}</legend>
+                    @foreach (['beers', 'chf'] as $unit)
+                        <label><input type="radio" name="carryover_unit" value="{{ $unit }}" @checked(old('carryover_unit', 'beers') === $unit)> <span>{{ __('register.carryover_'.$unit) }}</span></label>
+                    @endforeach
+                </fieldset>
+                <div class="field">
+                    <label for="carryover_value">{{ __('register.carryover_value') }}</label>
+                    <input type="text" id="carryover_value" name="carryover_value" value="{{ old('carryover_value') }}" inputmode="decimal" maxlength="20" autocomplete="off">
+                    @if ($price > 0)
+                        <div class="hint">{{ __('register.carryover_value_hint', ['price' => chf($price)]) }}</div>
+                    @endif
+                </div>
+            </div>
+        </details>
         <button class="btn primary big" type="submit">{{ __('register.submit') }}</button>
     </form>
 @endif

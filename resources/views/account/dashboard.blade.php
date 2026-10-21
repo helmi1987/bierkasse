@@ -24,6 +24,11 @@
             <span>{{ chf($pendingDeposit) }} – {{ __('account.pending_waiting') }}</span>
         </div>
     @endif
+    @if ($pendingCarryover)
+        <div class="pending-pill" data-testid="pending-carryover">
+            <span>{{ __('account.carryover_pending', ['amount' => chf($pendingCarryover->amount)]) }}</span>
+        </div>
+    @endif
     @if ($balance < 0)
         @include('partials.open-items', ['open' => $open])
     @endif
@@ -237,7 +242,7 @@
                     @else
                         <li>
                             <span>{{ local_time($tx->created_at) }} · {{ __('ledger.type.'.$tx->type) }}@if ($tx->method) · {{ __('ledger.method.'.$tx->method) }}@endif</span>
-                            <strong>{{ chf(abs($tx->amount)) }}</strong>
+                            <strong>{{ $tx->type === \App\Models\Transaction::TYPE_CARRYOVER ? chf($tx->amount) : chf(abs($tx->amount)) }}</strong>
                         </li>
                     @endif
                 @endforeach
@@ -261,4 +266,8 @@
     @include('account.tx-list', ['transactions' => $recent])
     <p><a href="{{ route('account.history') }}">{{ __('account.history') }} →</a></p>
 </section>
+
+@if ($canInvite)
+    <p class="center small-link"><a href="{{ route('account.invite') }}">{{ __('account.invite_link') }}</a></p>
+@endif
 @endsection

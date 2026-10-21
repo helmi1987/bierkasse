@@ -8,6 +8,7 @@ return [
         'payout' => 'Auszahlung',
         'donation' => 'Spende an die Kasse',
         'correction' => 'Korrektur',
+        'carryover' => 'Übertrag alte Strichliste',
     ],
     'status' => [
         'pending' => 'offen',
@@ -18,6 +19,18 @@ return [
         'cash' => 'Bar',
         'twint' => 'TWINT',
     ],
+    'carryover_beers' => [
+        'debt' => '{1} schuldet :count Bier à :price (:amount)|[2,*] schuldet :count Biere à :price (:amount)',
+        'credit' => '{1} hat Guthaben :count Bier à :price (:amount)|[2,*] hat Guthaben :count Biere à :price (:amount)',
+    ],
+    'carryover_chf' => [
+        'debt' => 'schuldet :amount',
+        'credit' => 'hat Guthaben :amount',
+    ],
+    'carryover_adjusted' => 'Vom Kassier angepasst (gemeldet: :text)',
+    'carryover_pending' => 'Der Übertrag von der alten Strichliste ist noch nicht bestätigt.',
+    'carryover_confirmed' => 'Übertrag bestätigt.',
+    'carryover_rejected' => 'Übertrag abgelehnt.',
     'beers' => '{1} :count Bier à :price|[2,*] :count Biere à :price',
 
     'consumed' => '{1} :count Bier abgestrichen (:amount). Prost!|[2,*] :count Biere abgestrichen (:amount). Prost!',

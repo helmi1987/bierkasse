@@ -81,6 +81,31 @@
         });
     });
 
+    // Share buttons: data-share="#selector" (URL as text content). Native share sheet where available,
+    // otherwise the URL is copied to the clipboard.
+    document.querySelectorAll('[data-share]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var source = document.querySelector(btn.dataset.share);
+            if (!source) {
+                return;
+            }
+            var url = source.textContent.trim();
+            if (navigator.share) {
+                navigator.share({ title: btn.dataset.shareTitle || '', text: btn.dataset.shareText || '', url: url })
+                    .catch(function () { /* cancelled */ });
+                return;
+            }
+            if (!navigator.clipboard) {
+                return;
+            }
+            navigator.clipboard.writeText(url).then(function () {
+                var label = btn.textContent;
+                btn.textContent = btn.dataset.copied || '✓';
+                window.setTimeout(function () { btn.textContent = label; }, 1500);
+            });
+        });
+    });
+
     // Deposit: proposal buttons fill the amount; below the field the amount is shown as beers.
     document.querySelectorAll('[data-beers]').forEach(function (input) {
         var out = document.querySelector(input.dataset.beers);

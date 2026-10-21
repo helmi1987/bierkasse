@@ -58,14 +58,18 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
 7. Nach dem Setup im Backend (`/backend/einstellungen`):
    - Bierpreis (Standard CHF 1.50), Standard-Limit (Standard 0 = kein Minus), TWINT-Nummer und Name.
    - Registrierung: Registrierungspasswort setzen (ohne Passwort ist keine Registrierung möglich).
-     QR-Code zum Aushängen unter `/backend/registrierung-qr` (füllt das Registrierungspasswort automatisch aus; Variante ohne Passwort wählbar).
+     QR-Code zum Aushängen unter `/backend/registrierung-qr` (füllt das Registrierungspasswort automatisch aus; Variante ohne Passwort wählbar), dort auch als druckfertiger A4-Flyer (Reiter "Flyer").
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
-     Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag) an alle Kassiers/Admins mit E-Mail.
+     Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.
    - SSO (`/backend/sso`): Google, Microsoft (Tenant, Standard `common`), GitHub, Facebook oder generisches OIDC
      (Discovery-URL). Redirect-URI beim Anbieter: `https://<domain>/login/sso/{kuerzel}/callback`.
      Anmelden per SSO kann nur, wer den Anbieter vorher unter Konto > Einstellungen verknüpft hat.
      Einrichtung pro Anbieter: siehe "SSO-Anbieter einrichten".
-   - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
+   - Einladen: Jeder angemeldete aktive Benutzer sieht unter `/konto/einladen` ("Jemand Neues einladen", kleiner Link
+    unten im Dashboard) den Registrierungs-QR-Code mit eingebettetem Registrierungspasswort, Link mit Kopier- und
+    Teilen-Knopf. Damit kann jeder Benutzer das Registrierungspasswort sehen (bewusst so, Entscheid 2026-10-21).
+    Nur solange die Registrierung offen ist (eingeschaltet und Passwort gesetzt), sonst 404 und Link ausgeblendet.
+  - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
 8. Steht ein Reverse-Proxy vor PHP, dessen IP in `.env` als `TRUSTED_PROXIES` (kommagetrennt, Standard: keine)
    eintragen, sonst werden `X-Forwarded-*`-Header ignoriert. Wichtig: Die Rate-Limits (Login, TOTP, Gäste,
    eigener Anbieter) zählen pro Client-IP; ohne korrekt gesetzte Proxy-IP teilen sich alle Benutzer die IP des
@@ -156,6 +160,16 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   - Haus verlassen (nur mit Saldo ≥ 0): Auszahlung beantragen (Kassier bestätigt die Auszahlung, Betrag = Saldo)
     oder Guthaben spenden. Danach ist das Konto `left` (keine Anmeldung, Verlauf bleibt).
   - Korrektur durch Kassier/Admin mit Pflicht-Bemerkung.
+  - Übertrag von der alten Strichliste (Entscheid 2026-10-21): bei der Registrierung optional "Ich schulde noch" /
+    "Ich habe noch Guthaben", in Bieren (1–500, umgerechnet zum aktuellen Bierpreis, Anzahl und Preis werden
+    gespeichert) oder CHF (max. 500.00). Wird als offene Buchung Typ `carryover` gespeichert (Schuld negativ,
+    Guthaben positiv) und zählt erst nach Bestätigung im Saldo. Kassier/Admin bestätigen (Betrag anpassbar; dann
+    wird die Bier-Anzahl verworfen und der gemeldete Wert in der Bemerkung festgehalten) oder lehnen ab im
+    Backend-Dashboard; zählt bei den offenen Posten (Badge). Erwähnt in der Registrierungs-Mail. Der Benutzer sieht
+    "Übertrag ausstehend" und kann ihn nicht ändern; solange offen, ist "Haus verlassen" gesperrt.
+    Übertrag-Biere ändern weder Lager noch Statistik (vor der App getrunken); bestätigte Übertrag-Schulden in
+    Bieren erscheinen unter "Offen" als Biere. **Annahme:** der Übertrag ändert den Kassenstand nicht, aber das
+    Guthaben aller Benutzer und damit den Überschuss.
 - Kasse (`/backend/kasse`): Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen ±
   Korrekturen, getrennt nach Bar und TWINT. Überschuss = Kassenstand − Guthaben aller Benutzer.
 - Gäste (`/backend/gaeste`, Kassier und Admin): zwei Schalter, Liste aller Gäste-Verkäufe ("gebucht von <Benutzer>"

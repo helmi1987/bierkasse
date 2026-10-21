@@ -29,22 +29,6 @@ return [
     'notice' => ':giver hat dir ein Bier spendiert',
     'given_kpi' => 'Spendiert',
 
-    // Account settings
-    'mail_setting' => 'Mail bei spendiertem Bier',
-    'mail_setting_hint' => 'Nur mit hinterlegter E-Mail-Adresse.',
-    'mail_setting_saved' => 'Gespeichert.',
-
-    // Mail to recipients
-    'mail_subject' => 'Prost! :giver spendiert dir ein Bier',
-    'mail_title' => 'Prost! :giver spendiert dir ein Bier',
-    'mail_line' => ':giver hat eine Runde spendiert, ein Bier davon ist für dich.',
-    'mail_row_giver' => 'Spender',
-    'mail_row_message' => 'Nachricht',
-    'mail_row_beers' => 'Runde',
-    'mail_row_time' => 'Zeit',
-    'mail_button' => 'Zur Bierkasse',
-    'mail_hint' => 'Diese Mail kannst du in der Bierkasse unter Einstellungen abschalten.',
-
     // Backend
     'backend_title' => 'Runden',
     'backend_intro' => 'Benutzer bezahlen eine Runde für Kollegen (je 1 Bier) und Gäste. Der Betrag geht vom Guthaben des Spenders ab, Lager und Statistik zählen die Biere (bei den Kollegen bzw. als «Gäste (eingeladen)»).',

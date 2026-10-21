@@ -175,8 +175,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Verlauf, Haus verlassen. Im Backend keine Einzahlung/Korrektur/Limit auf das Konto. Bleibt: Einstellungen
   (Passwort, TOTP, SSO, E-Mail), Feedback, Einladen, Statistik-Seite, Backend; Kassier-/Feedback-Mails; zählt als
   Admin (Regel "letzter Admin"). Nicht in der Kollegen-Liste "Runde spendieren", nicht in der Rangliste, nicht in
-  "Im Minus"; in der Benutzerliste mit Badge "Nur Verwaltung" ohne Saldo/Limit. Karten "Statistik", "Mail bei
-  spendiertem Bier" und "Haus verlassen" in den Einstellungen ausgeblendet.
+  "Im Minus"; in der Benutzerliste mit Badge "Nur Verwaltung" ohne Saldo/Limit. Karten "Statistik" und
+  "Haus verlassen" in den Einstellungen ausgeblendet.
   **Annahme:** Ältere Biere eines solchen Kontos zählen weiter in den Totals der Statistik, nur nicht namentlich.
 - Eigener Anmelde-Anbieter (Konto > Einstellungen): jeder Benutzer kann einen eigenen OAuth2-/OIDC-Anbieter
   (z. B. selbst gehostetes Authentik/Keycloak) hinterlegen: Discovery-URL oder Endpunkte von Hand, Client-ID,
@@ -255,10 +255,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     die Runde 10 Minuten lang zurücknehmen. Unter "Offen" zählen Runden-Biere wie eigene Biere (alter Preis).
     Kassenstand unverändert (wie Abstreichen); Lager sinkt um alle Biere der Runde (Lager-Mail wie beim Abstreichen); wie Abstreichen
     nicht durch den Lagerbestand begrenzt. Kollegen-Liste sortiert nach letztem eigenem Bier.
-  - Empfänger sehen 7 Tage lang im Dashboard "🍺 <Spender> hat dir ein Bier spendiert – <Nachricht>" (max. 3) und
-    erhalten eine Mail "Prost! <Spender> spendiert dir ein Bier" (nur mit E-Mail und Schalter "Mail bei spendiertem
-    Bier" unter Einstellungen, Standard an; unabhängig von der Kassier-Benachrichtigung). Fehler beim Versand werden
-    geloggt, die Buchung bleibt.
+  - Empfänger sehen 7 Tage lang im Dashboard "🍺 <Spender> hat dir ein Bier spendiert – <Nachricht>" (max. 3). Keine Mail an Empfänger (Entscheid 2026-10-22: alle sitzen am selben Tisch).
   - Statistik: Biere zählen beim Trinker. Kollegen-Biere zählen beim Kollegen (eigene Statistik, Rangliste, Totals),
     Biere ohne Namen als eigene Zeile "Gäste (eingeladen)" in der Rangliste. Monate/Wochentage nach Zeitpunkt der
     Runde. Total = Abstreichen + Gäste-Verkäufe + Runden-Biere (die Runde selbst zählt nicht zusätzlich).

@@ -84,7 +84,6 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::put('/konto/profil', [AccountSettingsController::class, 'profile'])->name('account.profile');
         Route::put('/konto/passwort', [AccountSettingsController::class, 'password'])->name('account.password');
         Route::post('/konto/statistik', [AccountSettingsController::class, 'stats'])->name('account.stats');
-        Route::post('/konto/runden-mail', [AccountSettingsController::class, 'roundMail'])->name('account.round-mail');
         Route::post('/konto/nur-verwaltung', [AccountSettingsController::class, 'adminOnly'])->name('account.admin-only');
         Route::post('/konto/totp', [AccountSettingsController::class, 'enableTotp'])->name('account.totp.enable');
         Route::post('/konto/totp/neu', [AccountSettingsController::class, 'restartTotp'])->name('account.totp.restart');

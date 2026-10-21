@@ -284,6 +284,39 @@ Benutzernamen des Admins protokolliert (`Log::info`, `storage/logs`).
   Nicht-Admins werden abgemeldet, auch direkt nach der Anmeldung. Erreichbar bleiben Anmeldung (inkl. TOTP, SSO,
   eigener Anbieter), Passwort-Reset, Manifest, `sw.js`, `/setup`, `/up` und statische Dateien.
   **Annahme:** Passwort-Reset bleibt offen, damit ein Admin sich auch ohne Passwort wieder anmelden kann.
+- "Datenbank-Backup": "Backup herunterladen" erstellt einen SQL-Dump und streamt ihn direkt als
+  `bierkasse-JJJJ-MM-TT-HHMMSS.sql.gz` (nichts wird auf dem Server gespeichert). Darunter die Liste der mit
+  `db:backup` erstellten Backups in `storage/app/backups` (Grösse, Datum) zum Herunterladen und Löschen. Nur
+  Dateinamen nach diesem Muster werden ausgeliefert (kein Pfad, keine anderen Dateien); `storage/app` ist nicht
+  öffentlich.
+
+### Datenbank-Backup und Wiederherstellung
+
+Reines PHP (kein `mysqldump`/`mysql` nötig, z. B. chroot-Shell auf Plesk). Unterstützt MySQL/MariaDB und SQLite;
+andere Treiber brechen mit Fehlermeldung ab.
+
+```
+php artisan db:backup                 # storage/app/backups/bierkasse-JJJJ-MM-TT-HHMMSS.sql.gz
+php artisan db:backup --keep=10       # danach nur die 10 neusten Backups in diesem Ordner behalten
+php artisan db:backup --path=/pfad/   # anderer Ordner (oder Dateiname)
+php artisan db:restore datei.sql.gz   # fragt nach; --force ohne Nachfrage (z. B. Skripte)
+```
+
+- **Das Backup enthält alle Daten dieser Installation**, auch Passwort-Hashes, verschlüsselte Einstellungen und
+  verschlüsselte TOTP-Geheimnisse. Sicher aufbewahren.
+- Verschlüsselte Werte lassen sich nach einer Wiederherstellung nur mit demselben `APP_KEY` entschlüsseln:
+  `.env` (bzw. `APP_KEY`) separat sichern.
+- `db:restore` löscht und ersetzt alle Tabellen, die im Dump enthalten sind (andere Tabellen bleiben). Vorher wird
+  geprüft, ob Treiber passt und der Dump vollständig ist (Endmarke `-- end of dump`). Bei MySQL/MariaDB ist die
+  Wiederherstellung nicht atomar (DDL), bricht sie ab, ist die Datenbank teilweise wiederhergestellt.
+  `--connection=` wählt eine andere Verbindung aus `config/database.php`.
+- Mit MySQL-Client geht es auch ohne PHP: `gunzip -c bierkasse-….sql.gz | mysql -u BENUTZER -p DATENBANK`.
+- Format: jede Anweisung endet am Zeilenende mit `;`, Zeilenumbrüche in Werten sind maskiert (MySQL `\n`,
+  SQLite `CAST(X'…' AS TEXT)`), ungültiges UTF-8 als Hex. TIMESTAMP-Werte in UTC (`TIME_ZONE='+00:00'`).
+  Bei MySQL nur Basistabellen (keine Views/Trigger/Routinen).
+- Regelmässig per Plesk-Cronjob, z. B. täglich `php artisan db:backup --keep=14`.
+- **Entscheid 2026-10-21:** vorerst Backup der ganzen Datenbank. Mit Mandantenfähigkeit wird das Backup im Backend
+  pro Mandant erstellt.
 
 ## Tests
 

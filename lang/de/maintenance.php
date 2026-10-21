@@ -64,6 +64,19 @@ return [
     'output' => 'Ausgabe',
     'failed' => 'Aktion fehlgeschlagen: :error',
 
+    // Database backup
+    'backup' => 'Datenbank-Backup',
+    'backup_hint' => 'Lädt einen vollständigen SQL-Dump (gzip) herunter. Er enthält alle Daten dieser Installation, auch Passwort-Hashes und verschlüsselte Einstellungen: sicher aufbewahren. Für die Wiederherstellung der Einstellungen wird zusätzlich der APP_KEY aus der .env gebraucht.',
+    'backup_download' => 'Backup herunterladen',
+    'backup_confirm' => 'Backup der ganzen Datenbank herunterladen? Die Datei enthält alle Daten inkl. Passwort-Hashes.',
+    'backup_stored' => 'Gespeicherte Backups',
+    'backup_stored_hint' => 'Backups von "php artisan db:backup" (z. B. per Cronjob) in storage/app/backups.',
+    'backup_none' => 'Keine gespeicherten Backups.',
+    'backup_delete' => 'Löschen',
+    'backup_delete_confirm' => 'Backup :name wirklich löschen?',
+    'backup_deleted' => 'Backup :name gelöscht.',
+    'backup_delete_failed' => 'Backup konnte nicht gelöscht werden (Schreibrechte prüfen).',
+
     // Banner and maintenance page
     'banner' => 'Wartungsmodus aktiv.',
     'banner_text' => 'Nur Admins können die Bierkasse benutzen.',

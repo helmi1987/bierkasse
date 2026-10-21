@@ -12,6 +12,7 @@ return [
     // Info
     'info' => 'System',
     'version' => 'App-Version',
+    'version_deployed' => 'installiert :date',
     'version_file_date' => '(Dateidatum)',
     'php' => 'PHP',
     'laravel' => 'Laravel',

@@ -109,6 +109,13 @@
     <dl class="info-list">
         <dt>{{ __('maintenance.version') }}</dt>
         <dd>
+            @if ($info['version'])
+                <strong>{{ $info['version']['version'] }}</strong>
+                @if ($info['version']['deployed'])
+                    · {{ __('maintenance.version_deployed', ['date' => \Illuminate\Support\Carbon::createFromTimestamp($info['version']['deployed'])->setTimezone(config('app.timezone'))->format('d.m.Y H:i')]) }}
+                @endif
+                @if ($info['git']) <br> @endif
+            @endif
             @if ($info['git'])
                 <code>{{ $info['git']['hash'] }}</code>
                 @if ($info['git']['branch']) ({{ $info['git']['branch'] }}) @endif
@@ -116,7 +123,7 @@
                     · {{ \Illuminate\Support\Carbon::createFromTimestamp($info['git']['date'])->setTimezone(config('app.timezone'))->format('d.m.Y H:i') }}
                     @if ($info['git']['date_source'] === 'file') {{ __('maintenance.version_file_date') }} @endif
                 @endif
-            @else
+            @elseif (! $info['version'])
                 {{ __('maintenance.unknown') }}
             @endif
         </dd>

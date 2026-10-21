@@ -207,4 +207,18 @@ PHP);
 
         $this->assertNull(SystemInfo::gitVersion($this->testStorage.'/nothing'));
     }
+
+    public function test_app_version_from_version_file(): void
+    {
+        $base = $this->testStorage.'/version';
+        File::ensureDirectoryExists($base);
+        File::put($base.'/VERSION', "1.2.3\n");
+        $this->assertSame('1.2.3', SystemInfo::appVersion($base)['version']);
+        File::put($base.'/VERSION', "<script>\n");
+        $this->assertNull(SystemInfo::appVersion($base));
+        $this->assertNull(SystemInfo::appVersion($this->testStorage.'/nothing'));
+
+        $this->actingAs($this->admin())->get('/backend/wartung')->assertOk()
+            ->assertSee('<strong>'.trim((string) file_get_contents(base_path('VERSION'))).'</strong>', false);
+    }
 }

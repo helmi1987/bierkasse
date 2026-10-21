@@ -17,6 +17,24 @@ class SystemInfo
      *
      * @return array{hash:string,branch:?string,date:?int,date_source:?string}|null
      */
+    /**
+     * Release version from the VERSION file in the project root (bumped with every change),
+     * plus the time the file was written by the deployment.
+     *
+     * @return array{version: string, deployed: int|null}|null
+     */
+    public static function appVersion(?string $base = null): ?array
+    {
+        $file = ($base ?? base_path()).'/VERSION';
+        $version = is_file($file) ? trim((string) @file_get_contents($file)) : '';
+        if ($version === '' || ! preg_match('/^[0-9A-Za-z.+-]{1,40}$/', $version)) {
+            return null;
+        }
+        $mtime = @filemtime($file);
+
+        return ['version' => $version, 'deployed' => $mtime !== false ? $mtime : null];
+    }
+
     public static function gitVersion(?string $base = null): ?array
     {
         try {
@@ -119,6 +137,7 @@ class SystemInfo
         $free = function_exists('disk_free_space') ? @disk_free_space(storage_path()) : false;
 
         return [
+            'version' => self::appVersion(),
             'git' => self::gitVersion(),
             'php' => PHP_VERSION,
             'laravel' => app()->version(),

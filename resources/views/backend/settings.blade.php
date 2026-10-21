@@ -47,7 +47,12 @@
 
     <section class="card stack">
         <h2>{{ __('settings.registration') }}</h2>
-        <label class="switch"><input type="checkbox" name="registration_enabled" value="1" @checked(old('registration_enabled', $registrationEnabled))> <span>{{ __('settings.registration_enabled') }}</span></label>
+        <fieldset class="stack">
+            <legend>{{ __('settings.registration_mode') }}</legend>
+            @foreach (\App\Support\AppSettings::REGISTRATION_MODES as $m)
+                <label class="check"><input type="radio" name="registration_mode" value="{{ $m }}" @checked(old('registration_mode', $registrationMode) === $m)> <span><strong>{{ __('settings.registration_modes.'.$m) }}</strong><br><small class="muted">{{ __('settings.registration_mode_hints.'.$m) }}</small></span></label>
+            @endforeach
+        </fieldset>
         <div class="field">
             <label for="registration_password">{{ __('settings.registration_password') }}</label>
             <input type="text" id="registration_password" name="registration_password" value="{{ old('registration_password', $registrationPassword) }}" maxlength="100" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">

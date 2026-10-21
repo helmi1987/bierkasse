@@ -5,16 +5,32 @@
 
 @section('content')
 <h1>{{ __('register.title') }}</h1>
-@if (! $open)
+@if ($state === 'closed')
     <div class="card"><p>{{ __('register.closed') }}</p></div>
+@elseif ($state === 'invite_only')
+    <div class="card"><p>{{ __('register.invite_only') }}</p></div>
+@elseif ($state === 'invalid')
+    <div class="card"><p>{{ $throttle ?? __('register.invitation_invalid') }}</p></div>
 @else
-    <p class="muted">{{ __('register.intro') }}</p>
+    @if ($state === 'invited')
+        <div class="alert ok">{{ __('register.invited_by', ['user' => $inviter ?? '?']) }}</div>
+        <p class="muted">{{ __('register.intro_invited') }}</p>
+    @else
+        @if ($tokenState === 'invalid' || $tokenState === 'throttled')
+            <div class="alert warn">{{ $throttle ?? __('register.invitation_invalid_password') }}</div>
+        @endif
+        <p class="muted">{{ __('register.intro') }}</p>
+    @endif
     <form method="post" action="{{ route('register.store') }}" class="card stack" autocomplete="off">
         @csrf
-        <div class="field">
-            <label for="code">{{ __('register.code') }}</label>
-            <input type="text" id="code" name="code" value="{{ $code }}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" required>
-        </div>
+        @if ($state === 'invited')
+            <input type="hidden" name="{{ \App\Models\Invitation::QUERY }}" value="{{ $token }}">
+        @else
+            <div class="field">
+                <label for="code">{{ __('register.code') }}</label>
+                <input type="text" id="code" name="code" value="{{ $code }}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+            </div>
+        @endif
         <div class="field">
             <label for="username">{{ __('register.username') }}</label>
             <input type="text" id="username" name="username" value="{{ old('username') }}" autocomplete="username" autocapitalize="none" spellcheck="false" pattern="[a-z0-9._\-]{3,32}" minlength="3" maxlength="32" required>

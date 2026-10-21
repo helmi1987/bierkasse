@@ -20,7 +20,22 @@ class AppSettings
 
     public const TWINT_NAME = 'twint_name';
 
-    public const REGISTRATION_ENABLED = 'registration_enabled';
+    /** Old on/off switch, replaced by REGISTRATION_MODE (only read by the migration). */
+    public const LEGACY_REGISTRATION_ENABLED = 'registration_enabled';
+
+    /** Registration mode, one of REGISTRATION_MODES. */
+    public const REGISTRATION_MODE = 'registration_mode';
+
+    /** No registration at all (invitation links are invalid too). */
+    public const MODE_CLOSED = 'closed';
+
+    /** Registration only with a valid invitation link. */
+    public const MODE_INVITE = 'invite';
+
+    /** Registration with the registration password; invitation links work too. */
+    public const MODE_PASSWORD = 'password';
+
+    public const REGISTRATION_MODES = [self::MODE_CLOSED, self::MODE_INVITE, self::MODE_PASSWORD];
 
     public const REGISTRATION_PASSWORD = 'registration_password';
 
@@ -97,10 +112,24 @@ class AppSettings
         return (string) self::get(self::REGISTRATION_PASSWORD, '');
     }
 
-    /** Registration is possible when switched on and a registration password is set. */
+    /** Registration mode; default for new installs: invitation only. */
+    public static function registrationMode(): string
+    {
+        $mode = self::get(self::REGISTRATION_MODE, self::MODE_INVITE);
+
+        return in_array($mode, self::REGISTRATION_MODES, true) ? $mode : self::MODE_INVITE;
+    }
+
+    /** Invitation links can be created and used (every mode except "closed"). */
+    public static function invitationsAllowed(): bool
+    {
+        return self::registrationMode() !== self::MODE_CLOSED;
+    }
+
+    /** Registration with the registration password: mode "password" and a password is set. */
     public static function registrationOpen(): bool
     {
-        return (bool) self::get(self::REGISTRATION_ENABLED, true) && self::registrationPassword() !== '';
+        return self::registrationMode() === self::MODE_PASSWORD && self::registrationPassword() !== '';
     }
 
     /**

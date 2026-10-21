@@ -3,6 +3,11 @@
 return [
     'title' => 'Registrieren',
     'intro' => 'Neues Konto für die Bierkasse. Das Registrierungspasswort gibt es beim Kassier (oder per QR-Code).',
+    'intro_invited' => 'Neues Konto für die Bierkasse. Der Einladungslink gilt nur für eine Person.',
+    'invite_only' => 'Registrieren geht nur mit einem persönlichen Einladungslink. Frag jemanden, der schon dabei ist (Konto → «Jemand Neues einladen»).',
+    'invited_by' => 'Eingeladen von :user',
+    'invitation_invalid' => 'Dieser Einladungslink ist ungültig, abgelaufen oder wurde schon benutzt. Bitte einen neuen Link verlangen.',
+    'invitation_invalid_password' => 'Dieser Einladungslink ist ungültig, abgelaufen oder wurde schon benutzt. Du kannst dich mit dem Registrierungspasswort registrieren.',
     'closed' => 'Die Registrierung ist zurzeit geschlossen. Bitte beim Kassier melden.',
     'code' => 'Registrierungspasswort',
     'username' => 'Benutzername',

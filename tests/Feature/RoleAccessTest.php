@@ -126,7 +126,7 @@ class RoleAccessTest extends TestCase
             'app_name' => 'Büro-Bier',
             'twint_phone' => '079 000 00 00',
             'twint_name' => 'Max',
-            'registration_enabled' => '1',
+            'registration_mode' => 'password',
             'registration_password' => 'prost',
             'notify_kassier' => '1',
             'mail_transport' => 'smtp',
@@ -152,7 +152,7 @@ class RoleAccessTest extends TestCase
 
         // Admin can view the registration password; an empty SMTP password keeps the stored one.
         $this->get('/backend/einstellungen')->assertOk()->assertSee('value="prost"', false)->assertDontSee('smtp-secret');
-        $this->put('/backend/einstellungen', ['beer_price' => '2', 'default_limit' => '0', 'mail_transport' => 'sendmail'])->assertSessionHas('status');
+        $this->put('/backend/einstellungen', ['beer_price' => '2', 'default_limit' => '0', 'registration_mode' => 'password', 'mail_transport' => 'sendmail'])->assertSessionHas('status');
         Setting::flushCache();
         $this->assertSame('smtp-secret', AppSettings::mail()['smtp_password']);
     }

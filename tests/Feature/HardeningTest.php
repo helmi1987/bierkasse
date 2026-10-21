@@ -178,6 +178,7 @@ class HardeningTest extends TestCase
 
     public function test_registration_checks_code_before_username(): void
     {
+        Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
         Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
         $this->user(['username' => 'taken']);
 
@@ -189,6 +190,7 @@ class HardeningTest extends TestCase
 
     public function test_registration_validation_failures_count_towards_rate_limit(): void
     {
+        Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
         Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
         $this->user(['username' => 'taken']);
         $data = ['code' => 'durst', 'username' => 'taken', 'password' => 'password-123', 'password_confirmation' => 'password-123'];

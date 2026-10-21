@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Backend;
 use App\Http\Controllers\GuestController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\PersonalSsoController;
 use App\Http\Controllers\SetupController;
@@ -63,7 +64,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
         Route::put('/konto/einzahlung/{transaction}', [AccountController::class, 'updateDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.update');
         Route::delete('/konto/einzahlung/{transaction}', [AccountController::class, 'cancelDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.cancel');
-        Route::get('/konto/einladen', [AccountController::class, 'invite'])->name('account.invite');
+        Route::get('/konto/einladen', [InvitationController::class, 'index'])->name('account.invite');
+        Route::post('/konto/einladen', [InvitationController::class, 'store'])->middleware('throttle:20,1')->name('account.invite.store');
+        Route::delete('/konto/einladungen/{invitation}', [InvitationController::class, 'destroy'])->whereNumber('invitation')->name('account.invite.destroy');
         Route::get('/konto/verlauf', [AccountController::class, 'history'])->name('account.history');
         Route::get('/konto/verlassen', [AccountController::class, 'leaveForm'])->name('account.leave');
         Route::post('/konto/verlassen', [AccountController::class, 'leave'])->name('account.leave.store');
@@ -115,6 +118,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::put('/gaeste', [Backend\GuestController::class, 'update'])->name('guests.update');
             Route::get('/gaeste/qr', [Backend\GuestController::class, 'qr'])->name('guests.qr');
             Route::delete('/gaeste/{sale}', [Backend\GuestController::class, 'destroy'])->whereNumber('sale')->name('guests.destroy');
+            Route::get('/einladungen', [Backend\InvitationController::class, 'index'])->name('invitations');
+            Route::delete('/einladungen/{invitation}', [Backend\InvitationController::class, 'destroy'])->whereNumber('invitation')->name('invitations.destroy');
             Route::get('/lager', [Backend\StockController::class, 'index'])->name('stock');
             Route::put('/lager/mindestbestand', [Backend\StockController::class, 'minimum'])->name('stock.minimum');
             Route::post('/lager/korrektur', [Backend\StockController::class, 'correct'])->name('stock.correct');

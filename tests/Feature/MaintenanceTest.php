@@ -26,7 +26,7 @@ class MaintenanceTest extends TestCase
 
     private function exhaustRegistrationLimit(): void
     {
-        Setting::put(AppSettings::REGISTRATION_ENABLED, true);
+        Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
         Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
         for ($i = 0; $i < 10; $i++) {
             $this->post('/registrieren', ['code' => 'falsch', 'username' => 'u'.$i]);

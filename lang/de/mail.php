@@ -10,6 +10,7 @@ return [
     'register_line' => ':name hat sich am :time registriert.',
     'register_username' => 'Benutzername: :username',
     'register_name' => 'Name: :name',
+    'register_invited_by' => 'Eingeladen von: :user',
     'register_email' => 'E-Mail: :email',
     'register_carryover' => 'Übertrag von der alten Strichliste: :text – bitte im Backend bestätigen.',
     'register_footer' => 'Benutzer im Backend ansehen:',

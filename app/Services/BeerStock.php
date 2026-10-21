@@ -29,6 +29,13 @@ class BeerStock
         return $purchased + $corrections - $consumed - $guests;
     }
 
+    /** True once the stock is maintained at all (a beer purchase or a count was recorded). */
+    public static function isTracked(): bool
+    {
+        return CashEntry::query()->where('type', 'expense_beer')->where('beers', '>', 0)->exists()
+            || StockCorrection::query()->exists();
+    }
+
     /** Minimum stock; 0 = no warning. */
     public static function minimum(): int
     {

@@ -56,10 +56,15 @@ class AccountController extends Controller
             ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
             ->latest('id')->get();
 
+        // Beers left in the cellar (only once the kassier maintains the stock).
+        $stock = BeerStock::isTracked() ? BeerStock::current() : null;
+
         return view('account.dashboard', [
             'user' => $user,
+            'stock' => $stock,
+            'stockLow' => $stock !== null && BeerStock::isLow($stock),
             'guestBooking' => $guestBooking,
-            'guestAvailable' => $guestBooking ? min(GuestSales::MAX_BEERS, max(0, BeerStock::current())) : 0,
+            'guestAvailable' => $guestBooking ? min(GuestSales::MAX_BEERS, max(0, $stock ?? BeerStock::current())) : 0,
             'guestUndoable' => $guestUndoable,
             'pendingDeposit' => $pendingDeposit,
             'pendingCarryover' => $pendingCarryover,

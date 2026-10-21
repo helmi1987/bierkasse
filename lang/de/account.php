@@ -13,6 +13,8 @@ return [
     'open_other' => 'Übrige Beträge (Korrekturen): :amount',
     'beer' => 'Bier abstreichen',
     'beer_price' => 'Preis: :price pro Bier',
+    'stock_left' => '{1} Im Lager: noch 1 Bier|[2,*] Im Lager: noch :count Biere',
+    'stock_empty' => 'Lager leer – bitte dem Kassier melden.',
     'quantity' => 'Anzahl',
     'less' => 'Eins weniger',
     'more' => 'Eins mehr',

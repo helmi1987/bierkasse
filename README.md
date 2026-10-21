@@ -160,6 +160,16 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   - Haus verlassen (nur mit Saldo ≥ 0): Auszahlung beantragen (Kassier bestätigt die Auszahlung, Betrag = Saldo)
     oder Guthaben spenden. Danach ist das Konto `left` (keine Anmeldung, Verlauf bleibt).
   - Korrektur durch Kassier/Admin mit Pflicht-Bemerkung.
+  - Übertrag von der alten Strichliste (Entscheid 2026-10-21): bei der Registrierung optional "Ich schulde noch" /
+    "Ich habe noch Guthaben", in Bieren (1–500, umgerechnet zum aktuellen Bierpreis, Anzahl und Preis werden
+    gespeichert) oder CHF (max. 500.00). Wird als offene Buchung Typ `carryover` gespeichert (Schuld negativ,
+    Guthaben positiv) und zählt erst nach Bestätigung im Saldo. Kassier/Admin bestätigen (Betrag anpassbar; dann
+    wird die Bier-Anzahl verworfen und der gemeldete Wert in der Bemerkung festgehalten) oder lehnen ab im
+    Backend-Dashboard; zählt bei den offenen Posten (Badge). Erwähnt in der Registrierungs-Mail. Der Benutzer sieht
+    "Übertrag ausstehend" und kann ihn nicht ändern; solange offen, ist "Haus verlassen" gesperrt.
+    Übertrag-Biere ändern weder Lager noch Statistik (vor der App getrunken); bestätigte Übertrag-Schulden in
+    Bieren erscheinen unter "Offen" als Biere. **Annahme:** der Übertrag ändert den Kassenstand nicht, aber das
+    Guthaben aller Benutzer und damit den Überschuss.
 - Kasse (`/backend/kasse`): Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen ±
   Korrekturen, getrennt nach Bar und TWINT. Überschuss = Kassenstand − Guthaben aller Benutzer.
 - Gäste (`/backend/gaeste`, Kassier und Admin): zwei Schalter, Liste aller Gäste-Verkäufe ("gebucht von <Benutzer>"

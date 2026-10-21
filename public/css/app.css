@@ -377,3 +377,8 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .pending-edit details[open] { padding-bottom: .75rem; }
 .pending-edit details form { margin-top: .5rem; }
 .btn.danger-text { color: var(--bad); }
+
+/* Registration: optional carry-over from the old paper tally list. */
+.carryover { border: 1.5px dashed var(--border); border-radius: var(--radius-sm); padding: 0 .85rem; }
+.carryover[open] { padding-bottom: .85rem; }
+.carryover .segmented span { text-align: center; padding: .25rem .5rem; }

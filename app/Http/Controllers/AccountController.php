@@ -48,6 +48,10 @@ class AccountController extends Controller
         $pendingDeposit = (int) Transaction::query()->where('user_id', $user->id)->pending()
             ->where('type', Transaction::TYPE_DEPOSIT)->sum('amount');
 
+        // Carry-over from the old tally list waiting for the kassier (not editable by the user).
+        $pendingCarryover = Transaction::query()->where('user_id', $user->id)->pending()
+            ->where('type', Transaction::TYPE_CARRYOVER)->latest('id')->first();
+
         // Booking for guests (own guest sales within the undo window can be undone).
         $guestBooking = AppSettings::guestUserBooking();
         $guestUndoable = GuestSale::query()->where('booked_by', $user->id)
@@ -60,6 +64,7 @@ class AccountController extends Controller
             'guestAvailable' => $guestBooking ? min(GuestSales::MAX_BEERS, max(0, BeerStock::current())) : 0,
             'guestUndoable' => $guestUndoable,
             'pendingDeposit' => $pendingDeposit,
+            'pendingCarryover' => $pendingCarryover,
             'balance' => $balance,
             'price' => $price,
             'open' => Ledger::openItems($user),

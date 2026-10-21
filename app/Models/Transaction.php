@@ -21,7 +21,15 @@ class Transaction extends Model
 
     public const TYPE_CORRECTION = 'correction';
 
-    public const TYPES = [self::TYPE_CONSUMPTION, self::TYPE_DEPOSIT, self::TYPE_PAYOUT, self::TYPE_DONATION, self::TYPE_CORRECTION];
+    /** Debt (negative) or credit (positive) carried over from the old paper tally list at registration. */
+    public const TYPE_CARRYOVER = 'carryover';
+
+    public const TYPES = [self::TYPE_CONSUMPTION, self::TYPE_DEPOSIT, self::TYPE_PAYOUT, self::TYPE_DONATION, self::TYPE_CORRECTION, self::TYPE_CARRYOVER];
+
+    /** Limits of a carry-over entered at registration. */
+    public const CARRYOVER_MAX_BEERS = 500;
+
+    public const CARRYOVER_MAX_AMOUNT = 50000;
 
     public const STATUS_PENDING = 'pending';
 
@@ -78,6 +86,22 @@ class Transaction extends Model
     public function isPending(): bool
     {
         return $this->status === self::STATUS_PENDING;
+    }
+
+    /**
+     * Carry-over in the third person, e.g. "schuldet 12 Biere à CHF 1.50 (CHF 18.00)" or "hat Guthaben CHF 20.00".
+     */
+    public function carryoverText(): string
+    {
+        $key = $this->amount < 0 ? 'debt' : 'credit';
+        $amount = chf(abs($this->amount));
+        if ($this->quantity && $this->unit_price && $this->quantity * $this->unit_price === abs($this->amount)) {
+            return trans_choice('ledger.carryover_beers.'.$key, $this->quantity, [
+                'count' => $this->quantity, 'price' => chf($this->unit_price), 'amount' => $amount,
+            ]);
+        }
+
+        return __('ledger.carryover_chf.'.$key, ['amount' => $amount]);
     }
 
     public function canBeUndoneBy(User $user): bool

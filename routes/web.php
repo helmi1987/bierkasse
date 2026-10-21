@@ -93,6 +93,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/auszahlungen/{transaction}/bestaetigen', [Backend\DashboardController::class, 'confirmPayout'])->whereNumber('transaction')->name('payouts.confirm');
             Route::post('/auszahlungen/{transaction}/ablehnen', [Backend\DashboardController::class, 'cancelPayout'])->whereNumber('transaction')->name('payouts.cancel');
 
+            Route::post('/uebertraege/{transaction}/bestaetigen', [Backend\DashboardController::class, 'confirmCarryover'])->whereNumber('transaction')->name('carryovers.confirm');
+            Route::post('/uebertraege/{transaction}/ablehnen', [Backend\DashboardController::class, 'rejectCarryover'])->whereNumber('transaction')->name('carryovers.reject');
+
             Route::get('/kasse', [Backend\CashController::class, 'index'])->name('cash');
             Route::post('/kasse', [Backend\CashController::class, 'store'])->name('cash.store');
             Route::delete('/kasse/{entry}', [Backend\CashController::class, 'destroy'])->whereNumber('entry')->name('cash.destroy');

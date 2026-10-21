@@ -27,6 +27,7 @@ return [
     'pending_heading' => 'Wartet auf Bestätigung',
     'pending_beers' => '{1} +:count Bier ausstehend ·|[*] +:count Biere ausstehend ·',
     'pending_waiting' => 'wartet auf Kassier',
+    'carryover_pending' => 'Übertrag ausstehend: :amount – wartet auf Kassier',
     'deposit_edited' => 'geändert',
     'deposit_update' => 'Ändern',
     'deposit_cancel' => 'Nicht bezahlt – zurückziehen',

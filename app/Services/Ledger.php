@@ -39,7 +39,7 @@ class Ledger
     public static function pendingCount(): int
     {
         return Transaction::query()->pending()
-            ->whereIn('type', [Transaction::TYPE_DEPOSIT, Transaction::TYPE_PAYOUT])->count();
+            ->whereIn('type', [Transaction::TYPE_DEPOSIT, Transaction::TYPE_PAYOUT, Transaction::TYPE_CARRYOVER])->count();
     }
 
     public static function hasPendingPayout(User $user): bool
@@ -220,6 +220,68 @@ class Ledger
     }
 
     /**
+     * Carry-over from the old paper tally list, entered by the user at registration: pending until a
+     * kassier confirms it (balance and limit only count it then). Negative = debt, positive = credit.
+     * With beers, quantity and the current price are stored (amount = quantity × price).
+     * Neither the beer stock nor the statistics count it (the beers were drunk before the app).
+     */
+    public static function reportCarryover(User $user, int $amount, ?int $quantity = null, ?int $unitPrice = null): Transaction
+    {
+        if ($amount === 0 || abs($amount) > Transaction::CARRYOVER_MAX_AMOUNT
+            || ($quantity !== null && ($quantity < 1 || $quantity > Transaction::CARRYOVER_MAX_BEERS || $quantity * (int) $unitPrice !== abs($amount)))) {
+            throw new LedgerException(__('ledger.amount_invalid'));
+        }
+
+        return Transaction::query()->create([
+            'user_id' => $user->id,
+            'type' => Transaction::TYPE_CARRYOVER,
+            'status' => Transaction::STATUS_PENDING,
+            'quantity' => $quantity,
+            'unit_price' => $quantity !== null ? $unitPrice : null,
+            'amount' => $amount,
+            'created_by' => $user->id,
+        ]);
+    }
+
+    /**
+     * The kassier confirms a carry-over, optionally with a corrected (signed) amount. A changed amount
+     * drops the beer quantity (it no longer matches) and keeps the original value in the note.
+     */
+    public static function confirmCarryover(Transaction $tx, User $by, ?int $amount = null): void
+    {
+        if ($amount !== null && ($amount === 0 || abs($amount) > Transaction::CARRYOVER_MAX_AMOUNT)) {
+            throw new LedgerException(__('ledger.amount_invalid'));
+        }
+
+        DB::transaction(function () use ($tx, $by, $amount) {
+            $user = User::query()->findOrFail($tx->user_id);
+            self::lock($user);
+            $locked = self::lockPending($tx, Transaction::TYPE_CARRYOVER);
+            self::assertActive($user);
+            $changes = ['status' => Transaction::STATUS_CONFIRMED, 'confirmed_by' => $by->id, 'confirmed_at' => now()];
+            if ($amount !== null && $amount !== $locked->amount) {
+                $changes += [
+                    'note' => __('ledger.carryover_adjusted', ['text' => $locked->carryoverText()]),
+                    'amount' => $amount,
+                    'quantity' => null,
+                    'unit_price' => null,
+                ];
+            }
+            $locked->forceFill($changes)->save();
+            $tx->setRawAttributes($locked->getAttributes(), true);
+        });
+    }
+
+    public static function rejectCarryover(Transaction $tx, User $by): void
+    {
+        DB::transaction(function () use ($tx, $by) {
+            $locked = self::lockPending($tx, Transaction::TYPE_CARRYOVER);
+            $locked->forceFill(['status' => Transaction::STATUS_REJECTED, 'confirmed_by' => $by->id, 'confirmed_at' => now()])->save();
+            $tx->setRawAttributes($locked->getAttributes(), true);
+        });
+    }
+
+    /**
      * Leaving: request the payout of the balance. A kassier confirms it once paid out.
      */
     public static function requestPayout(User $user): Transaction
@@ -335,7 +397,8 @@ class Ledger
             }
 
             $price = (int) $row->unit_price;
-            if ($row->type !== Transaction::TYPE_CONSUMPTION || $price <= 0 || (int) $row->quantity * $price !== $debit) {
+            $beerRow = in_array($row->type, [Transaction::TYPE_CONSUMPTION, Transaction::TYPE_CARRYOVER], true);
+            if (! $beerRow || $price <= 0 || (int) $row->quantity * $price !== $debit) {
                 $other += $debit - $covered;
 
                 continue;
@@ -383,6 +446,14 @@ class Ledger
         return Transaction::query()->with('user')->pending()->where('type', Transaction::TYPE_PAYOUT)->orderBy('created_at')->get();
     }
 
+    /**
+     * @return Collection<int, Transaction>
+     */
+    public static function pendingCarryovers(): Collection
+    {
+        return Transaction::query()->with('user')->pending()->where('type', Transaction::TYPE_CARRYOVER)->orderBy('created_at')->get();
+    }
+
     public static function assertCanLeave(User $user): void
     {
         self::assertActive($user);
@@ -391,6 +462,9 @@ class Ledger
         }
         if (Transaction::query()->where('user_id', $user->id)->where('type', Transaction::TYPE_DEPOSIT)->pending()->exists()) {
             throw new LedgerException(__('ledger.deposit_pending'));
+        }
+        if (Transaction::query()->where('user_id', $user->id)->where('type', Transaction::TYPE_CARRYOVER)->pending()->exists()) {
+            throw new LedgerException(__('ledger.carryover_pending'));
         }
         if (self::balance($user) < 0) {
             throw new LedgerException(__('ledger.leave_negative'));

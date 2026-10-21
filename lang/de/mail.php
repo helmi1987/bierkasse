@@ -11,6 +11,7 @@ return [
     'register_username' => 'Benutzername: :username',
     'register_name' => 'Name: :name',
     'register_email' => 'E-Mail: :email',
+    'register_carryover' => 'Übertrag von der alten Strichliste: :text – bitte im Backend bestätigen.',
     'register_footer' => 'Benutzer im Backend ansehen:',
     'footer' => 'Bestätigen im Backend:',
 ];

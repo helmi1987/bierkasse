@@ -144,6 +144,64 @@
         btn.addEventListener('click', function () { window.print(); });
     });
 
+    // PNG download of an SVG image: data-png-download="<svg url>", data-png-filename, data-png-error="#selector".
+    // Renders the (same-origin) SVG onto a white A4 canvas at 300 dpi (2480 x 3508 px).
+    document.querySelectorAll('[data-png-download]').forEach(function (btn) {
+        var errorBox = btn.dataset.pngError ? document.querySelector(btn.dataset.pngError) : null;
+        var fail = function () {
+            btn.disabled = false;
+            if (errorBox) {
+                errorBox.hidden = false;
+            }
+        };
+        var save = function (url) {
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = btn.dataset.pngFilename || 'image.png';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+        btn.addEventListener('click', function () {
+            if (errorBox) {
+                errorBox.hidden = true;
+            }
+            btn.disabled = true;
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = 2480;
+                    canvas.height = 3508;
+                    var ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    if (canvas.toBlob) {
+                        canvas.toBlob(function (blob) {
+                            if (!blob) {
+                                fail();
+                                return;
+                            }
+                            var url = URL.createObjectURL(blob);
+                            save(url);
+                            // Revoke later: Safari starts the download asynchronously.
+                            window.setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+                            btn.disabled = false;
+                        }, 'image/png');
+                    } else {
+                        save(canvas.toDataURL('image/png'));
+                        btn.disabled = false;
+                    }
+                } catch (err) {
+                    fail();
+                }
+            };
+            img.onerror = fail;
+            img.src = btn.dataset.pngDownload;
+        });
+    });
+
     // PWA install hint: native prompt where the browser offers one (Chrome/Edge/Samsung on Android and
     // desktop), instructions for iOS Safari. Hidden when running installed or dismissed (30 days).
     (function () {

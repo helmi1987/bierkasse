@@ -153,20 +153,18 @@ class RegistrationTest extends TestCase
         $this->open();
         $this->actingAs($this->admin());
 
-        $qrWithCode = Qr::dataUri(RegistrationLink::url(true), 480);
         $this->get('/backend/registrierung-qr?view=flyer')->assertOk()
-            ->assertSee('class="flyer"', false)->assertSee('Die Bierkasse ist jetzt digital!')
-            ->assertSee('Schluss mit Strichliste und Münzsuche.')
-            ->assertSee($qrWithCode, false)
-            ->assertSee('<p class="flyer-url">'.route('register').'</p>', false)
-            ->assertSee('Registrierungspasswort beim Kassier')
-            ->assertDontSee('flyer='.AppSettings::flyerCode())->assertDontSee('durst')
-            ->assertSee('Zum Home-Bildschirm')->assertSee('data-print', false);
+            ->assertSee('class="flyer-image"', false)
+            ->assertSee('<img src="'.route('backend.registration.flyer-svg').'"', false)
+            ->assertSee('data-png-download="'.route('backend.registration.flyer-svg').'"', false)
+            ->assertSee(route('backend.registration.flyer-svg', ['download' => 1]), false)
+            ->assertSee('Als PNG herunterladen')->assertSee('Als SVG herunterladen')
+            ->assertSee('An Seite anpassen')->assertSee('data-print', false)
+            ->assertDontSee('class="flyer"', false)
+            ->assertDontSee('flyer='.AppSettings::flyerCode())->assertDontSee('durst');
         $this->get('/backend/registrierung-qr?view=flyer&code=0')->assertOk()
-            ->assertSee('class="flyer"', false)->assertDontSee($qrWithCode, false)
-            ->assertSee(Qr::dataUri(route('register'), 480), false)
-            ->assertSee('Registrierungspasswort gibt');
-        $this->get('/backend/registrierung-qr')->assertOk()->assertDontSee('class="flyer"', false);
+            ->assertSee('<img src="'.route('backend.registration.flyer-svg', ['code' => 0]).'"', false);
+        $this->get('/backend/registrierung-qr')->assertOk()->assertDontSee('class="flyer-image"', false);
     }
 
     public function test_admin_sees_registration_qr_without_password(): void

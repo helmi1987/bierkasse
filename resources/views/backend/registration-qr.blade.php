@@ -6,6 +6,7 @@
 @section('content')
 @php
     $codeParam = $withCode ? [] : ['code' => 0];
+    $flyerSvg = route('backend.registration.flyer-svg', $codeParam);
 @endphp
 <div class="no-print">
     @include('partials.backend-nav')
@@ -19,7 +20,15 @@
             <a href="{{ route('backend.registration.qr', ['code' => 0] + ($view === 'flyer' ? ['view' => 'flyer'] : [])) }}" @class(['btn', 'primary' => ! $withCode])>{{ __('settings.qr_without_flyer_code') }}</a>
         @endif
         <button type="button" class="btn" data-print>{{ $view === 'flyer' ? __('settings.flyer_print') : __('settings.qr_print') }}</button>
+        @if ($view === 'flyer')
+            <button type="button" class="btn" data-png-download="{{ $flyerSvg }}" data-png-filename="bierkasse-flyer.png" data-png-error="#flyer-png-error">{{ __('settings.flyer_download_png') }}</button>
+            <a href="{{ route('backend.registration.flyer-svg', $codeParam + ['download' => 1]) }}" class="btn" download="bierkasse-flyer.svg">{{ __('settings.flyer_download_svg') }}</a>
+        @endif
     </div>
+    @if ($view === 'flyer')
+        <p class="hint">{{ __('settings.flyer_hint') }}</p>
+        <p class="alert bad" id="flyer-png-error" role="alert" hidden>{{ __('settings.flyer_png_error') }}</p>
+    @endif
     @if ($withCode)
         <div class="alert warn">{{ __('settings.qr_warning') }}</div>
         <form method="post" action="{{ route('backend.registration.flyer-code', $view === 'flyer' ? ['view' => 'flyer'] : []) }}" class="inline" data-confirm="{{ __('settings.flyer_code_regenerate_confirm') }}">
@@ -33,54 +42,11 @@
     @elseif (! $open)
         <div class="alert bad">{{ __('settings.qr_closed') }}</div>
     @endif
-    @if ($view === 'flyer')
-        <p class="muted">{{ __('settings.flyer_hint') }}</p>
-    @endif
 </div>
 
 @if ($view === 'flyer')
-    <div class="flyer-frame">
-        <article class="flyer" aria-label="{{ __('settings.qr_tab_flyer') }}">
-            <header class="flyer-band">
-                <img src="{{ asset('logo.svg') }}" alt="" width="64" height="64">
-                <span>{{ $appName }}</span>
-            </header>
-            <div class="flyer-body">
-                <h1 class="flyer-headline">{{ __('settings.flyer_headline') }}</h1>
-                <p class="flyer-subline">{{ __('settings.flyer_subline') }}</p>
-
-                <ol class="flyer-steps" aria-label="{{ __('settings.flyer_steps_title') }}">
-                    <li>
-                        <strong>{{ __('settings.flyer_step1_title') }}</strong>
-                        <span>{{ __('settings.flyer_step1_text') }}</span>
-                    </li>
-                    <li>
-                        <strong>{{ __('settings.flyer_step2_title') }}</strong>
-                        <span>{{ $withCode ? __('settings.flyer_step2_text') : ($mode === \App\Support\AppSettings::MODE_INVITE ? __('settings.flyer_step2_text_invite') : __('settings.flyer_step2_text_no_code')) }}</span>
-                    </li>
-                    <li>
-                        <strong>{{ __('settings.flyer_step3_title') }}</strong>
-                        <span>{{ __('settings.flyer_step3_text') }}</span>
-                    </li>
-                </ol>
-
-                <div class="flyer-qr">
-                    <p class="flyer-scan">{{ __('settings.flyer_scan') }}</p>
-                    <img src="{{ $qr }}" alt="QR" width="480" height="480">
-                    <p class="flyer-or">{{ __('settings.flyer_or_open') }}</p>
-                    <p class="flyer-url">{{ $url }}</p>
-                    @if ($open)
-                        <p class="flyer-or">{{ __('settings.flyer_url_password_note') }}</p>
-                    @endif
-                </div>
-
-                <p class="flyer-joke">{{ __('settings.flyer_joke') }}</p>
-            </div>
-            <footer class="flyer-footer">
-                <span>{{ __('settings.flyer_install') }}</span>
-                <span>{{ __('settings.flyer_questions') }}</span>
-            </footer>
-        </article>
+    <div class="flyer-image">
+        <img src="{{ $flyerSvg }}" alt="{{ __('settings.qr_tab_flyer') }}" width="794" height="1123">
     </div>
 @else
     <section class="print-sheet">

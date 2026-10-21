@@ -49,7 +49,7 @@ class GuestTest extends TestCase
         $this->followRedirects($this->get('/gast/danke'))->assertOk()->assertSee('CHF 4.50 bar in die Kasse');
 
         $this->post('/gast', $this->sale(['quantity' => 2, 'method' => 'twint']))->assertRedirect(route('guest.thanks'));
-        $this->get('/gast/danke')->assertOk()->assertSee('CHF 3.00 per TWINT an 079 123 45 67');
+        $this->get('/gast/danke')->assertOk()->assertSee('CHF 3.00 per TWINT an <strong>079 123 45 67</strong>', false);
 
         $this->assertDatabaseHas('guest_sales', ['name' => 'Fritz', 'beers' => 3, 'unit_price' => 150, 'amount' => 450, 'method' => 'cash']);
         $cash = CashBook::balance();

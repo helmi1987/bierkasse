@@ -10,7 +10,7 @@
     <p>{{ trans_choice('guest.thanks_beers', $sale['beers'], ['count' => $sale['beers']]) }}</p>
     @if ($sale['method'] === 'twint')
         @if ($twintEnabled)
-            <p class="lead">{{ __('guest.thanks_twint', ['amount' => chf($sale['amount']), 'phone' => $twintText]) }}</p>
+            <p class="lead">{!! __('guest.thanks_twint', ['amount' => e(chf($sale['amount'])), 'phone' => $twintHtml]) !!}</p>
             @include('partials.twint-number', ['id' => 'twint-phone'])
         @else
             <p class="lead">{{ __('guest.thanks_twint_noname', ['amount' => chf($sale['amount'])]) }}</p>

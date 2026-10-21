@@ -90,12 +90,12 @@ class GuestBookingTest extends TestCase
         Setting::put(AppSettings::TWINT_NAME, 'Phlipp Arnold');
         Setting::put(AppSettings::TWINT_ENABLED, true);
         $this->actingAs($this->user())->get('/konto')->assertOk()
-            ->assertSee('name="guest_method" value="twint"', false)->assertSee('per TWINT an Phlipp Arnold senden.')->assertDontSee('guest-twint-phone', false);
+            ->assertSee('name="guest_method" value="twint"', false)->assertSee('per TWINT an <strong>Phlipp Arnold</strong> senden.', false)->assertDontSee('guest-twint-phone', false);
         $this->post('/konto/gast', $this->sale(['guest_method' => 'twint']))
             ->assertSessionHas('status', '1 Bier für Gast erfasst – bitte CHF 1.50 per TWINT an Phlipp Arnold senden.');
 
         Setting::put(AppSettings::TWINT_RECIPIENTS, [['name' => 'Phlipp Arnold', 'phone' => ''], ['name' => 'Eva', 'phone' => '']]);
-        $this->get('/konto')->assertOk()->assertSee('per TWINT an Phlipp Arnold oder Eva senden.');
+        $this->get('/konto')->assertOk()->assertSee('per TWINT an <strong>Phlipp Arnold</strong> oder <strong>Eva</strong> senden.', false);
         Setting::put(AppSettings::TWINT_RECIPIENTS, [['name' => 'Phlipp Arnold', 'phone' => '']]);
 
         Setting::put(AppSettings::TWINT_PHONE, '079 123 45 67');

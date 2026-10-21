@@ -54,6 +54,15 @@
             </button>
             <p class="muted center">{{ __('account.beer_price', ['price' => chf($price)]) }} · <span data-total>{{ chf($price) }}</span></p>
         </form>
+        @if ($stock !== null)
+            <p @class(['stock-line', 'low' => $stockLow || $stock <= 0])>
+                @if ($stock > 0)
+                    {{ trans_choice('account.stock_left', $stock, ['count' => $stock]) }}
+                @else
+                    {{ __('account.stock_empty') }}
+                @endif
+            </p>
+        @endif
 
         @if ($undoable->isNotEmpty())
             <ul class="undo-list">
@@ -137,7 +146,8 @@
 <div class="grid-2">
     @if ($twintPhone !== '')
         <section class="card twint">
-            <h2>{{ __('account.twint_heading') }}</h2>
+            <details>
+            <summary><h2>{{ __('account.twint_heading') }}</h2></summary>
             <p class="muted">{{ __('account.twint_intro') }}</p>
             <div class="twint-number">
                 <span id="twint-phone">{{ $twintPhone }}</span>
@@ -150,11 +160,13 @@
                 <p class="muted">{{ __('account.twint_suggested') }}</p>
                 @include('partials.beer-amount', ['s' => $suggested])
             @endif
+            </details>
         </section>
     @endif
 
     <section class="card">
-        <h2>{{ __('account.deposit_heading') }}</h2>
+        <details @if ($errors->hasAny(['amount', 'method', 'note']) || old('amount')) open @endif>
+        <summary><h2>{{ __('account.deposit_heading') }}</h2></summary>
         <p class="muted">{{ __('account.deposit_intro') }}</p>
         <form method="post" action="{{ route('account.deposit') }}" class="stack">
             @csrf
@@ -190,6 +202,7 @@
             </div>
             <button type="submit" class="btn">{{ __('account.deposit_submit') }}</button>
         </form>
+        </details>
         @if ($pending->isNotEmpty())
             <h3>{{ __('account.pending_heading') }}</h3>
             @if ($pending->where('type', \App\Models\Transaction::TYPE_DEPOSIT)->isNotEmpty())
@@ -252,13 +265,15 @@
 </div>
 
 <section class="card">
-    <h2>{{ __('account.my_stats') }}</h2>
+    <details>
+    <summary><h2>{{ __('account.my_stats') }}</h2></summary>
     <div class="kpis">
         <div class="kpi"><span>{{ __('account.total_beers') }}</span><strong>{{ $stats['total_beers'] }}</strong></div>
         <div class="kpi"><span>{{ __('account.total_amount') }}</span><strong>{{ chf($stats['total_amount']) }}</strong></div>
         <div class="kpi"><span>{{ __('account.per_week') }}</span><strong>{{ number_format($stats['per_week'], 1, '.', "'") }}</strong></div>
     </div>
     {!! $chart !!}
+    </details>
 </section>
 
 <section class="card">

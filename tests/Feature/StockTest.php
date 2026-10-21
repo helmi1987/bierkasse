@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Mail\KassierNotice;
 use App\Models\CashEntry;
 use App\Models\Setting;
+use App\Models\StockCorrection;
 use App\Services\BeerStock;
 use App\Services\Ledger;
 use App\Support\AppSettings;
@@ -131,6 +132,18 @@ class StockTest extends TestCase
         $this->put('/backend/lager/mindestbestand', ['minimum' => '-1'])->assertSessionHasErrors('minimum');
         $this->actingAs($this->admin())->put('/backend/lager/mindestbestand', ['minimum' => '0'])->assertSessionHas('status');
         $this->assertSame(0, AppSettings::stockMinimum());
+    }
+
+    public function test_dashboard_shows_stock_once_tracked(): void
+    {
+        $user = $this->user();
+        $this->actingAs($user)->get('/konto')->assertOk()->assertDontSee('Im Lager')->assertDontSee('Lager leer');
+
+        $this->purchase(24);
+        $this->actingAs($user)->get('/konto')->assertSee('Im Lager: noch 24 Biere');
+
+        StockCorrection::query()->create(['delta' => -24, 'counted' => 0, 'created_by' => $this->kassier()->id]);
+        $this->actingAs($user)->get('/konto')->assertSee('Lager leer');
     }
 
     private function purchase(int $beers): void

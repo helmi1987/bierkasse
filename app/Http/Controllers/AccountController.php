@@ -14,6 +14,8 @@ use App\Support\BarChart;
 use App\Support\DepositSuggestions;
 use App\Support\FormToken;
 use App\Support\Money;
+use App\Support\Qr;
+use App\Support\RegistrationLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -69,11 +71,29 @@ class AccountController extends Controller
             'suggested' => $suggested,
             'recent' => Transaction::query()->where('user_id', $user->id)->latest('id')->limit(5)->get(),
             'stats' => $stats,
+            'canInvite' => AppSettings::registrationOpen(),
             'chart' => BarChart::render(
                 array_column($stats['months'], 'label'),
                 array_column($stats['months'], 'beers'),
                 __('stats.chart_my_months'),
             ),
+        ]);
+    }
+
+    /**
+     * "Invite someone new": registration QR with the embedded registration password, shown on the
+     * phone of any active user (by design, user decision 2026-10-21). 404 while registration is closed.
+     */
+    public function invite(): View
+    {
+        abort_unless(AppSettings::registrationOpen(), 404);
+
+        $url = RegistrationLink::url(true);
+
+        return view('account.invite', [
+            'url' => $url,
+            'qr' => Qr::dataUri($url, 480),
+            'appName' => AppSettings::appName(),
         ]);
     }
 

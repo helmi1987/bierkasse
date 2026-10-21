@@ -63,6 +63,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
         Route::put('/konto/einzahlung/{transaction}', [AccountController::class, 'updateDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.update');
         Route::delete('/konto/einzahlung/{transaction}', [AccountController::class, 'cancelDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.cancel');
+        Route::get('/konto/einladen', [AccountController::class, 'invite'])->name('account.invite');
         Route::get('/konto/verlauf', [AccountController::class, 'history'])->name('account.history');
         Route::get('/konto/verlassen', [AccountController::class, 'leaveForm'])->name('account.leave');
         Route::post('/konto/verlassen', [AccountController::class, 'leave'])->name('account.leave.store');

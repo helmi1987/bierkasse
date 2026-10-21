@@ -261,4 +261,8 @@
     @include('account.tx-list', ['transactions' => $recent])
     <p><a href="{{ route('account.history') }}">{{ __('account.history') }} →</a></p>
 </section>
+
+@if ($canInvite)
+    <p class="center small-link"><a href="{{ route('account.invite') }}">{{ __('account.invite_link') }}</a></p>
+@endif
 @endsection

@@ -65,7 +65,11 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      (Discovery-URL). Redirect-URI beim Anbieter: `https://<domain>/login/sso/{kuerzel}/callback`.
      Anmelden per SSO kann nur, wer den Anbieter vorher unter Konto > Einstellungen verknüpft hat.
      Einrichtung pro Anbieter: siehe "SSO-Anbieter einrichten".
-   - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
+   - Einladen: Jeder angemeldete aktive Benutzer sieht unter `/konto/einladen` ("Jemand Neues einladen", kleiner Link
+    unten im Dashboard) den Registrierungs-QR-Code mit eingebettetem Registrierungspasswort, Link mit Kopier- und
+    Teilen-Knopf. Damit kann jeder Benutzer das Registrierungspasswort sehen (bewusst so, Entscheid 2026-10-21).
+    Nur solange die Registrierung offen ist (eingeschaltet und Passwort gesetzt), sonst 404 und Link ausgeblendet.
+  - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
 8. Steht ein Reverse-Proxy vor PHP, dessen IP in `.env` als `TRUSTED_PROXIES` (kommagetrennt, Standard: keine)
    eintragen, sonst werden `X-Forwarded-*`-Header ignoriert. Wichtig: Die Rate-Limits (Login, TOTP, Gäste,
    eigener Anbieter) zählen pro Client-IP; ohne korrekt gesetzte Proxy-IP teilen sich alle Benutzer die IP des

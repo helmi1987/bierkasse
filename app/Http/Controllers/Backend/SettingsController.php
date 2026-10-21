@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Support\AppSettings;
 use App\Support\Money;
 use App\Support\Qr;
+use App\Support\RegistrationLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -100,10 +101,7 @@ class SettingsController extends Controller
     public function registrationQr(Request $request): View
     {
         $withCode = $request->boolean('code', true) && AppSettings::registrationPassword() !== '';
-        $url = route('register');
-        if ($withCode) {
-            $url .= '?'.http_build_query(['code' => AppSettings::registrationPassword()]);
-        }
+        $url = RegistrationLink::url($withCode);
 
         return view('backend.registration-qr', [
             'view' => $request->query('view') === 'flyer' ? 'flyer' : 'qr',

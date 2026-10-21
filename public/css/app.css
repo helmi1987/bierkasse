@@ -312,6 +312,15 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
     .print-sheet { border: 0; }
 }
 
+/* Invite someone new (registration QR on the phone). */
+.invite { text-align: center; }
+.invite-qr { display: block; width: 100%; max-width: 420px; height: auto; margin: .5rem auto 1rem; }
+.invite-url { word-break: break-all; font-weight: 600; background: var(--surface-2); border-radius: var(--radius-sm); padding: .6rem .75rem; margin: .25rem 0 .75rem; }
+.invite .row-buttons { justify-content: center; }
+.invite .row-buttons .btn { flex: 1 1 8rem; }
+.small-link { font-size: .875rem; }
+.small-link a { color: var(--muted); }
+
 /* Printable A4 flyer (registration). Sized in container units so the screen preview and the
    printed page (210 mm wide) look the same. Always light, independent of the dark mode. */
 .flyer-frame { container-type: inline-size; max-width: 210mm; margin: 0 auto; }

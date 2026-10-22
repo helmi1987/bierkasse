@@ -18,7 +18,13 @@ return [
     'meta' => 'erstellt :date von :user',
     'meta_deactivated' => 'deaktiviert :date',
     'title' => 'QR-Codes',
-    'intro_admin' => 'Alle QR-Codes im Überblick. Verwalten (neuer Code, Name, deaktivieren, reaktivieren) auf der jeweiligen Seite.',
+    'manage_title' => 'QR-Codes verwalten',
+    'manage_intro' => 'Neue Codes erstellen, benennen, deaktivieren und reaktivieren. Mehrere Codes pro Art können aktiv sein; nichts wird gelöscht. Kassiers sehen nur die aktiven Codes.',
+    'manage_link' => 'QR-Codes verwalten',
+    'settings' => 'Schalter',
+    'view' => 'Ansehen / Drucken',
+    'on' => 'eingeschaltet',
+    'flyer_closed' => 'Flyer-Codes gelten nur im Registrierungsmodus «Offen mit Registrierungspasswort».',
     'intro_kassier' => 'Alle aktiven QR-Codes zum Anzeigen und Drucken.',
     'kind' => [
         'cashbox_cash' => 'Kassen-QR Bar («Kein Konto? Bar bezahlt»)',
@@ -28,8 +34,6 @@ return [
         'flyer' => 'Flyer-Codes (Registrierung)',
     ],
     'count_active' => ':count aktiv',
-    'count_inactive' => ':count deaktiviert',
     'open' => 'Öffnen',
     'off' => 'ausgeschaltet',
-    'admin_only' => 'Nur der Admin kann Codes erstellen, deaktivieren und Einstellungen ändern.',
 ];

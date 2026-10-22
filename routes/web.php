@@ -168,7 +168,12 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 Route::delete('/navigation', [Backend\NavController::class, 'reset'])->name('nav.reset');
                 Route::post('/registrierung-qr/codes', [Backend\RegistrationCodeController::class, 'store'])->name('registration.codes.store');
                 Route::put('/registrierung-qr/codes/{registrationCode}/sperre', [Backend\RegistrationCodeController::class, 'lock'])->whereNumber('registrationCode')->name('registration.codes.lock');
-                // QR codes with history (cashbox, flyer, guest page).
+                // QR codes with history (cashbox, flyer, guest page): management view.
+                Route::get('/verwaltung/qr-codes', [Backend\QrCodeController::class, 'manage'])->name('qr-admin');
+                Route::put('/verwaltung/qr-codes/einstellungen', [Backend\QrCodeController::class, 'settings'])->name('qr-admin.settings');
+                // Audit log in the admin bar (same page as for kassiers).
+                Route::get('/verwaltung/protokoll', [Backend\AuditController::class, 'index'])->name('audit-admin');
+                Route::get('/verwaltung/protokoll/{entry}', [Backend\AuditController::class, 'show'])->whereNumber('entry')->name('audit-admin.show');
                 Route::post('/qr-codes', [Backend\QrCodeController::class, 'store'])->name('qr-codes.store');
                 Route::put('/qr-codes/{qrCode}/aktiv', [Backend\QrCodeController::class, 'active'])->whereNumber('qrCode')->name('qr-codes.active');
                 Route::put('/qr-codes/{qrCode}/name', [Backend\QrCodeController::class, 'label'])->whereNumber('qrCode')->name('qr-codes.label');

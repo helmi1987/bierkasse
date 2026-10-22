@@ -3,12 +3,14 @@
 @section('title', __('audit.title'))
 
 @section('content')
+{{-- Kassier bar or admin bar (same page). --}}
+@php($auditBase = request()->routeIs('backend.audit-admin*') ? 'backend.audit-admin' : 'backend.audit')
 @include('partials.backend-nav')
 <h1>{{ __('audit.title') }}</h1>
 <p class="muted">{{ __('audit.intro') }}</p>
 
 <section class="card">
-    <form method="get" action="{{ route('backend.audit') }}" class="inline-form">
+    <form method="get" action="{{ route($auditBase) }}" class="inline-form">
         <label for="f-actor">{{ __('audit.filter_actor') }}</label>
         <select id="f-actor" name="actor">
             <option value="">{{ __('audit.filter_actor_all') }}</option>
@@ -30,7 +32,7 @@
         <label for="f-q">{{ __('audit.filter_q') }}</label>
         <input type="search" id="f-q" name="q" value="{{ $filters['q'] }}" maxlength="100">
         <button type="submit" class="btn small">{{ __('audit.filter_submit') }}</button>
-        <a class="btn small ghost" href="{{ route('backend.audit') }}">{{ __('audit.filter_reset') }}</a>
+        <a class="btn small ghost" href="{{ route($auditBase) }}">{{ __('audit.filter_reset') }}</a>
     </form>
     <div class="row-buttons">
         <form method="post" action="{{ route('backend.audit.verify') }}" class="inline">
@@ -58,7 +60,7 @@
                 <tbody>
                     @foreach ($entries as $entry)
                         <tr>
-                            <td><a href="{{ route('backend.audit.show', $entry) }}">{{ local_time($entry->at(), 'd.m.Y H:i:s') }}</a></td>
+                            <td><a href="{{ route($auditBase.'.show', $entry) }}">{{ local_time($entry->at(), 'd.m.Y H:i:s') }}</a></td>
                             <td>{{ $entry->actor_name ?? __('audit.system') }}</td>
                             <td><code>{{ $entry->action }}</code></td>
                             <td>@if ($entry->subject_type){{ $entry->subject_type }} #{{ $entry->subject_id }}@else – @endif</td>

@@ -29,7 +29,7 @@ class RegistrationCodeController extends Controller
             return $code;
         });
 
-        return redirect()->route('backend.registration.qr', ['qr' => $code->id])->with('status', __('settings.codes_created'));
+        return back()->with('status', __('settings.codes_created'));
     }
 
     public function lock(Request $request, RegistrationCode $registrationCode): RedirectResponse

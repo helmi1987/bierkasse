@@ -12,25 +12,12 @@
     @method('PUT')
     <label class="switch"><input type="checkbox" name="guest_user_booking" value="1" @checked(old('guest_user_booking', $userBooking))> <span>{{ __('guest.user_booking') }}</span></label>
     <div class="hint">{{ __('guest.user_booking_hint') }}</div>
-    {{-- QR related settings: admins only (kassiers see the state). --}}
-    <label class="switch"><input type="checkbox" name="cashbox_qr_enabled" value="1" @checked(old('cashbox_qr_enabled', $cashboxEnabled)) @disabled(! $admin)> <span>{{ __('guest.cashbox_enabled') }}</span></label>
-    <label class="switch"><input type="checkbox" name="guest_enabled" value="1" @checked(old('guest_enabled', $enabled)) @disabled(! $admin)> <span>{{ __('guest.enabled') }}</span></label>
-    @if ($admin)
-        <div class="field">
-            <label for="guest_password">{{ __('guest.password') }}</label>
-            <input type="text" id="guest_password" name="guest_password" value="{{ old('guest_password', $password) }}" maxlength="100" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
-            <div class="hint">{{ __('guest.password_hint') }}</div>
-        </div>
-    @else
-        <p class="hint">{{ __('qr.admin_only') }}</p>
-    @endif
+    {{-- QR switches and guest password: QR management page (admins); here only the state. --}}
+    <p class="hint">{{ __('guest.cashbox_enabled') }}: <strong>{{ $cashboxEnabled ? __('qr.on') : __('qr.off') }}</strong> · {{ __('guest.enabled') }}: <strong>{{ $open ? __('qr.on') : __('qr.off') }}</strong></p>
     <div class="row-buttons">
         <button type="submit" class="btn primary">{{ __('guest.save') }}</button>
         <a class="btn" href="{{ route('backend.guests.qr') }}">{{ __('guest.qr') }} →</a>
     </div>
-    @unless ($open)
-        <p class="hint">{{ __('guest.qr_closed') }}</p>
-    @endunless
 </form>
 
 <section class="card stack" id="kassen-qr">
@@ -43,10 +30,7 @@
         <p class="hint">{{ __('guest.cashbox_twint_off') }}</p>
     @endunless
     @if ($admin)
-        <div class="row-buttons">
-            @include('partials.qr.new', ['kind' => \App\Models\QrCode::KIND_CASH, 'button' => __('guest.cashbox_new_cash')])
-            @include('partials.qr.new', ['kind' => \App\Models\QrCode::KIND_TWINT, 'button' => __('guest.cashbox_new_twint')])
-        </div>
+        <p><a class="btn small" href="{{ route('backend.qr-admin') }}">{{ __('qr.manage_link') }} →</a></p>
     @endif
     @if ($cashboxActive->isEmpty())
         <p class="muted">{{ __('qr.none_active') }}</p>
@@ -67,9 +51,6 @@
                     <button type="button" class="btn small" data-png-download="{{ route('backend.guests.cashbox.sheet', $code) }}" data-png-filename="{{ $file }}-a4.png" data-png-error="#cashbox-png-error">{{ __('guest.cashbox_sheet_png') }}</button>
                     <a class="btn small" href="{{ route('backend.guests.cashbox.sheet', ['qrCode' => $code, 'download' => 1]) }}">{{ __('guest.cashbox_sheet_svg') }}</a>
                 </div>
-                @if ($admin)
-                    @include('partials.qr.manage', ['code' => $code])
-                @endif
             </div>
         @endforeach
     </div>
@@ -83,9 +64,6 @@
         </div>
     @endif
     <p class="alert bad" id="cashbox-png-error" role="alert" hidden>{{ __('settings.flyer_png_error') }}</p>
-    @if ($admin)
-        @include('partials.qr.history', ['history' => $cashboxHistory, 'kindLabel' => fn ($c) => __('guest.cashbox_title_'.$c->method())])
-    @endif
 </section>
 
 <section class="card">

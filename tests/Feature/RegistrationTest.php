@@ -175,7 +175,7 @@ class RegistrationTest extends TestCase
 
         $this->get('/backend/registrierung-qr')->assertOk()
             ->assertSee(Qr::dataUri(RegistrationLink::url(true), 480), false)
-            ->assertSee('enthält den Flyer-Code')->assertSee('Neuer Code')
+            ->assertSee('enthält den Flyer-Code')->assertDontSee('Neuer Code')
             ->assertDontSee('durst')->assertDontSee('flyer='.$this->flyerCode());
         $this->assertStringNotContainsString('durst', RegistrationLink::url(true));
         $this->assertStringStartsWith(route('register').'?flyer=', RegistrationLink::url(true));
@@ -204,7 +204,8 @@ class RegistrationTest extends TestCase
         $first = QrCode::findActive(QrCode::KIND_FLYER, $code);
         $this->put(route('backend.qr-codes.active', $first), ['active' => 0])->assertSessionHas('status');
         $this->assertFalse(AppSettings::flyerCodeValid($code));
-        $this->get('/backend/registrierung-qr')->assertOk()->assertSee('Deaktivierte Codes (Historie) (1)');
+        $this->get('/backend/registrierung-qr')->assertOk()->assertDontSee('Deaktivierte Codes');
+        $this->get('/backend/verwaltung/qr-codes')->assertOk()->assertSee('Deaktivierte Codes (Historie) (1)');
         $this->actingAs($this->kassier())->get('/backend/registrierung-qr')->assertOk()->assertDontSee('Deaktivierte Codes')->assertSee('Lift');
         $this->actingAs($this->kassier())->put(route('backend.qr-codes.active', $first), ['active' => 1])->assertForbidden();
         $this->actingAs($this->admin())->put(route('backend.qr-codes.active', $first), ['active' => 1]);

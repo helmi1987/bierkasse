@@ -60,7 +60,8 @@ class RegistrationCodeTest extends TestCase
 
         $this->put("/backend/registrierung-qr/codes/{$code->id}/sperre", ['locked' => 1]);
         $this->assertTrue($code->fresh()->isLocked());
-        $this->get('/backend/registrierung-qr')->assertOk()->assertSee('deaktiviert')->assertSee('Kein aktiver Registrierungscode');
+        $this->get('/backend/registrierung-qr')->assertOk()->assertSee('Kein aktiver Registrierungscode');
+        $this->get('/backend/verwaltung/qr-codes')->assertOk()->assertSee('Flyer Küche')->assertSee('deaktiviert')->assertSee('Reaktivieren');
         // Kassiers only see active codes and cannot manage them.
         $this->actingAs($this->kassier())->get('/backend/registrierung-qr')->assertOk()->assertDontSee('Flyer Küche')->assertDontSee('Code erstellen');
         $this->actingAs(User::query()->where('role', 'admin')->first());

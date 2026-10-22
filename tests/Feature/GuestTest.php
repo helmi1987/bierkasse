@@ -127,9 +127,9 @@ class GuestTest extends TestCase
         $this->assertFalse(AppSettings::guestUserBooking());
         $this->assertFalse((bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED, false));
         $this->get('/backend/gaeste')->assertOk()->assertSee('Gast')->assertSee('CHF 3.00')->assertSee('öffentlich')
-            ->assertDontSee('gast-1234')->assertSee('Nur der Admin');
+            ->assertDontSee('gast-1234')->assertDontSee(route('backend.qr-admin'));
 
-        $this->actingAs($this->admin())->put('/backend/gaeste', ['guest_enabled' => '1', 'guest_password' => 'neues-pw', 'guest_user_booking' => '1'])->assertSessionHas('status');
+        $this->actingAs($this->admin())->put('/backend/verwaltung/qr-codes/einstellungen', ['guest_enabled' => '1', 'guest_password' => 'neues-pw'])->assertSessionHas('status');
         $this->assertSame('neues-pw', AppSettings::guestPassword());
         $this->assertStringNotContainsString('neues-pw', (string) Setting::query()->find(AppSettings::GUEST_PASSWORD)->getRawOriginal('value'));
         $this->assertNotSame(AppSettings::registrationPassword(), AppSettings::guestPassword());
@@ -158,19 +158,20 @@ class GuestTest extends TestCase
         $this->post('/abmelden');
         $this->post('/gast', $this->sale(['code' => '', 'zugang' => $code->code]))->assertSessionHasErrors(['code' => __('guest.access_invalid')]);
         $this->get('/gast?zugang='.$code->code)->assertOk()->assertSee('name="code"', false);
-        $this->actingAs($admin)->get('/backend/gaeste/qr')->assertOk()->assertSee(__('qr.activate'));
+        $this->actingAs($admin)->get('/backend/gaeste/qr')->assertOk()->assertDontSee(__('qr.activate'));
+        $this->get('/backend/verwaltung/qr-codes')->assertOk()->assertSee(__('qr.activate'));
         $this->actingAs($kassier)->get('/backend/gaeste/qr')->assertOk()->assertDontSee(__('qr.activate'));
     }
 
     public function test_enabling_guests_requires_password(): void
     {
         Setting::putMany([AppSettings::GUEST_ENABLED => false, AppSettings::GUEST_PASSWORD => '']);
-        $this->actingAs($this->admin())->put('/backend/gaeste', ['guest_enabled' => '1', 'guest_password' => ''])
+        $this->actingAs($this->admin())->put('/backend/verwaltung/qr-codes/einstellungen', ['guest_enabled' => '1', 'guest_password' => ''])
             ->assertSessionHasErrors(['guest_password' => __('guest.password_required')]);
         $this->assertFalse(AppSettings::guestOpen());
 
         // Switching off without a password is fine.
-        $this->put('/backend/gaeste', ['guest_password' => ''])->assertSessionHas('status');
+        $this->put('/backend/verwaltung/qr-codes/einstellungen', ['guest_password' => ''])->assertSessionHas('status');
     }
 
     public function test_used_token_cannot_be_claimed_twice(): void

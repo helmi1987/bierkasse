@@ -115,7 +115,11 @@ class CashboxQrTest extends TestCase
         $this->put(route('backend.qr-codes.active', $cash), ['active' => 0])->assertSessionHas('status');
         $this->put(route('backend.qr-codes.label', $twint), ['label' => 'Tresen'])->assertSessionHas('status');
         $this->assertSame('Tresen', $twint->fresh()->label);
-        $this->get('/backend/gaeste')->assertOk()->assertSee('Kühlschrank')->assertSee(__('qr.activate'));
+        // Kassier view (also for admins): active codes only, no management; management page with history.
+        $this->get('/backend/gaeste')->assertOk()->assertSee('Kühlschrank')->assertDontSee(__('qr.deactivate'))->assertSee(route('backend.qr-admin'));
+        $this->get('/backend/verwaltung/qr-codes')->assertOk()->assertSee('Kühlschrank')->assertSee(__('qr.activate'))->assertSee(__('qr.deactivate'));
+        $this->actingAs($kassier)->get('/backend/verwaltung/qr-codes')->assertForbidden();
+        $this->actingAs($admin);
         // Deactivated: hidden from kassiers, the admin still sees it.
         $this->get(route('backend.guests.cashbox', $cash))->assertOk();
         $this->actingAs($kassier)->get(route('backend.guests.cashbox', $cash))->assertNotFound();
@@ -126,10 +130,11 @@ class CashboxQrTest extends TestCase
             $this->assertTrue(AuditLog::query()->where('action', $action)->exists(), $action);
         }
 
-        // The switch is admin only.
+        // The switch is on the management page (admins only).
         $this->actingAs($kassier)->put('/backend/gaeste', ['guest_user_booking' => '1', 'cashbox_qr_enabled' => '0'])->assertSessionHas('status');
         $this->assertTrue((bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED));
-        $this->actingAs($admin)->put('/backend/gaeste', ['guest_user_booking' => '1'])->assertSessionHas('status');
+        $this->put('/backend/verwaltung/qr-codes/einstellungen', [])->assertForbidden();
+        $this->actingAs($admin)->put('/backend/verwaltung/qr-codes/einstellungen', [])->assertSessionHas('status');
         $this->assertFalse((bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED));
     }
 
@@ -139,9 +144,11 @@ class CashboxQrTest extends TestCase
         QrCode::generate(QrCode::KIND_CASH)->update(['deactivated_at' => now()]);
         $this->actingAs($this->kassier())->get('/backend/qr-codes')->assertOk()
             ->assertSee('class="active">QR-Codes', false)->assertSee('1 aktiv')->assertDontSee('deaktiviert');
-        $this->actingAs($this->admin())->get('/backend/qr-codes')->assertOk()->assertSee('1 deaktiviert')
-            ->assertSee(route('backend.registration.qr'))->assertSee(route('backend.guests.qr'));
+        $this->actingAs($this->admin())->get('/backend/qr-codes')->assertOk()->assertDontSee('deaktiviert')
+            ->assertSee(route('backend.registration.qr'))->assertSee(route('backend.guests.qr'))->assertSee(route('backend.qr-admin'));
         $this->get('/backend/registrierung-qr')->assertOk()->assertSee('class="active">QR-Codes', false);
+        $this->get('/backend/verwaltung/qr-codes')->assertOk()->assertSee('Deaktivierte Codes (Historie) (1)')
+            ->assertSee('href="'.route('backend.qr-admin').'" class="active"', false);
         $this->actingAs($this->user())->get('/backend/qr-codes')->assertForbidden();
     }
 

@@ -121,24 +121,20 @@ class SettingsController extends Controller
     }
 
     /**
-     * Registration QR page (kassiers and admins): the multi-use registration codes (valid in every mode)
-     * and, in mode "password", the flyer codes. QR and flyer of the selected one (?qr=<id>|flyer-<id>);
-     * there is no QR without a code. Kassiers only see active codes; admins also manage them and see
-     * the deactivated ones. The registration password is never put into a QR code.
+     * Registration QR page (view, kassiers and admins): the active multi-use registration codes (valid in
+     * every mode) and, in mode "password", the active flyer codes. QR and flyer of the selected one
+     * (?qr=<id>|flyer-<id>); there is no QR without a code. Managed on the QR management page.
+     * The registration password is never put into a QR code.
      */
     public function registrationQr(Request $request): View
     {
-        $admin = $request->user()->isAdmin();
         $target = $this->qrTarget($request);
-        $flyerCodes = QrCode::query()->with('creator')->where('kind', QrCode::KIND_FLYER)->orderBy('id')->get();
 
         return view('backend.registration-qr', [
-            'admin' => $admin,
+            'admin' => $request->user()->isAdmin(),
             'view' => $request->query('view') === 'flyer' ? 'flyer' : 'qr',
-            'codes' => RegistrationCode::query()->with('creator')->withCount('users')
-                ->when(! $admin, fn ($q) => $q->whereNull('locked_at'))->orderBy('label')->get(),
-            'flyerCodes' => $flyerCodes->filter->isActive()->values(),
-            'flyerHistory' => $admin ? $flyerCodes->reject->isActive()->values() : collect(),
+            'codes' => RegistrationCode::query()->with('creator')->withCount('users')->whereNull('locked_at')->orderBy('label')->get(),
+            'flyerCodes' => QrCode::query()->with('creator')->active()->where('kind', QrCode::KIND_FLYER)->orderBy('id')->get(),
             'target' => $target,
             'qr' => $target ? Qr::dataUri($target['url'], 480) : null,
             'open' => AppSettings::registrationOpen(),

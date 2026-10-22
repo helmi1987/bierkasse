@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Backend;
+use App\Http\Controllers\CashboxQrController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GuestController;
 use App\Http\Controllers\InvitationController;
@@ -44,6 +45,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     Route::get('/gast', [GuestController::class, 'show'])->name('guest');
     Route::post('/gast', [GuestController::class, 'store'])->middleware('throttle:30,1')->name('guest.store');
     Route::get('/gast/danke', [GuestController::class, 'thanks'])->name('guest.thanks');
+    // Cashbox QR sticker (no login, secret code selects cash or TWINT).
+    Route::get('/kasse/{code}', [CashboxQrController::class, 'show'])->where('code', '[A-Za-z0-9_-]{1,64}')->middleware('throttle:60,1')->name('cashbox');
+    Route::post('/kasse/{code}', [CashboxQrController::class, 'store'])->where('code', '[A-Za-z0-9_-]{1,64}')->middleware('throttle:30,1')->name('cashbox.store');
 
     // Registration and password reset (guests only)
     Route::middleware('guest')->group(function () {
@@ -129,6 +133,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::get('/gaeste', [Backend\GuestController::class, 'index'])->name('guests');
             Route::put('/gaeste', [Backend\GuestController::class, 'update'])->name('guests.update');
             Route::get('/gaeste/qr', [Backend\GuestController::class, 'qr'])->name('guests.qr');
+            Route::get('/gaeste/kassen-qr/{method}', [Backend\GuestController::class, 'cashboxSvg'])->whereIn('method', ['cash', 'twint'])->name('guests.cashbox');
+            Route::post('/gaeste/kassen-qr/{method}/neuer-code', [Backend\GuestController::class, 'regenerateCashbox'])->whereIn('method', ['cash', 'twint'])->name('guests.cashbox.regenerate');
             Route::delete('/gaeste/{sale}', [Backend\GuestController::class, 'destroy'])->whereNumber('sale')->name('guests.destroy');
             Route::get('/runden', [Backend\RoundController::class, 'index'])->name('rounds');
             Route::put('/runden', [Backend\RoundController::class, 'update'])->name('rounds.update');

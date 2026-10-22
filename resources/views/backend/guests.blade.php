@@ -12,6 +12,7 @@
     @method('PUT')
     <label class="switch"><input type="checkbox" name="guest_user_booking" value="1" @checked(old('guest_user_booking', $userBooking))> <span>{{ __('guest.user_booking') }}</span></label>
     <div class="hint">{{ __('guest.user_booking_hint') }}</div>
+    <label class="switch"><input type="checkbox" name="cashbox_qr_enabled" value="1" @checked(old('cashbox_qr_enabled', $cashboxEnabled))> <span>{{ __('guest.cashbox_enabled') }}</span></label>
     <label class="switch"><input type="checkbox" name="guest_enabled" value="1" @checked(old('guest_enabled', $enabled))> <span>{{ __('guest.enabled') }}</span></label>
     <div class="field">
         <label for="guest_password">{{ __('guest.password') }}</label>
@@ -27,6 +28,26 @@
     @endunless
 </form>
 
+<section class="card stack">
+    <h2>{{ __('guest.cashbox_heading') }}</h2>
+    <p class="muted">{{ __('guest.cashbox_intro_backend') }}</p>
+    @unless ($twintEnabled)
+        <p class="hint">{{ __('guest.cashbox_twint_off') }}</p>
+    @endunless
+    <div class="row-buttons">
+        @foreach (['cash', 'twint'] as $method)
+            <div class="stack center">
+                <img src="{{ route('backend.guests.cashbox', $method) }}" alt="{{ __('guest.cashbox_title_'.$method) }}" width="200" height="275">
+                <a class="btn small" href="{{ route('backend.guests.cashbox', ['method' => $method, 'download' => 1]) }}">{{ __('guest.cashbox_download') }}</a>
+                <form method="post" action="{{ route('backend.guests.cashbox.regenerate', $method) }}" class="inline" data-confirm="{{ __('guest.cashbox_regenerate_confirm') }}">
+                    @csrf
+                    <button type="submit" class="btn small ghost">{{ __('guest.cashbox_regenerate') }}</button>
+                </form>
+            </div>
+        @endforeach
+    </div>
+</section>
+
 <section class="card">
     <h2>{{ __('guest.sales') }}</h2>
     <p class="muted">{{ __('guest.sales_total', ['beers' => $total['beers'], 'amount' => chf($total['amount'])]) }}</p>
@@ -39,7 +60,7 @@
                     <span>
                         <span class="tx-date">{{ local_time($sale->created_at) }} · {{ __('ledger.method.'.$sale->method) }}</span><br>
                         {{ $sale->name ?? __('guest.anonymous') }} · {{ trans_choice('stock.beers', $sale->beers, ['count' => $sale->beers]) }}<br>
-                        <small class="muted">{{ $sale->booked_by === null ? __('guest.public') : __('guest.booked_by', ['user' => $sale->bookedBy?->username ?? '?']) }}</small>
+                        <small class="muted">{{ $sale->source === \App\Models\GuestSale::SOURCE_CASHBOX ? __('guest.via_cashbox') : ($sale->booked_by === null ? __('guest.public') : __('guest.booked_by', ['user' => $sale->bookedBy?->username ?? '?'])) }}</small>
                     </span>
                     <strong class="amount pos">{{ chf($sale->amount) }}</strong>
                     <form method="post" action="{{ route('backend.guests.destroy', $sale) }}" class="inline" data-confirm="{{ __('guest.cancel_confirm') }}">

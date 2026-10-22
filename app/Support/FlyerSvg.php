@@ -15,21 +15,21 @@ class FlyerSvg
 
     private const H = 297;
 
-    private const ACCENT = '#d97706';
+    protected const ACCENT = '#d97706';
 
-    private const ACCENT_STRONG = '#b45309';
+    protected const ACCENT_STRONG = '#b45309';
 
-    private const ACCENT_SOFT = '#fef3c7';
+    protected const ACCENT_SOFT = '#fef3c7';
 
-    private const TEXT = '#1f1a14';
+    protected const TEXT = '#1f1a14';
 
-    private const MUTED = '#6b6152';
+    protected const MUTED = '#6b6152';
 
     private const BG = '#fdf8ef';
 
     private const BORDER = '#eadfcb';
 
-    private const FONT = 'system-ui, -apple-system, &quot;Segoe UI&quot;, Roboto, Arial, sans-serif';
+    protected const FONT = 'system-ui, -apple-system, &quot;Segoe UI&quot;, Roboto, Arial, sans-serif';
 
     /**
      * @param  string  $appName  shown in the orange band
@@ -176,7 +176,7 @@ class FlyerSvg
      *
      * @param  list<string>  $out
      */
-    private static function lines(array &$out, string $text, int $maxChars, float $x, float $y, float $size, float $lineHeight,
+    protected static function lines(array &$out, string $text, int $maxChars, float $x, float $y, float $size, float $lineHeight,
         string $attrs, bool $anywhere = false, string $anchor = 'middle'): float
     {
         $lines = self::wrap($text, $maxChars, $anywhere);
@@ -193,7 +193,7 @@ class FlyerSvg
     }
 
     /** QR code as nested <svg> (without the XML declaration of the generator). */
-    private static function qr(string $text, float $x, float $y, float $size): string
+    protected static function qr(string $text, float $x, float $y, float $size): string
     {
         $svg = preg_replace('/^\s*<\?xml[^>]*\?>\s*/', '', Qr::svg($text, 480)) ?? '';
 
@@ -206,7 +206,7 @@ class FlyerSvg
     }
 
     /** Paths of public/logo.svg (viewBox 0 0 64 64). */
-    private static function logo(): string
+    protected static function logo(): string
     {
         return '<path d="M44 24h5a8 8 0 0 1 8 8v6a8 8 0 0 1-8 8h-5v-6h5a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-5z" fill="#b45309"/>'
             .'<rect x="12" y="18" width="34" height="38" rx="6" fill="#f59e0b"/>'
@@ -219,7 +219,7 @@ class FlyerSvg
             .'<circle cx="26" cy="45" r="1.4" fill="#fef3c7"/>';
     }
 
-    private static function e(string $text): string
+    protected static function e(string $text): string
     {
         // Drop characters that are not allowed in XML 1.0 (would break the document).
         $text = preg_replace('/[^\x{9}\x{A}\x{D}\x{20}-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]/u', '', $text) ?? '';
@@ -227,7 +227,7 @@ class FlyerSvg
         return htmlspecialchars($text, ENT_XML1 | ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
-    private static function n(float $value): string
+    protected static function n(float $value): string
     {
         return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
     }

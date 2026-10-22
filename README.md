@@ -255,6 +255,15 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     Öffentliche Seite `/gast` (Passwort per `?code=` vorausgefüllt oder eingeben): Name freiwillig, 1–10 Biere,
     Bar oder TWINT (TWINT-Nummer mit Kopier-Knopf). Passwort wird zuerst geprüft; 10 Versuche/Minute pro IP (auch
     falsche Passwörter), Einmal-Token gegen Doppelbuchung.
+  - "Kassen-QR aktiv" (Entscheid 2026-10-22, Standard aus): zwei feste Aufkleber für die Kasse, für Gäste ohne Konto
+    (Vertrauensbasis, keine Ortsprüfung): "Kein Konto? Bar bezahlt" und "Kein Konto? Ich habe getwintet". Jeder hat
+    einen eigenen geheimen Code (32 Zeichen URL-sicher, verschlüsselt, Settings `cashbox_qr_cash_token` /
+    `cashbox_qr_twint_token`, beim ersten Aufruf erzeugt), unabhängig vom Gäste-Passwort; der Code bestimmt die Zahlart
+    und öffnet nur `/kasse/<code>`. Seite: Anzahl 1–10 wählen und bestätigen, sofort als Gäste-Verkauf gebucht
+    (`guest_sales.source = cashbox`, Liste "Kassen-QR"). Die Bar-Seite zeigt nie TWINT-Daten; die TWINT-Seite zeigt die
+    Empfänger wie hinterlegt (Kopier-Knopf nur mit Nummer) und funktioniert nur, solange TWINT aktiv ist. Ungültiger
+    Code = 404 (10 Fehlversuche/Minute pro IP). Im Backend Vorschau, "SVG herunterladen" (80 x 110 mm,
+    `app/Support/CashboxQrSvg.php`) und "Neuer Code" pro Aufkleber (alte Aufkleber werden ungültig).
 - Runde spendieren (Entscheid 2026-10-21): Dashboard-Karte "Runde spendieren" (nach "Bier für Gast"). Angehakte
   aktive Kollegen (alle aktiven Benutzer ausser einem selbst, nach Name sortiert, mit Suchfeld) bekommen je 1 Bier,
   dazu 0–20 "weitere Biere" ohne Namen (z. B. Gäste) und eine freiwillige Nachricht (max. 140 Zeichen). Pro Runde

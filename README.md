@@ -57,6 +57,9 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Migrationen).
 7. Nach dem Setup im Backend (`/backend/einstellungen`):
    - Bierpreis (Standard CHF 1.50), Standard-Limit (Standard 0 = kein Minus), TWINT (Schalter, Empfänger: Name aus Kassier/Admin oder frei, Nummer optional).
+   - Rückgängig (Entscheid 2026-10-22): Minuten pro Buchungsart, 0–60 (0 = nie): Bier abstreichen 10, Runde spendieren 10,
+     Bier für Gast 10, Bier verschenken 5 (Setting `undo_minutes`; der Wert `gift_undo_minutes` aus 1.7.0 gilt weiter,
+     bis gespeichert wird).
    - Registrierung (Entscheid 2026-10-21): Registrierungsmodus wählen:
      - "Geschlossen": keine Registrierung, auch Einladungslinks sind ungültig.
      - "Nur per Einladung" (Standard bei Neuinstallation): nur mit gültigem Einladungslink, das
@@ -216,8 +219,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   - Doppeltes Abschicken (Doppeltipp) wird verhindert: Einmal-Token pro Formular (Bier, Bier für Gast, Einzahlung melden)
     und Sperre des Knopfs nach dem Absenden.
   - Bier: Preis im Moment des Abstreichens wird pro Buchung gespeichert; Preisänderungen ändern alte Buchungen nie.
-    Limit: neuer Saldo darf nicht unter `-Limit` fallen (individuell oder Standard). Eigene Striche 10 Minuten
-    rückgängig machbar.
+    Limit: neuer Saldo darf nicht unter `-Limit` fallen (individuell oder Standard). Eigene Striche rückgängig machbar
+    (Zeit siehe Einstellungen "Rückgängig").
   - "Offen": bei negativem Saldo der offene Betrag; die offenen Biere werden mit ihrem ursprünglichen Preis
     angezeigt (Einzahlungen decken die ältesten Biere zuerst). Die Positionen ergeben immer das Total:
     volle offene Biere, Rest eines teilweise bezahlten Biers, übrige Beträge (negative Korrekturen).
@@ -248,7 +251,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     können): angemeldete Benutzer erfassen im Konto unter "Bier für Gast" 1–10 Biere, Bar oder TWINT (TWINT nur mit
     hinterlegter Nummer, Nummer mit Kopier-Knopf), Name freiwillig. Guthaben und Limit des Benutzers bleiben
     unverändert; gespeichert wird, wer gebucht hat (`guest_sales.booked_by`). Meldung z. B. "3 Biere für Gast
-    erfasst – bitte CHF 4.50 bar in die Kasse legen". Eigene Gäste-Buchungen 10 Minuten rückgängig machbar,
+    erfasst – bitte CHF 4.50 bar in die Kasse legen". Eigene Gäste-Buchungen rückgängig machbar (Zeit siehe Einstellungen),
     Einmal-Token gegen Doppelbuchung.
   - "Öffentliche Gäste-Seite (QR + Gäste-Passwort)" (Standard aus): eigenes Gäste-Passwort (verschlüsselt, nicht das
     Registrierungspasswort; zum Einschalten Pflicht), druckbarer Gäste-QR-Code (mit/ohne Passwort).
@@ -276,7 +279,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     einzahlen", gesperrt bei beantragter Auszahlung, Einmal-Token): Spender zahlt Anzahl × aktueller Preis als
     Buchung Typ `round` (Betrag negativ, Anzahl, Preis gespeichert, Nachricht als Bemerkung). Die Biere stehen in
     `round_items` (pro Kollege 1 Zeile mit Anzahl 1, Biere ohne Namen als 1 Zeile ohne Benutzer). Der Spender kann
-    die Runde 10 Minuten lang zurücknehmen. Unter "Offen" zählen Runden-Biere wie eigene Biere (alter Preis).
+    die Runde zurücknehmen (Zeit siehe Einstellungen). Unter "Offen" zählen Runden-Biere wie eigene Biere (alter Preis).
     Kassenstand unverändert (wie Abstreichen); Lager sinkt um alle Biere der Runde (Lager-Mail wie beim Abstreichen); wie Abstreichen
     nicht durch den Lagerbestand begrenzt. Kollegen-Liste sortiert nach letztem eigenem Bier.
   - Empfänger sehen 7 Tage lang im Dashboard "🍺 <Spender> hat dir ein Bier spendiert – <Nachricht>" (max. 3). Keine Mail an Empfänger (Entscheid 2026-10-22: alle sitzen am selben Tisch).
@@ -298,15 +301,16 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     Limit-Regel wie Abstreichen, gesperrt bei beantragter Auszahlung, Einmal-Token), jeder Empfänger eine Buchung `gift`
     mit positivem Betrag (`transactions.parent_id` = Buchung des Schenkers). Steigt der Preis später, reicht die
     Gutschrift für weniger Biere. Kein Bier getrunken: Lager und Kassenstand unverändert; getrunken wird später normal.
-  - Schenker kann innerhalb der im Backend eingestellten Minuten zurücknehmen (Standard 5, 0–60, 0 = nie); dabei
-    werden alle Gutschriften gelöscht (**Annahme:** auch wenn der Empfänger sie schon verbraucht hat).
+  - Schenker kann zurücknehmen (Zeit siehe Einstellungen, Standard 5 Minuten); dabei werden alle Gutschriften
+    gelöscht. Entscheid 2026-10-22: nicht mehr möglich, sobald ein Empfänger seit dem Geschenk selbst Bier
+    abgestrichen oder eine Runde spendiert hat (Einzahlungen zählen nicht).
   - Empfänger sehen 7 Tage lang "🎁 <Schenker> hat dir N Biere geschenkt – <Nachricht>" (max. 3), keine Mail.
   - Statistik: "Verschenkt: N" (Schenker) und "Geschenkt bekommen: N" (Empfänger), auch in der Benutzer-Detailansicht;
     zählen nicht als getrunkene Biere. **Annahme:** "Total ausgegeben" des Schenkers enthält die verschenkten Beträge.
     Unter "Offen" zählt ein ungedecktes Geschenk wie eigene Biere (alter Preis).
   - Backend `/backend/verschenkt` (Kassier und Admin, Reiter "Verschenkt"): Schalter "Bier verschenken erlauben"
-    (Standard an, `gifts_enabled`; aus: Karte ausgeblendet, `/konto/verschenken` 404), Rückgängig-Minuten
-    (`gift_undo_minutes`) und Liste der Geschenke.
+    (Standard an, `gifts_enabled`; aus: Karte ausgeblendet, `/konto/verschenken` 404), und Liste der
+    Geschenke.
 - Lager (`/backend/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
   Pflicht; alte Einträge ohne Anzahl zählen 0) + Inventur-Korrekturen (gezählter Bestand, gespeichert als Differenz
   mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere inkl. spendierter Runden (Rückgängig erhöht den

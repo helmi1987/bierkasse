@@ -32,6 +32,19 @@
     </section>
 
     <section class="card stack">
+        <h2>{{ __('settings.undo') }}</h2>
+        <p class="hint">{{ __('settings.undo_hint', ['max' => \App\Support\AppSettings::UNDO_MAX]) }}</p>
+        <div class="grid-2">
+            @foreach ($undoMinutes as $kind => $minutes)
+                <div class="field">
+                    <label for="undo_minutes_{{ $kind }}">{{ __('settings.undo_kind.'.$kind) }}</label>
+                    <input type="number" id="undo_minutes_{{ $kind }}" name="undo_minutes[{{ $kind }}]" value="{{ old('undo_minutes.'.$kind, $minutes) }}" min="0" max="{{ \App\Support\AppSettings::UNDO_MAX }}" inputmode="numeric" required>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
+    <section class="card stack">
         <h2>{{ __('settings.twint') }}</h2>
         <label class="switch"><input type="checkbox" name="twint_enabled" value="1" @checked(old('twint_enabled', $twintEnabled))> <span>{{ __('settings.twint_enabled') }}</span></label>
         <p class="hint">{{ __('settings.twint_hint') }}</p>

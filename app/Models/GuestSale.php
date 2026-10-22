@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\AppSettings;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -32,6 +33,6 @@ class GuestSale extends Model
         return $this->booked_by !== null
             && $this->booked_by === $user->id
             && $this->created_at !== null
-            && $this->created_at->gt(now()->subMinutes(Transaction::UNDO_MINUTES));
+            && $this->created_at->gt(now()->subMinutes(AppSettings::undoMinutes('guest')));
     }
 }

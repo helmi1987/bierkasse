@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Gifts;
 use App\Support\AppSettings;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -52,9 +53,6 @@ class Transaction extends Model
     public const STATUS_REJECTED = 'rejected';
 
     public const METHODS = ['cash', 'twint'];
-
-    /** Minutes a user can undo an own consumption or round. */
-    public const UNDO_MINUTES = 10;
 
     protected $fillable = [
         'user_id', 'parent_id', 'type', 'status', 'method', 'quantity', 'unit_price', 'amount', 'note',
@@ -145,16 +143,18 @@ class Transaction extends Model
     public function canBeUndoneBy(User $user): bool
     {
         if ($this->type === self::TYPE_GIFT) {
+            // Ends early once a recipient booked a beer (consumption or own round) after the gift.
             return $this->isGiftGiven()
                 && $this->user_id === $user->id
                 && $this->created_at !== null
-                && $this->created_at->gt(now()->subMinutes(AppSettings::giftUndoMinutes()));
+                && $this->created_at->gt(now()->subMinutes(AppSettings::undoMinutes('gift')))
+                && ! Gifts::recipientsBookedSince($this);
         }
 
         return in_array($this->type, self::BEER_TYPES, true)
             && $this->user_id === $user->id
             && $this->created_by === $user->id
             && $this->created_at !== null
-            && $this->created_at->gt(now()->subMinutes(self::UNDO_MINUTES));
+            && $this->created_at->gt(now()->subMinutes(AppSettings::undoMinutes($this->type === self::TYPE_ROUND ? 'round' : 'consume')));
     }
 }

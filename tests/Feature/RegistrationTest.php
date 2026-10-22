@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\QrCode;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\AppSettings;
@@ -153,15 +154,17 @@ class RegistrationTest extends TestCase
         $this->open();
         $this->actingAs($this->admin());
 
+        $this->flyerCode();
+        $key = 'flyer-'.QrCode::query()->where('kind', QrCode::KIND_FLYER)->value('id');
         $this->get('/backend/registrierung-qr?view=flyer')->assertOk()
             ->assertSee('class="flyer-image"', false)
-            ->assertSee('<img src="'.route('backend.registration.flyer-svg', ['qr' => 'flyer']).'"', false)
-            ->assertSee('data-png-download="'.route('backend.registration.flyer-svg', ['qr' => 'flyer']).'"', false)
-            ->assertSee(route('backend.registration.flyer-svg', ['qr' => 'flyer', 'download' => 1]))
+            ->assertSee('<img src="'.route('backend.registration.flyer-svg', ['qr' => $key]).'"', false)
+            ->assertSee('data-png-download="'.route('backend.registration.flyer-svg', ['qr' => $key]).'"', false)
+            ->assertSee(route('backend.registration.flyer-svg', ['qr' => $key, 'download' => 1]))
             ->assertSee('Als PNG herunterladen')->assertSee('Als SVG herunterladen')
             ->assertSee('An Seite anpassen')->assertSee('data-print', false)
             ->assertDontSee('class="flyer"', false)
-            ->assertDontSee('flyer='.AppSettings::flyerCode())->assertDontSee('durst');
+            ->assertDontSee('flyer='.$this->flyerCode())->assertDontSee('durst');
         $this->get('/backend/registrierung-qr')->assertOk()->assertDontSee('class="flyer-image"', false);
     }
 
@@ -172,36 +175,46 @@ class RegistrationTest extends TestCase
 
         $this->get('/backend/registrierung-qr')->assertOk()
             ->assertSee(Qr::dataUri(RegistrationLink::url(true), 480), false)
-            ->assertSee('enthält den Flyer-Code')->assertSee('Flyer-Code neu erzeugen')
-            ->assertDontSee('durst')->assertDontSee('flyer='.AppSettings::flyerCode());
+            ->assertSee('enthält den Flyer-Code')->assertSee('Neuer Code')
+            ->assertDontSee('durst')->assertDontSee('flyer='.$this->flyerCode());
         $this->assertStringNotContainsString('durst', RegistrationLink::url(true));
         $this->assertStringStartsWith(route('register').'?flyer=', RegistrationLink::url(true));
     }
 
-    public function test_flyer_code_is_random_and_stable_until_regenerated(): void
+    public function test_flyer_codes_with_history_several_active(): void
     {
         $this->open();
-        $code = AppSettings::flyerCode();
+        $code = $this->flyerCode();
 
-        $this->assertGreaterThanOrEqual(24, strlen($code));
-        $this->assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', $code);
-        $this->assertSame($code, AppSettings::flyerCode());
-        // Stored encrypted like every setting.
-        $raw = (string) DB::table('settings')->where('key', AppSettings::FLYER_CODE)->value('value');
-        $this->assertStringNotContainsString($code, $raw);
+        $this->assertSame(QrCode::CODE_LENGTH, strlen($code));
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9]+$/', $code);
+        $this->assertSame($code, $this->flyerCode());
+        // Stored encrypted; the hash is used for the lookup.
+        $this->assertStringNotContainsString($code, (string) DB::table('qr_codes')->value('code'));
 
-        $this->actingAs($this->user())->post('/backend/registrierung-qr/neuer-code')->assertForbidden();
-        $this->actingAs($this->admin())->post('/backend/registrierung-qr/neuer-code')
-            ->assertRedirect(route('backend.registration.qr', ['qr' => 'flyer']))->assertSessionHas('status');
-        Setting::flushCache();
-        $this->assertNotSame($code, AppSettings::flyerCode());
+        foreach ([$this->user(), $this->kassier()] as $who) {
+            $this->actingAs($who)->post('/backend/qr-codes', ['kind' => QrCode::KIND_FLYER])->assertForbidden();
+        }
+        $this->actingAs($this->admin())->post('/backend/qr-codes', ['kind' => QrCode::KIND_FLYER, 'label' => 'Lift'])->assertSessionHas('status');
+        $second = QrCode::query()->where('label', 'Lift')->sole();
+        // Both are valid.
+        $this->assertTrue(AppSettings::flyerCodeValid($code));
+        $this->assertTrue(AppSettings::flyerCodeValid($second->code));
+
+        $first = QrCode::findActive(QrCode::KIND_FLYER, $code);
+        $this->put(route('backend.qr-codes.active', $first), ['active' => 0])->assertSessionHas('status');
         $this->assertFalse(AppSettings::flyerCodeValid($code));
+        $this->get('/backend/registrierung-qr')->assertOk()->assertSee('Deaktivierte Codes (Historie) (1)');
+        $this->actingAs($this->kassier())->get('/backend/registrierung-qr')->assertOk()->assertDontSee('Deaktivierte Codes')->assertSee('Lift');
+        $this->actingAs($this->kassier())->put(route('backend.qr-codes.active', $first), ['active' => 1])->assertForbidden();
+        $this->actingAs($this->admin())->put(route('backend.qr-codes.active', $first), ['active' => 1]);
+        $this->assertTrue(AppSettings::flyerCodeValid($code));
     }
 
     public function test_flyer_code_replaces_password_field(): void
     {
         $this->open();
-        $code = AppSettings::flyerCode();
+        $code = $this->flyerCode();
 
         $this->get('/registrieren?flyer='.$code)->assertOk()
             ->assertDontSee('id="code"', false)
@@ -217,7 +230,7 @@ class RegistrationTest extends TestCase
     public function test_invalid_flyer_code_is_rejected_and_rate_limited(): void
     {
         $this->open();
-        AppSettings::flyerCode();
+        $this->flyerCode();
 
         $this->get('/registrieren?flyer=alt')->assertOk()
             ->assertSee('id="code"', false)->assertSee('nicht mehr gültig');
@@ -228,7 +241,7 @@ class RegistrationTest extends TestCase
             $this->post('/registrieren', $data)->assertSessionHasErrors('code');
         }
         // 10 failed attempts (1 GET + 9 POST): even the correct flyer code is throttled now.
-        $data = $this->data(['flyer' => AppSettings::flyerCode()]);
+        $data = $this->data(['flyer' => $this->flyerCode()]);
         unset($data['code']);
         $this->post('/registrieren', $data)->assertSessionHasErrors('code');
         $this->assertSame(0, User::query()->count());
@@ -237,7 +250,7 @@ class RegistrationTest extends TestCase
     public function test_flyer_code_only_valid_in_password_mode(): void
     {
         $this->open();
-        $code = AppSettings::flyerCode();
+        $code = $this->flyerCode();
         Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_INVITE);
 
         $this->get('/registrieren?flyer='.$code)->assertOk()->assertDontSee('name="username"', false);

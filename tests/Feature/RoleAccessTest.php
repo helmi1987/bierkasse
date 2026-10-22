@@ -36,10 +36,10 @@ class RoleAccessTest extends TestCase
         $user = $this->user();
         $this->actingAs($kassier);
 
-        foreach (['/backend', '/backend/kasse', '/backend/benutzer', "/backend/benutzer/{$user->id}", '/backend/benutzer?status=left', '/backend/statistik', '/backend/runden'] as $url) {
+        foreach (['/backend', '/backend/kasse', '/backend/benutzer', "/backend/benutzer/{$user->id}", '/backend/benutzer?status=left', '/backend/statistik', '/backend/runden', '/backend/registrierung-qr'] as $url) {
             $this->get($url)->assertOk();
         }
-        foreach (['/backend/einstellungen', '/backend/sso', '/backend/sso/create', '/backend/registrierung-qr'] as $url) {
+        foreach (['/backend/einstellungen', '/backend/sso', '/backend/sso/create'] as $url) {
             $this->get($url)->assertForbidden();
         }
         $this->put("/backend/benutzer/{$user->id}/rolle", ['role' => 'kassier'])->assertForbidden();

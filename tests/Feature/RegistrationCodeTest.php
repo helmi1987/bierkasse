@@ -8,6 +8,7 @@ use App\Models\RegistrationCode;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\AppSettings;
+use App\Support\Qr;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -41,12 +42,11 @@ class RegistrationCodeTest extends TestCase
             $this->actingAs($who);
             $this->post('/backend/registrierung-qr/codes', ['label' => 'X'])->assertForbidden();
             $this->put("/backend/registrierung-qr/codes/{$code->id}/sperre", ['locked' => 1])->assertForbidden();
-            $this->delete("/backend/registrierung-qr/codes/{$code->id}")->assertForbidden();
         }
         $this->assertSame(1, RegistrationCode::query()->count());
     }
 
-    public function test_admin_creates_locks_unlocks_and_deletes(): void
+    public function test_admin_creates_deactivates_and_reactivates(): void
     {
         $this->actingAs($this->admin());
         $this->post('/backend/registrierung-qr/codes', ['label' => 'Flyer Küche'])->assertSessionHas('status');
@@ -56,17 +56,21 @@ class RegistrationCodeTest extends TestCase
         $this->assertStringNotContainsString($code->code, (string) DB::table('registration_codes')->value('code'));
 
         $this->get('/backend/registrierung-qr')->assertOk()->assertSee('Flyer Küche')
-            ->assertSee(\App\Support\Qr::dataUri($code->url(), 480), false);
+            ->assertSee(Qr::dataUri($code->url(), 480), false);
 
         $this->put("/backend/registrierung-qr/codes/{$code->id}/sperre", ['locked' => 1]);
         $this->assertTrue($code->fresh()->isLocked());
-        $this->get('/backend/registrierung-qr')->assertOk()->assertSee('gesperrt')->assertSee('Kein aktiver Registrierungscode');
+        $this->get('/backend/registrierung-qr')->assertOk()->assertSee('deaktiviert')->assertSee('Kein aktiver Registrierungscode');
+        // Kassiers only see active codes and cannot manage them.
+        $this->actingAs($this->kassier())->get('/backend/registrierung-qr')->assertOk()->assertDontSee('Flyer Küche')->assertDontSee('Code erstellen');
+        $this->actingAs(User::query()->where('role', 'admin')->first());
         $this->put("/backend/registrierung-qr/codes/{$code->id}/sperre", ['locked' => 0]);
         $this->assertFalse($code->fresh()->isLocked());
 
-        $this->delete("/backend/registrierung-qr/codes/{$code->id}")->assertRedirect(route('backend.registration.qr'));
-        $this->assertSame(0, RegistrationCode::query()->count());
-        foreach (['registration_code.create', 'registration_code.lock', 'registration_code.unlock', 'registration_code.delete'] as $action) {
+        // Nothing is deleted any more.
+        $this->delete("/backend/registrierung-qr/codes/{$code->id}")->assertStatus(404);
+        $this->assertSame(1, RegistrationCode::query()->count());
+        foreach (['registration_code.create', 'registration_code.lock', 'registration_code.unlock'] as $action) {
             $this->assertTrue(AuditLog::query()->where('action', $action)->exists(), $action);
         }
     }

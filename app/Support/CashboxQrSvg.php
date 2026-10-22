@@ -14,13 +14,6 @@ class CashboxQrSvg extends FlyerSvg
 
     public const STICKER_H = 110;
 
-    /** Sheet variants: method of each of the 4 stickers (row by row). */
-    public const SHEETS = [
-        'cash' => ['cash', 'cash', 'cash', 'cash'],
-        'twint' => ['twint', 'twint', 'twint', 'twint'],
-        'mixed' => ['cash', 'cash', 'twint', 'twint'],
-    ];
-
     public static function sticker(string $appName, string $method, string $url): string
     {
         $out = self::open($appName, __('guest.cashbox_sticker_'.$method), self::STICKER_W, self::STICKER_H);
@@ -33,22 +26,22 @@ class CashboxQrSvg extends FlyerSvg
     /**
      * A4 sheet (210 x 297 mm) with 4 stickers, 10 mm gap, centered (margins 20 mm left/right, 33.5 mm top/bottom).
      *
-     * @param  array<string, string>  $urls  method => cashbox URL
+     * @param  list<array{0: string, 1: string}>  $stickers  [method, cashbox URL] row by row
      */
-    public static function sheet(string $appName, string $variant, array $urls): string
+    public static function sheet(string $appName, array $stickers): string
     {
-        $out = self::open($appName, __('guest.cashbox_sheet_'.$variant), 210, 297);
+        $out = self::open($appName, __('guest.cashbox_sheets'), 210, 297);
         $gap = 10;
         $x0 = (210 - 2 * self::STICKER_W - $gap) / 2;
         $y0 = (297 - 2 * self::STICKER_H - $gap) / 2;
-        foreach (self::SHEETS[$variant] as $i => $method) {
+        foreach (array_slice($stickers, 0, 4) as $i => [$method, $url]) {
             $x = $x0 + ($i % 2) * (self::STICKER_W + $gap);
             $y = $y0 + intdiv($i, 2) * (self::STICKER_H + $gap);
             // Cut line along the sticker edge.
             $out[] = '<rect x="'.self::n($x).'" y="'.self::n($y).'" width="'.self::STICKER_W.'" height="'.self::STICKER_H.'"'
                 .' fill="none" stroke="#9ca3af" stroke-width="0.2" stroke-dasharray="2 1.5"/>';
             $out[] = '<g transform="translate('.self::n($x).' '.self::n($y).')">';
-            self::body($out, $appName, $method, $urls[$method]);
+            self::body($out, $appName, $method, $url);
             $out[] = '</g>';
         }
         $out[] = '</svg>';

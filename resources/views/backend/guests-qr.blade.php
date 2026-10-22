@@ -6,17 +6,47 @@
 @section('content')
 <div class="no-print">
     @include('partials.backend-nav')
-    <div class="row-buttons">
-        <a href="{{ route('backend.guests.qr') }}" @class(['btn', 'primary' => $withCode])>{{ __('settings.qr_with_code') }}</a>
-        <a href="{{ route('backend.guests.qr', ['code' => 0]) }}" @class(['btn', 'primary' => ! $withCode])>{{ __('settings.qr_without_code') }}</a>
-        <button type="button" class="btn" data-print>{{ __('settings.qr_print') }}</button>
-    </div>
-    @if ($withCode)
-        <div class="alert warn">{{ __('guest.qr_warning') }}</div>
-    @endif
+    <h1>{{ __('guest.qr') }}</h1>
     @unless ($open)
         <div class="alert bad">{{ __('guest.qr_closed') }}</div>
     @endunless
+    <section class="card stack">
+        <p class="hint">{{ __('guest.qr_codes_intro') }}</p>
+        @if ($admin)
+            @include('partials.qr.new', ['kind' => \App\Models\QrCode::KIND_GUEST, 'button' => __('qr.new')])
+        @endif
+        <ul class="list">
+            @foreach ($active as $code)
+                <li class="wrap-row" data-testid="guest-code">
+                    <span>
+                        <strong>{{ $code->displayName() }}</strong>
+                        @if ($selected && $selected->id === $code->id)<span class="pill ok">{{ __('settings.codes_shown') }}</span>@endif
+                        <br><small class="muted">{{ __('qr.meta', ['date' => local_time($code->created_at), 'user' => $code->creator?->username ?? '–']) }}</small>
+                    </span>
+                    <span class="row-buttons">
+                        <a href="{{ route('backend.guests.qr', ['qr' => $code->id]) }}" class="btn small">{{ __('settings.codes_show') }}</a>
+                        @if ($admin)
+                            @include('partials.qr.manage', ['code' => $code])
+                        @endif
+                    </span>
+                </li>
+            @endforeach
+            <li class="wrap-row">
+                <span>
+                    <strong>{{ __('guest.qr_without_code') }}</strong>
+                    @if (! $selected)<span class="pill ok">{{ __('settings.codes_shown') }}</span>@endif
+                    <br><small class="muted">{{ __('guest.qr_without_code_hint') }}</small>
+                </span>
+                <a href="{{ route('backend.guests.qr', ['qr' => 0]) }}" class="btn small">{{ __('settings.codes_show') }}</a>
+            </li>
+        </ul>
+        @if ($admin)
+            @include('partials.qr.history', ['history' => $history])
+        @endif
+    </section>
+    <div class="row-buttons">
+        <button type="button" class="btn" data-print>{{ __('settings.qr_print') }}</button>
+    </div>
 </div>
 
 <section class="print-sheet">
@@ -24,6 +54,8 @@
     <h1>{{ __('guest.qr_title') }}</h1>
     <p class="lead">{{ $appName }} · {{ __('guest.qr_intro') }}</p>
     <img src="{{ $qr }}" alt="QR" width="320" height="320" class="qr big">
-    <p class="url">{{ $url }}</p>
+    @unless ($selected)
+        <p class="url">{{ $url }}</p>
+    @endunless
 </section>
 @endsection

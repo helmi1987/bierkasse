@@ -29,19 +29,19 @@ class BackendNav
             'stock' => ['backend.stock', 'backend.stock*'],
             'deposit_suggestions' => ['backend.deposit-suggestions', 'backend.deposit-suggestions'],
             'audit' => ['backend.audit', 'backend.audit*'],
+            'qr' => ['backend.registration.qr', 'backend.registration.*'],
         ],
         self::BACKEND => [
             'settings' => ['backend.settings', 'backend.settings'],
             'nav' => ['backend.nav', 'backend.nav'],
             'sso' => ['backend.sso.index', 'backend.sso.*'],
-            'qr' => ['backend.registration.qr', 'backend.registration.*'],
             'feedback' => ['backend.feedback', 'backend.feedback*'],
             'maintenance' => ['backend.maintenance', 'backend.maintenance*'],
         ],
     ];
 
     /** Route patterns of the admin-only pages. */
-    public const ADMIN_ROUTES = ['backend.settings*', 'backend.nav*', 'backend.registration.*', 'backend.feedback*', 'backend.maintenance*', 'backend.sso.*'];
+    public const ADMIN_ROUTES = ['backend.settings*', 'backend.nav*', 'backend.feedback*', 'backend.maintenance*', 'backend.sso.*'];
 
     public static function isAdminPage(): bool
     {

@@ -1,0 +1,21 @@
+<?php
+
+// QR codes with history (cashbox, flyer, guest page): admins manage, kassiers only see active ones.
+return [
+    'new' => 'Neuer Code',
+    'label' => 'Name (freiwillig)',
+    'label_placeholder' => 'z. B. Kasse Küche',
+    'label_save' => 'Name speichern',
+    'deactivate' => 'Deaktivieren',
+    'deactivate_confirm' => 'Code deaktivieren? Gedruckte QR-Codes damit funktionieren nicht mehr, bis er reaktiviert wird.',
+    'activate' => 'Reaktivieren',
+    'created' => 'Neuer Code erstellt.',
+    'activated' => 'Code reaktiviert.',
+    'deactivated' => 'Code deaktiviert.',
+    'history' => 'Deaktivierte Codes (Historie)',
+    'history_none' => 'Keine deaktivierten Codes.',
+    'none_active' => 'Kein aktiver Code.',
+    'meta' => 'erstellt :date von :user',
+    'meta_deactivated' => 'deaktiviert :date',
+    'admin_only' => 'Nur der Admin kann Codes erstellen, deaktivieren und Einstellungen ändern.',
+];

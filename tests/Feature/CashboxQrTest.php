@@ -2,14 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\CashEntry;
 use App\Models\GuestSale;
+use App\Models\QrCode;
 use App\Models\Setting;
 use App\Services\BeerStock;
 use App\Services\CashBook;
 use App\Support\AppSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class CashboxQrTest extends TestCase
@@ -26,7 +29,7 @@ class CashboxQrTest extends TestCase
 
     public function test_cash_code_books_cash_guest_sale_without_twint_data(): void
     {
-        $code = AppSettings::cashboxQrCode('cash');
+        $code = $this->code('cash');
         $this->get('/kasse/'.$code)->assertOk()->assertSee('Kein Konto? Bar bezahlt')->assertDontSee('079 123 45 67');
         $this->get('/kasse/'.$code)->assertSee('href="'.route('login').'">Abbrechen</a>', false);
         $this->actingAs($this->user())->get('/')->assertRedirect(route('account.dashboard'));
@@ -42,7 +45,7 @@ class CashboxQrTest extends TestCase
 
     public function test_twint_code_books_twint_and_shows_copy_button(): void
     {
-        $code = AppSettings::cashboxQrCode('twint');
+        $code = $this->code('twint');
         $this->get('/kasse/'.$code)->assertOk()->assertSee('Ich habe getwintet')->assertSee('data-copy-text="079 123 45 67"', false);
         $this->post('/kasse/'.$code, $this->tokened('cashbox', ['quantity' => 2]));
         $this->assertDatabaseHas('guest_sales', ['beers' => 2, 'method' => 'twint', 'source' => 'cashbox']);
@@ -51,23 +54,29 @@ class CashboxQrTest extends TestCase
         $this->get('/kasse/'.$code)->assertNotFound();
     }
 
-    public function test_invalid_disabled_or_regenerated_code_is_404(): void
+    public function test_invalid_disabled_or_deactivated_code_is_404_and_several_can_be_active(): void
     {
-        $code = AppSettings::cashboxQrCode('cash');
+        $code = $this->code('cash');
         $this->get('/kasse/falsch')->assertNotFound();
         $this->post('/kasse/falsch', $this->tokened('cashbox', ['quantity' => 1]))->assertNotFound();
 
-        AppSettings::regenerateCashboxQrCode('cash');
+        // A second code: both are valid.
+        $second = QrCode::generate(QrCode::KIND_CASH, 'Kasse 2')->code;
+        $this->get('/kasse/'.$code)->assertOk();
+        $this->get('/kasse/'.$second)->assertOk();
+
+        QrCode::findActive(QrCode::KIND_CASH, $code)->update(['deactivated_at' => now()]);
         $this->get('/kasse/'.$code)->assertNotFound();
+        $this->get('/kasse/'.$second)->assertOk();
 
         Setting::put(AppSettings::CASHBOX_QR_ENABLED, false);
-        $this->get('/kasse/'.AppSettings::cashboxQrCode('cash'))->assertNotFound();
+        $this->get('/kasse/'.$second)->assertNotFound();
         $this->assertSame(0, GuestSale::query()->count());
     }
 
     public function test_stock_zero_never_blocks(): void
     {
-        $code = AppSettings::cashboxQrCode('cash');
+        $code = $this->code('cash');
         foreach ([10, 10, 10, 2] as $beers) {
             $this->post('/kasse/'.$code, $this->tokened('cashbox', ['quantity' => $beers]))->assertRedirect(route('cashbox', $code));
         }
@@ -75,33 +84,73 @@ class CashboxQrTest extends TestCase
         $this->get('/kasse/'.$code)->assertOk()->assertDontSee('disabled');
     }
 
-    public function test_backend_sticker_svg_regenerate_and_label(): void
+    public function test_backend_stickers_kassier_sees_admin_manages(): void
     {
         $kassier = $this->kassier();
-        $this->actingAs($kassier)->get('/backend/kassen-qr/cash')->assertNotFound();
-        $svg = $this->actingAs($kassier)->get('/backend/gaeste/kassen-qr/cash?download=1')->assertOk()
-            ->assertHeader('Content-Disposition', 'attachment; filename="kassen-qr-bar.svg"');
-        $this->assertStringContainsString('Bar bezahlt', $svg->getContent());
-        $this->actingAs($kassier)->get('/backend/gaeste/kassen-qr/twint')->assertOk()->assertSee('Ich habe getwintet');
-        $this->actingAs($this->user())->get('/backend/gaeste/kassen-qr/cash')->assertForbidden();
+        $admin = $this->admin();
+        $page = $this->actingAs($kassier)->get('/backend/gaeste')->assertOk()->assertDontSee('Neuer Bar-Code')->assertDontSee(__('qr.deactivate'));
+        $cash = QrCode::newestActive(QrCode::KIND_CASH);
+        $twint = QrCode::newestActive(QrCode::KIND_TWINT);
+        $page->assertSee(route('backend.guests.cashbox', $cash))->assertSee('data-png-width="945"', false);
 
-        $sheet = $this->actingAs($kassier)->get('/backend/gaeste/kassen-qr-a4/mixed?download=1')->assertOk()
+        $svg = $this->get(route('backend.guests.cashbox', ['qrCode' => $cash, 'download' => 1]))->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename="kassen-qr-bar-'.$cash->id.'.svg"')->getContent();
+        $this->assertStringContainsString('Bar bezahlt', $svg);
+        $this->get(route('backend.guests.cashbox', $twint))->assertOk()->assertSee('Ich habe getwintet');
+        $this->actingAs($this->user())->get(route('backend.guests.cashbox', $cash))->assertForbidden();
+
+        $sheet = $this->actingAs($kassier)->get(route('backend.guests.cashbox.mixed', ['download' => 1]))->assertOk()
             ->assertHeader('Content-Disposition', 'attachment; filename="kassen-qr-a4-bar-twint.svg"')->getContent();
         $this->assertStringContainsString('width="210mm" height="297mm"', $sheet);
         $this->assertSame(2, substr_count($sheet, '>Bar bezahlt<'));
         $this->assertSame(2, substr_count($sheet, '>Ich habe getwintet<'));
         $this->assertSame(4, substr_count($sheet, 'stroke-dasharray'));
-        $this->actingAs($kassier)->get('/backend/gaeste/kassen-qr-a4/andere')->assertNotFound();
-        $this->actingAs($kassier)->get('/backend/gaeste')->assertSee('data-png-width="945"', false);
+        $one = $this->get(route('backend.guests.cashbox.sheet', $twint))->assertOk()->getContent();
+        $this->assertSame(4, substr_count($one, '>Ich habe getwintet<'));
 
-        $old = AppSettings::cashboxQrCode('twint');
-        $this->actingAs($kassier)->post('/backend/gaeste/kassen-qr/twint/neuer-code')->assertSessionHas('status');
-        $this->assertNotSame($old, AppSettings::cashboxQrCode('twint'));
+        // Only admins create, rename, deactivate and reactivate.
+        $this->post('/backend/qr-codes', ['kind' => QrCode::KIND_CASH])->assertForbidden();
+        $this->put(route('backend.qr-codes.active', $cash), ['active' => 0])->assertForbidden();
+        $this->actingAs($admin)->post('/backend/qr-codes', ['kind' => QrCode::KIND_CASH, 'label' => 'Kühlschrank'])->assertSessionHas('status');
+        $this->put(route('backend.qr-codes.active', $cash), ['active' => 0])->assertSessionHas('status');
+        $this->put(route('backend.qr-codes.label', $twint), ['label' => 'Tresen'])->assertSessionHas('status');
+        $this->assertSame('Tresen', $twint->fresh()->label);
+        $this->get('/backend/gaeste')->assertOk()->assertSee('Kühlschrank')->assertSee(__('qr.activate'));
+        // Deactivated: hidden from kassiers, the admin still sees it.
+        $this->get(route('backend.guests.cashbox', $cash))->assertOk();
+        $this->actingAs($kassier)->get(route('backend.guests.cashbox', $cash))->assertNotFound();
+        $this->get('/backend/gaeste')->assertDontSee('src="'.route('backend.guests.cashbox', $cash).'"', false);
+        $this->actingAs($admin)->put(route('backend.qr-codes.active', $cash), ['active' => 1]);
+        $this->assertTrue($cash->fresh()->isActive());
+        foreach (['qr_code.create', 'qr_code.deactivate', 'qr_code.activate', 'qr_code.label'] as $action) {
+            $this->assertTrue(AuditLog::query()->where('action', $action)->exists(), $action);
+        }
 
-        $this->post('/kasse/'.AppSettings::cashboxQrCode('cash'), $this->tokened('cashbox', ['quantity' => 1]));
-        $this->actingAs($kassier)->get('/backend/gaeste')->assertOk()->assertSee('Kassen-QR');
-
-        $this->actingAs($kassier)->put('/backend/gaeste', ['guest_user_booking' => '1'])->assertSessionHas('status');
+        // The switch is admin only.
+        $this->actingAs($kassier)->put('/backend/gaeste', ['guest_user_booking' => '1', 'cashbox_qr_enabled' => '0'])->assertSessionHas('status');
+        $this->assertTrue((bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED));
+        $this->actingAs($admin)->put('/backend/gaeste', ['guest_user_booking' => '1'])->assertSessionHas('status');
         $this->assertFalse((bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED));
+    }
+
+    public function test_migration_moves_former_codes_from_settings(): void
+    {
+        Setting::putMany(['cashbox_qr_cash_token' => 'oldCashCode123', 'registration_flyer_code' => 'oldFlyer456']);
+        $migration = require database_path('migrations/2026_10_23_000100_create_qr_codes_table.php');
+        Schema::drop('qr_codes');
+        $migration->up();
+        Setting::flushCache();
+
+        $this->assertSame('cash', AppSettings::cashboxQrMethod('oldCashCode123'));
+        $this->assertNotNull(QrCode::findActive(QrCode::KIND_FLYER, 'oldFlyer456'));
+        $this->assertNull(AppSettings::get('cashbox_qr_cash_token'));
+    }
+
+    private function code(string $method): string
+    {
+        $kind = $method === 'cash' ? QrCode::KIND_CASH : QrCode::KIND_TWINT;
+        QrCode::ensureFirst($kind);
+
+        return QrCode::newestActive($kind)->code;
     }
 }

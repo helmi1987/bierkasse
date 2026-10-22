@@ -19,7 +19,6 @@ return [
     'thanks_twint_noname' => 'Bitte :amount per TWINT senden.',
     'thanks_beers' => '{1} :count Bier erfasst.|[*] :count Biere erfasst.',
     'again' => 'Weitere Biere erfassen',
-    'stock_short' => '{0} Zurzeit ist kein Bier an Lager.|{1} Nur noch 1 Bier an Lager.|[2,*] Nur noch :count Biere an Lager.',
     'disabled' => 'Gäste-Verkauf ist zurzeit nicht möglich.',
 
     // Dashboard: booking for a guest by a logged-in user

@@ -155,18 +155,16 @@ class GuestTest extends TestCase
         $this->assertSame(0, GuestSale::query()->count());
     }
 
-    public function test_guests_cannot_take_more_than_the_stock(): void
+    public function test_guests_are_never_blocked_by_the_stock(): void
     {
         $this->stock(3);
-        $this->get('/gast')->assertOk()->assertSee('max="3"', false);
+        $this->get('/gast')->assertOk()->assertSee('max="10"', false);
 
-        $this->post('/gast', $this->sale(['quantity' => 4]))->assertSessionHasErrors(['quantity' => 'Nur noch 3 Biere an Lager.']);
-        $this->post('/gast', $this->sale(['quantity' => 3]))->assertRedirect(route('guest.thanks'));
-        $this->post('/gast', $this->sale(['quantity' => 1]))->assertSessionHasErrors(['quantity' => 'Zurzeit ist kein Bier an Lager.']);
-        $this->get('/gast')->assertOk()->assertSee('Zurzeit ist kein Bier an Lager.');
+        $this->post('/gast', $this->sale(['quantity' => 4]))->assertRedirect(route('guest.thanks'));
+        $this->post('/gast', $this->sale(['quantity' => 1]))->assertRedirect(route('guest.thanks'));
 
-        $this->assertSame(3, (int) GuestSale::query()->sum('beers'));
-        $this->assertSame(0, BeerStock::current());
+        $this->assertSame(5, (int) GuestSale::query()->sum('beers'));
+        $this->assertSame(-2, BeerStock::current());
     }
 
     private function stock(int $beers): void

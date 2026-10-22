@@ -5,12 +5,11 @@ namespace App\Services;
 use App\Models\GuestSale;
 use App\Models\User;
 use App\Support\AppSettings;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Guest sales: booked immediately (no confirmation), at the current beer price.
- * Unlike user consumption, guests can never take more beers than the stock holds.
+ * Like user consumption, never limited by the stock (the stock may go negative).
  */
 class GuestSales
 {
@@ -26,29 +25,20 @@ class GuestSales
             throw new LedgerException(__('ledger.quantity_invalid'));
         }
 
-        // Lock so two guests cannot both take the last beers.
-        $sale = Cache::lock(BeerStock::LOCK, 10)->block(5, function () use ($beers, $method, $name, $by, $source) {
-            $available = max(0, BeerStock::current());
-            if ($beers > $available) {
-                throw new LedgerException(trans_choice('guest.stock_short', $available));
-            }
+        $price = AppSettings::beerPrice();
+        $sale = DB::transaction(function () use ($beers, $method, $name, $by, $source, $price) {
+            $sale = GuestSale::query()->create([
+                'name' => $name !== null && trim($name) !== '' ? trim($name) : null,
+                'beers' => $beers,
+                'unit_price' => $price,
+                'amount' => $beers * $price,
+                'method' => $method,
+                'booked_by' => $by?->id,
+                'source' => $source,
+            ]);
+            Audit::log('guest_sale.create', $sale, [], self::auditValues($sale), $by, $by === null ? ($source === null ? 'Gast' : 'Gast (Kassen-QR)') : null);
 
-            $price = AppSettings::beerPrice();
-
-            return DB::transaction(function () use ($beers, $method, $name, $by, $source, $price) {
-                $sale = GuestSale::query()->create([
-                    'name' => $name !== null && trim($name) !== '' ? trim($name) : null,
-                    'beers' => $beers,
-                    'unit_price' => $price,
-                    'amount' => $beers * $price,
-                    'method' => $method,
-                    'booked_by' => $by?->id,
-                    'source' => $source,
-                ]);
-                Audit::log('guest_sale.create', $sale, [], self::auditValues($sale), $by, $by === null ? ($source === null ? 'Gast' : 'Gast (Kassen-QR)') : null);
-
-                return $sale;
-            });
+            return $sale;
         });
 
         BeerStock::afterConsumption($beers);

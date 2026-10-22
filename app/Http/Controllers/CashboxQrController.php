@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\GuestSale;
-use App\Services\BeerStock;
 use App\Services\GuestSales;
 use App\Services\LedgerException;
 use App\Support\AppSettings;
@@ -31,7 +30,6 @@ class CashboxQrController extends Controller
             'code' => $code,
             'method' => $method,
             'price' => AppSettings::beerPrice(),
-            'available' => min(GuestSales::MAX_BEERS, max(0, BeerStock::current())),
             'sale' => $request->session()->get('cashbox.sale'),
             'twintRecipients' => $method === 'twint' ? AppSettings::twintRecipients() : [],
             'twintHtml' => $method === 'twint' ? AppSettings::twintRecipientText(true) : '',

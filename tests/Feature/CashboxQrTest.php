@@ -62,14 +62,14 @@ class CashboxQrTest extends TestCase
         $this->assertSame(0, GuestSale::query()->count());
     }
 
-    public function test_never_more_than_stock(): void
+    public function test_stock_zero_never_blocks(): void
     {
         $code = AppSettings::cashboxQrCode('cash');
-        $this->post('/kasse/'.$code, $this->tokened('cashbox', ['quantity' => 10]));
-        $this->post('/kasse/'.$code, $this->tokened('cashbox', ['quantity' => 10]));
-        $this->post('/kasse/'.$code, $this->tokened('cashbox', ['quantity' => 10]));
-        $this->post('/kasse/'.$code, $this->tokened('cashbox', ['quantity' => 1]))->assertSessionHasErrors('quantity');
-        $this->assertSame(30, (int) GuestSale::query()->sum('beers'));
+        foreach ([10, 10, 10, 2] as $beers) {
+            $this->post('/kasse/'.$code, $this->tokened('cashbox', ['quantity' => $beers]))->assertRedirect(route('cashbox', $code));
+        }
+        $this->assertSame(-2, BeerStock::current());
+        $this->get('/kasse/'.$code)->assertOk()->assertDontSee('disabled');
     }
 
     public function test_backend_sticker_svg_regenerate_and_label(): void

@@ -30,6 +30,7 @@ return [
     'register_name' => 'Name',
     'register_email' => 'E-Mail',
     'register_invited_by' => 'Eingeladen von',
+    'register_code' => 'Registrierungscode',
     'register_time' => 'Registriert am',
     'register_carryover' => 'Übertrag',
     'register_carryover_hint' => 'Der Übertrag von der alten Strichliste muss im Backend bestätigt werden.',

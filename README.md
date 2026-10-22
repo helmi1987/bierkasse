@@ -71,7 +71,7 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Formularfehler) in 15 Minuten, max. 60 Anfragen in 10 Minuten (ein Büro teilt meist eine IP).
      QR-Code zum Aushängen unter `/backend/registrierung-qr` (Admin), dort auch als druckfertiger A4-Flyer
      (Reiter "Flyer"). Der Flyer ist ein SVG-Bild in exakt A4 (`/backend/registrierung-qr/flyer-bild`, gleicher
-     Parameter `code`, `?download=1` zum Herunterladen; `app/Support/FlyerSvg.php`), damit jeder Browser gleich
+     Parameter `qr`, `?download=1` zum Herunterladen; `app/Support/FlyerSvg.php`), damit jeder Browser gleich
      druckt. Auf der Seite: "Flyer drucken" (nur das Bild, zentriert, max. 92 % Breite bzw. 235 mm Höhe),
      "Als PNG herunterladen" (im Browser gerendert, 2480 x 3508 px = A4 300 dpi) und "Als SVG herunterladen".
      Texte im SVG werden nach Zeichenanzahl umbrochen (**Annahme:** Systemschriften sind nicht breiter als
@@ -79,10 +79,17 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      eigenen zufälligen Flyer-Code (`/registrieren?flyer=<code>`, 32 Zeichen URL-sicher, Setting
      `registration_flyer_code`, verschlüsselt, beim ersten Aufruf erzeugt). Gültig nur im Modus "Offen mit
      Registrierungspasswort"; dann zeigt die Registrierung kein Passwortfeld. Falscher Code zählt wie ein falsches
-     Passwort. "Flyer-Code neu erzeugen" macht alle gedruckten Flyer/QR-Codes mit Code ungültig. Variante
-     "Ohne Code" wählbar. Gedruckt wird als Text nur `/registrieren` plus Hinweis "Registrierungspasswort beim
-     Kassier", nie die URL mit Code. Alte QR-Codes mit `?code=<passwort>` füllen das Passwortfeld weiterhin aus.
-     Im Modus "Nur per Einladung" enthält der QR-Code keinen Code und führt nur zur Registrierungsseite.
+     Passwort. "Flyer-Code neu erzeugen" macht alle gedruckten Flyer/QR-Codes mit Code ungültig. Gedruckt wird
+     als Text nur `/registrieren` plus Hinweis "Registrierungspasswort beim Kassier", nie die URL mit Code.
+     Alte QR-Codes mit `?code=<passwort>` füllen das Passwortfeld weiterhin aus.
+     Registrierungscodes (Entscheid 2026-10-22, nur Admin, gleiche Seite): mehrere, beschriftet, für beliebig viele
+     Personen, ohne Ablauf, gültig in **jedem** Modus (auch "Geschlossen"); Konto sofort aktiv
+     (`/registrieren?zugang=<code>`, 32 Zeichen, Tabelle `registration_codes`, Code verschlüsselt + SHA-256 für die
+     Suche, `users.registration_code_id`). Sperren/Entsperren und Löschen (Konten bleiben); gesperrter oder
+     unbekannter Code → Startseite mit Hinweis "gesperrt" bzw. "nicht mehr gültig" (unbekannt zählt fürs Rate-Limit).
+     Mail an Kassier/Admin wie jede Selbst-Registrierung (folgt dem Schalter), mit Zeile "Registrierungscode".
+     Die QR-Seite zeigt nur Mögliches: Registrierungscodes und im Modus "Offen mit Registrierungspasswort"
+     zusätzlich den Flyer-Code; einen QR-Code ohne Code gibt es nicht. Gedruckt wird die vollständige URL mit Code.
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.
      Alle Mails (auch Passwort-Reset) nutzen ein gemeinsames HTML-Layout (`resources/views/mail/layout.blade.php`, Inline-CSS, Logo `public/icon-192.png` als CID eingebettet, fehlt es, entfällt das Logo) plus Textversion; Fakten als Tabelle, Link als Button.

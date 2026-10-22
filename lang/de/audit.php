@@ -1,6 +1,6 @@
 <?php
 
-// Audit log ("Protokoll", admins only).
+// Audit log ("Protokoll", kassiers and admins).
 return [
     'title' => 'Protokoll',
     'intro' => 'Alle Änderungen und Buchungen, neueste zuerst. Einträge können nicht geändert oder gelöscht werden; die Hash-Kette zeigt Lücken und Änderungen an.',

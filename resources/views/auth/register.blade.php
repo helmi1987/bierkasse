@@ -15,7 +15,7 @@
     @if ($state === 'invited')
         <div class="alert ok">{{ __('register.invited_by', ['user' => $inviter ?? '?']) }}</div>
         <p class="muted">{{ __('register.intro_invited') }}</p>
-    @elseif ($state === 'flyer')
+    @elseif ($state === 'flyer' || $state === 'reg_code')
         <p class="muted">{{ __('register.intro_flyer') }}</p>
     @else
         @if ($tokenState === 'invalid' || $tokenState === 'throttled')
@@ -31,6 +31,8 @@
             <input type="hidden" name="{{ \App\Models\Invitation::QUERY }}" value="{{ $token }}">
         @elseif ($state === 'flyer')
             <input type="hidden" name="{{ \App\Support\RegistrationLink::FLYER_QUERY }}" value="{{ $flyer }}">
+        @elseif ($state === 'reg_code')
+            <input type="hidden" name="{{ \App\Models\RegistrationCode::QUERY }}" value="{{ $regCode }}">
         @else
             <div class="field">
                 <label for="code">{{ __('register.code') }}</label>

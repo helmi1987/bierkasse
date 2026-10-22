@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\InvitationUsedException;
 use App\Http\Controllers\Controller;
 use App\Models\Invitation;
+use App\Models\RegistrationCode;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Audit;
@@ -31,6 +32,8 @@ use Illuminate\View\View;
  * - password: with the registration password, with the flyer code of the backend QR/flyer
  *   (?flyer=…, replaces the password field) or with a valid invitation link.
  *   Old printed QR codes with ?code=<password> still prefill the password field.
+ * In every mode: with a multi-use registration code of the admin (?zugang=…, QR/flyer); a locked
+ * or unknown code leads to the start page with a hint.
  */
 class RegisterController extends Controller
 {
@@ -39,10 +42,18 @@ class RegisterController extends Controller
 
     private const DECAY = 900;
 
-    public function show(Request $request): View
+    public function show(Request $request): View|RedirectResponse
     {
+        $regCode = null;
+        if ($this->regCode($request) !== '') {
+            $regCode = $this->validRegCode($request);
+            if ($regCode instanceof RedirectResponse) {
+                return $regCode;
+            }
+        }
+
         $mode = AppSettings::registrationMode();
-        $token = $this->token($request);
+        $token = $regCode ? '' : $this->token($request);
         $invitation = null;
         $tokenState = null;
 
@@ -62,7 +73,7 @@ class RegisterController extends Controller
         // Flyer code (only in mode "password"): counts like a wrong password when invalid.
         $flyer = $this->flyer($request);
         $flyerValid = false;
-        if ($invitation === null && $flyer !== '' && AppSettings::registrationOpen()) {
+        if ($regCode === null && $invitation === null && $flyer !== '' && AppSettings::registrationOpen()) {
             $key = $this->limiterKey($request);
             if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
                 $tokenState = 'throttled';
@@ -76,6 +87,7 @@ class RegisterController extends Controller
 
         // Form: with a valid invitation or flyer code (no password field) or in password mode.
         $state = match (true) {
+            $regCode !== null => 'reg_code',
             $mode === AppSettings::MODE_CLOSED => 'closed',
             $invitation !== null => 'invited',
             $flyerValid => 'flyer',
@@ -91,6 +103,7 @@ class RegisterController extends Controller
             'inviter' => $invitation?->creator?->username,
             'token' => $invitation ? $token : '',
             'flyer' => $flyerValid ? $flyer : '',
+            'regCode' => $regCode ? $this->regCode($request) : '',
             'code' => (string) $request->query('code', ''),
             'price' => AppSettings::beerPrice(),
         ]);
@@ -98,12 +111,20 @@ class RegisterController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $regCode = null;
+        if ($this->regCode($request) !== '') {
+            $regCode = $this->validRegCode($request);
+            if ($regCode instanceof RedirectResponse) {
+                return $regCode;
+            }
+        }
+
         $mode = AppSettings::registrationMode();
-        abort_if($mode === AppSettings::MODE_CLOSED, 403);
+        abort_if($mode === AppSettings::MODE_CLOSED && $regCode === null, 403);
 
         $key = $this->limiterKey($request);
         $back = fn (string $field, string $message) => back()
-            ->withInput($request->except(['password', 'password_confirmation', 'code', RegistrationLink::FLYER_QUERY]))
+            ->withInput($request->except(['password', 'password_confirmation', 'code', RegistrationLink::FLYER_QUERY, RegistrationCode::QUERY]))
             ->withErrors([$field => $message]);
 
         // Only failed attempts count; an office shares one IP, so keep it moderate.
@@ -111,11 +132,11 @@ class RegisterController extends Controller
             return $back('code', __('auth.throttle', ['seconds' => RateLimiter::availableIn($key)]));
         }
 
-        // Invitation token or registration password is checked first: without it nothing else
-        // is validated, so user names cannot be probed for existence.
-        $token = $this->token($request);
+        // Registration code, invitation token or registration password is checked first: without
+        // it nothing else is validated, so user names cannot be probed for existence.
+        $token = $regCode ? '' : $this->token($request);
         $invitation = $token !== '' ? Invitation::findValid($token) : null;
-        if ($invitation === null) {
+        if ($invitation === null && $regCode === null) {
             if ($token !== '') {
                 RateLimiter::hit($key, self::DECAY);
                 if (! AppSettings::registrationOpen()) {
@@ -161,7 +182,7 @@ class RegisterController extends Controller
         }
 
         try {
-            [$user, $carryoverTx] = DB::transaction(function () use ($data, $carryover, $invitation) {
+            [$user, $carryoverTx] = DB::transaction(function () use ($data, $carryover, $invitation, $regCode) {
                 $user = User::query()->create([
                     'username' => $data['username'],
                     'first_name' => $data['first_name'] ?? null,
@@ -170,6 +191,7 @@ class RegisterController extends Controller
                     'password' => $data['password'],
                     'role' => User::ROLE_USER,
                     'status' => User::STATUS_ACTIVE,
+                    'registration_code_id' => $regCode?->id,
                 ]);
                 // Consumed atomically inside the transaction: a parallel registration with the
                 // same link rolls back its new user.
@@ -180,6 +202,7 @@ class RegisterController extends Controller
                     'username' => $user->username,
                     'email' => $user->email,
                     'invitation_id' => $invitation?->id,
+                    'registration_code_id' => $regCode?->id,
                 ], fn ($v) => $v !== null), $user);
                 $tx = $carryover ? Ledger::reportCarryover($user, ...$carryover) : null;
 
@@ -189,7 +212,7 @@ class RegisterController extends Controller
             return $back('code', __('register.invitation_invalid'));
         }
 
-        $this->notifyKassiers($user, $carryoverTx, $invitation);
+        $this->notifyKassiers($user, $carryoverTx, $invitation, $regCode);
 
         Auth::login($user);
         $request->session()->regenerate();
@@ -203,6 +226,37 @@ class RegisterController extends Controller
         $token = $request->input(Invitation::QUERY, $request->query(Invitation::QUERY, ''));
 
         return is_string($token) ? trim($token) : '';
+    }
+
+    private function regCode(Request $request): string
+    {
+        $code = $request->input(RegistrationCode::QUERY, $request->query(RegistrationCode::QUERY, ''));
+
+        return is_string($code) ? trim($code) : '';
+    }
+
+    /**
+     * The registration code of the request, or a redirect to the start page with a hint when it
+     * is locked or unknown (deleted). Unknown codes count like wrong registration passwords.
+     */
+    private function validRegCode(Request $request): RegistrationCode|RedirectResponse
+    {
+        $key = $this->limiterKey($request);
+        if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
+            return redirect()->route('login')->with('warning', __('auth.throttle', ['seconds' => RateLimiter::availableIn($key)]));
+        }
+
+        $code = RegistrationCode::findByCode($this->regCode($request));
+        if ($code === null) {
+            RateLimiter::hit($key, self::DECAY);
+
+            return redirect()->route('login')->with('warning', __('register.reg_code_invalid'));
+        }
+        if ($code->isLocked()) {
+            return redirect()->route('login')->with('warning', __('register.reg_code_locked'));
+        }
+
+        return $code;
     }
 
     private function flyer(Request $request): string
@@ -261,7 +315,7 @@ class RegisterController extends Controller
      * Tells kassiers and admins about the new account (only self registration, not accounts
      * created in the backend). Respects the notification switch; failures never block.
      */
-    private function notifyKassiers(User $user, ?Transaction $carryover, ?Invitation $invitation): void
+    private function notifyKassiers(User $user, ?Transaction $carryover, ?Invitation $invitation, ?RegistrationCode $regCode): void
     {
         $name = trim(($user->first_name ?? '').' '.($user->last_name ?? ''));
         $rows = [
@@ -269,6 +323,7 @@ class RegisterController extends Controller
             __('mail.register_name') => $name !== '' ? $name : '–',
             __('mail.register_email') => (string) ($user->email ?? ''),
             __('mail.register_invited_by') => $invitation ? ($invitation->creator?->username ?? '?') : '',
+            __('mail.register_code') => $regCode ? $regCode->label : '',
             __('mail.register_time') => local_time($user->created_at ?? now()),
             __('mail.register_carryover') => $carryover ? $carryover->carryoverText() : '',
         ];

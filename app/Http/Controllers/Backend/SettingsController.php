@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\RegistrationCode;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\AppSettings;
@@ -116,44 +117,59 @@ class SettingsController extends Controller
     }
 
     /**
-     * Printable page with the QR code of the registration URL; includes the flyer code unless
-     * ?code=0. Only in mode "password" (the flyer code is not accepted otherwise). The registration
-     * password is never put into the QR code, and the URL with the flyer code is not printed.
+     * Registration QR page: list of the multi-use registration codes (valid in every mode) and, in
+     * mode "password", the flyer code. QR and flyer of the selected one (?qr=<id>|flyer); there is
+     * no QR without a code. The registration password is never put into a QR code.
      */
     public function registrationQr(Request $request): View
     {
-        $mode = AppSettings::registrationMode();
-        $withCode = $request->boolean('code', true) && AppSettings::registrationOpen();
+        $target = $this->qrTarget($request);
 
         return view('backend.registration-qr', [
             'view' => $request->query('view') === 'flyer' ? 'flyer' : 'qr',
-            'url' => route('register'),
-            'qr' => Qr::dataUri(RegistrationLink::url($withCode), 480),
-            'withCode' => $withCode,
-            'mode' => $mode,
+            'codes' => RegistrationCode::query()->with('creator')->withCount('users')->orderBy('label')->get(),
+            'target' => $target,
+            'qr' => $target ? Qr::dataUri($target['url'], 480) : null,
             'open' => AppSettings::registrationOpen(),
             'appName' => AppSettings::appName(),
         ]);
     }
 
-    /** Flyer as A4 SVG image (preview, print, download); same options as the QR page (?code=0). */
+    /** Flyer as A4 SVG image (preview, print, download) of the selected code (?qr=…). */
     public function flyerSvg(Request $request): Response
     {
-        $mode = AppSettings::registrationMode();
-        $open = AppSettings::registrationOpen();
-        $withCode = $request->boolean('code', true) && $open;
-        $step2 = $withCode ? __('settings.flyer_step2_text')
-            : ($mode === AppSettings::MODE_INVITE ? __('settings.flyer_step2_text_invite') : __('settings.flyer_step2_text_no_code'));
+        $target = $this->qrTarget($request);
+        abort_if($target === null, 404);
 
-        $svg = FlyerSvg::render(AppSettings::appName(), RegistrationLink::url($withCode), route('register'), $step2, $open);
+        $svg = FlyerSvg::render(AppSettings::appName(), $target['url'], $target['printed_url'], __('settings.flyer_step2_text'), $target['key'] === 'flyer');
         $disposition = $request->boolean('download') ? 'attachment' : 'inline';
 
         return response($svg, 200, [
             'Content-Type' => 'image/svg+xml; charset=UTF-8',
             'Content-Disposition' => $disposition.'; filename="bierkasse-flyer.svg"',
-            // Contains the flyer code: never stored by shared caches.
+            // Contains the code: never stored by shared caches.
             'Cache-Control' => 'no-store, private',
         ]);
+    }
+
+    /**
+     * Selected QR target: an unlocked registration code or the flyer code (only in mode "password");
+     * default the first available one. Null when none is available.
+     *
+     * @return array{key: string, label: string, url: string, printed_url: string}|null
+     */
+    private function qrTarget(Request $request): ?array
+    {
+        $targets = RegistrationCode::query()->whereNull('locked_at')->orderBy('label')->get()
+            ->map(fn (RegistrationCode $c) => ['key' => (string) $c->id, 'label' => $c->label, 'url' => $c->url(), 'printed_url' => $c->url()])
+            ->all();
+        if (AppSettings::registrationOpen()) {
+            // The URL with the flyer code is not printed (only the plain registration URL).
+            $targets[] = ['key' => 'flyer', 'label' => __('settings.flyer_code_label'), 'url' => RegistrationLink::url(true), 'printed_url' => route('register')];
+        }
+        $selected = (string) $request->query('qr', '');
+
+        return collect($targets)->firstWhere('key', $selected) ?? ($targets[0] ?? null);
     }
 
     /** New flyer code: every printed flyer/QR code with the old code stops working. */
@@ -161,7 +177,7 @@ class SettingsController extends Controller
     {
         AppSettings::regenerateFlyerCode();
 
-        return redirect()->route('backend.registration.qr', $request->query('view') === 'flyer' ? ['view' => 'flyer'] : [])
+        return redirect()->route('backend.registration.qr', ['qr' => 'flyer'] + ($request->query('view') === 'flyer' ? ['view' => 'flyer'] : []))
             ->with('status', __('settings.flyer_code_regenerated'));
     }
 }

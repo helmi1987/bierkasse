@@ -133,6 +133,18 @@ class CashboxQrTest extends TestCase
         $this->assertFalse((bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED));
     }
 
+    public function test_qr_overview_tab_for_kassier_and_admin(): void
+    {
+        QrCode::ensureFirst(QrCode::KIND_CASH);
+        QrCode::generate(QrCode::KIND_CASH)->update(['deactivated_at' => now()]);
+        $this->actingAs($this->kassier())->get('/backend/qr-codes')->assertOk()
+            ->assertSee('class="active">QR-Codes', false)->assertSee('1 aktiv')->assertDontSee('deaktiviert');
+        $this->actingAs($this->admin())->get('/backend/qr-codes')->assertOk()->assertSee('1 deaktiviert')
+            ->assertSee(route('backend.registration.qr'))->assertSee(route('backend.guests.qr'));
+        $this->get('/backend/registrierung-qr')->assertOk()->assertSee('class="active">QR-Codes', false);
+        $this->actingAs($this->user())->get('/backend/qr-codes')->assertForbidden();
+    }
+
     public function test_migration_moves_former_codes_from_settings(): void
     {
         Setting::putMany(['cashbox_qr_cash_token' => 'oldCashCode123', 'registration_flyer_code' => 'oldFlyer456']);

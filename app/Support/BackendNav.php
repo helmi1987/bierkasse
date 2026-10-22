@@ -15,7 +15,7 @@ class BackendNav
 
     public const BACKEND = 'backend';
 
-    /** Tabs per group in the built-in order: key => [route, active route pattern]. */
+    /** Tabs per group in the built-in order: key => [route, active route pattern(s)]. */
     public const ITEMS = [
         self::KASSIER => [
             'dashboard' => ['backend.dashboard', 'backend.dashboard'],
@@ -29,7 +29,7 @@ class BackendNav
             'stock' => ['backend.stock', 'backend.stock*'],
             'deposit_suggestions' => ['backend.deposit-suggestions', 'backend.deposit-suggestions'],
             'audit' => ['backend.audit', 'backend.audit*'],
-            'qr' => ['backend.registration.qr', 'backend.registration.*'],
+            'qr' => ['backend.qr-codes.index', ['backend.qr-codes.*', 'backend.registration.*']],
         ],
         self::BACKEND => [
             'settings' => ['backend.settings', 'backend.settings'],

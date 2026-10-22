@@ -100,6 +100,8 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Tabelle `qr_codes` (Art `cashbox_cash`/`cashbox_twint`/`flyer`/`guest`, Name freiwillig, Code verschlüsselt +
      SHA-256 für die Suche, `deactivated_at`); die früheren Einzel-Codes aus den Settings werden beim Migrieren
      übernommen (gedruckte Aufkleber/Flyer bleiben gültig). Audit: `qr_code.create/label/deactivate/activate`.
+     Reiter "QR-Codes" in der Kassier-Leiste (`/backend/qr-codes`, Kassier und Admin): Übersicht aller Arten mit Anzahl
+     aktiver (Admin zusätzlich deaktivierter) Codes und Link zur jeweiligen Seite; ersetzt den Reiter "Registrierungs-QR".
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.
      Alle Mails (auch Passwort-Reset) nutzen ein gemeinsames HTML-Layout (`resources/views/mail/layout.blade.php`, Inline-CSS, Logo `public/icon-192.png` als CID eingebettet, fehlt es, entfällt das Logo) plus Textversion; Fakten als Tabelle, Link als Button.

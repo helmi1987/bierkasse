@@ -15,7 +15,7 @@ return [
         'invitations' => 'Einladungen',
         'settings' => 'Einstellungen',
         'sso' => 'SSO',
-        'qr' => 'Registrierungs-QR',
+        'qr' => 'QR-Codes',
         'maintenance' => 'Wartung',
         'feedback' => 'Feedback',
         'audit' => 'Protokoll',

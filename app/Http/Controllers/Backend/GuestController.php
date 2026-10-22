@@ -7,14 +7,16 @@ use App\Models\GuestSale;
 use App\Models\Setting;
 use App\Services\GuestSales;
 use App\Support\AppSettings;
+use App\Support\CashboxQrSvg;
 use App\Support\Qr;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 /**
  * Guests (kassier and admin): booking by logged-in users on/off, public guest page on/off with
- * guest password and printable QR code, guest sales with storno.
+ * guest password and printable QR code, cashbox QR stickers (cash / TWINT), guest sales with storno.
  */
 class GuestController extends Controller
 {
@@ -25,6 +27,8 @@ class GuestController extends Controller
             'enabled' => (bool) AppSettings::get(AppSettings::GUEST_ENABLED, false),
             'password' => AppSettings::guestPassword(),
             'open' => AppSettings::guestOpen(),
+            'cashboxEnabled' => (bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED, false),
+            'twintEnabled' => AppSettings::twintEnabled(),
             'sales' => GuestSale::query()->with('bookedBy')->latest('id')->paginate(30),
             'total' => ['beers' => (int) GuestSale::query()->sum('beers'), 'amount' => (int) GuestSale::query()->sum('amount')],
         ]);
@@ -40,6 +44,7 @@ class GuestController extends Controller
             AppSettings::GUEST_USER_BOOKING => $request->boolean('guest_user_booking'),
             AppSettings::GUEST_ENABLED => $request->boolean('guest_enabled'),
             AppSettings::GUEST_PASSWORD => (string) ($data['guest_password'] ?? ''),
+            AppSettings::CASHBOX_QR_ENABLED => $request->boolean('cashbox_qr_enabled'),
         ]);
 
         return back()->with('status', __('settings.saved'));
@@ -70,5 +75,26 @@ class GuestController extends Controller
             'open' => AppSettings::guestOpen(),
             'appName' => AppSettings::appName(),
         ]);
+    }
+
+    /** Cashbox QR sticker as SVG (?download=1 as attachment); generates the code on first use. */
+    public function cashboxSvg(Request $request, string $method): Response
+    {
+        $svg = CashboxQrSvg::sticker(AppSettings::appName(), $method, route('cashbox', AppSettings::cashboxQrCode($method)));
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return response($svg, 200, [
+            'Content-Type' => 'image/svg+xml; charset=UTF-8',
+            'Content-Disposition' => $disposition.'; filename="kassen-qr-'.($method === 'cash' ? 'bar' : 'twint').'.svg"',
+            'Cache-Control' => 'no-store',
+        ]);
+    }
+
+    /** New cashbox QR code: stickers printed with the old code stop working. */
+    public function regenerateCashbox(string $method): RedirectResponse
+    {
+        AppSettings::regenerateCashboxQrCode($method);
+
+        return back()->with('status', __('guest.cashbox_regenerated'));
     }
 }

@@ -66,6 +66,11 @@ class AppSettings
     /** Logged-in users may book beers for guests on their dashboard. */
     public const GUEST_USER_BOOKING = 'guest_user_booking';
 
+    /** Cashbox QR stickers ("Kein Konto? Bar bezahlt" / "… getwintet"): one switch, one secret code per method. */
+    public const CASHBOX_QR_ENABLED = 'cashbox_qr_enabled';
+
+    public const CASHBOX_QR_TOKENS = ['cash' => 'cashbox_qr_cash_token', 'twint' => 'cashbox_qr_twint_token'];
+
     public const STOCK_LOW_WARNED = 'stock_low_warned';
 
     /** Users may pay a round for colleagues/guests ("Runde spendieren"). Planned to move to the tenant settings. */
@@ -263,6 +268,42 @@ class AppSettings
     public static function guestOpen(): bool
     {
         return (bool) self::get(self::GUEST_ENABLED, false) && self::guestPassword() !== '';
+    }
+
+    /** Cashbox QR code of a method ('cash'|'twint'); generated on first use (random, URL-safe, 32 characters). */
+    public static function cashboxQrCode(string $method): string
+    {
+        $code = (string) self::get(self::CASHBOX_QR_TOKENS[$method], '');
+
+        return $code !== '' ? $code : self::regenerateCashboxQrCode($method);
+    }
+
+    /** New cashbox QR code; stickers printed with the old one stop working. */
+    public static function regenerateCashboxQrCode(string $method): string
+    {
+        $code = rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=');
+        Setting::put(self::CASHBOX_QR_TOKENS[$method], $code);
+
+        return $code;
+    }
+
+    /**
+     * Payment method of a valid cashbox QR code, null if invalid or switched off.
+     * The TWINT code only works while TWINT is active. Never generates a code.
+     */
+    public static function cashboxQrMethod(string $code): ?string
+    {
+        if ($code === '' || ! (bool) self::get(self::CASHBOX_QR_ENABLED, false)) {
+            return null;
+        }
+        foreach (self::CASHBOX_QR_TOKENS as $method => $key) {
+            $stored = (string) self::get($key, '');
+            if ($stored !== '' && hash_equals($stored, $code)) {
+                return $method === 'twint' && ! self::twintEnabled() ? null : $method;
+            }
+        }
+
+        return null;
     }
 
     /** Logged-in users may book beers for guests (default on, independent of the public guest page). */

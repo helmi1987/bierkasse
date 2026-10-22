@@ -7,11 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Beers sold to a guest (no account). Amount is the positive income in Rappen.
- * booked_by: user who booked it on the dashboard; null = public guest page.
+ * booked_by: user who booked it on the dashboard; null = public guest page or cashbox QR.
+ * source: 'cashbox' = cashbox QR sticker, otherwise null.
  */
 class GuestSale extends Model
 {
-    protected $fillable = ['name', 'beers', 'unit_price', 'amount', 'method', 'booked_by'];
+    protected $fillable = ['name', 'beers', 'unit_price', 'amount', 'method', 'booked_by', 'source'];
+
+    public const SOURCE_CASHBOX = 'cashbox';
 
     protected function casts(): array
     {

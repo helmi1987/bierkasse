@@ -82,6 +82,15 @@ class CashboxQrTest extends TestCase
         $this->actingAs($kassier)->get('/backend/gaeste/kassen-qr/twint')->assertOk()->assertSee('Ich habe getwintet');
         $this->actingAs($this->user())->get('/backend/gaeste/kassen-qr/cash')->assertForbidden();
 
+        $sheet = $this->actingAs($kassier)->get('/backend/gaeste/kassen-qr-a4/mixed?download=1')->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename="kassen-qr-a4-bar-twint.svg"')->getContent();
+        $this->assertStringContainsString('width="210mm" height="297mm"', $sheet);
+        $this->assertSame(2, substr_count($sheet, '>Bar bezahlt<'));
+        $this->assertSame(2, substr_count($sheet, '>Ich habe getwintet<'));
+        $this->assertSame(4, substr_count($sheet, 'stroke-dasharray'));
+        $this->actingAs($kassier)->get('/backend/gaeste/kassen-qr-a4/andere')->assertNotFound();
+        $this->actingAs($kassier)->get('/backend/gaeste')->assertSee('data-png-width="945"', false);
+
         $old = AppSettings::cashboxQrCode('twint');
         $this->actingAs($kassier)->post('/backend/gaeste/kassen-qr/twint/neuer-code')->assertSessionHas('status');
         $this->assertNotSame($old, AppSettings::cashboxQrCode('twint'));

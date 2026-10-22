@@ -38,7 +38,11 @@
         @foreach (['cash', 'twint'] as $method)
             <div class="stack center">
                 <img src="{{ route('backend.guests.cashbox', $method) }}" alt="{{ __('guest.cashbox_title_'.$method) }}" width="200" height="275">
-                <a class="btn small" href="{{ route('backend.guests.cashbox', ['method' => $method, 'download' => 1]) }}">{{ __('guest.cashbox_download') }}</a>
+                <div class="row-buttons">
+                    {{-- 80 x 110 mm at 300 dpi. --}}
+                    <button type="button" class="btn small" data-png-download="{{ route('backend.guests.cashbox', $method) }}" data-png-width="945" data-png-height="1299" data-png-filename="kassen-qr-{{ $method === 'cash' ? 'bar' : 'twint' }}.png" data-png-error="#cashbox-png-error">{{ __('guest.cashbox_png') }}</button>
+                    <a class="btn small" href="{{ route('backend.guests.cashbox', ['method' => $method, 'download' => 1]) }}">{{ __('guest.cashbox_download') }}</a>
+                </div>
                 <form method="post" action="{{ route('backend.guests.cashbox.regenerate', $method) }}" class="inline" data-confirm="{{ __('guest.cashbox_regenerate_confirm') }}">
                     @csrf
                     <button type="submit" class="btn small ghost">{{ __('guest.cashbox_regenerate') }}</button>
@@ -46,6 +50,21 @@
             </div>
         @endforeach
     </div>
+    <h3>{{ __('guest.cashbox_sheets') }}</h3>
+    <p class="hint">{{ __('guest.cashbox_sheets_hint') }}</p>
+    <ul class="list">
+        @foreach (\App\Http\Controllers\Backend\GuestController::SHEET_FILES as $variant => $file)
+            <li class="wrap-row">
+                <span>{{ __('guest.cashbox_sheet_'.$variant) }}</span>
+                <span class="row-buttons">
+                    <a class="btn small" href="{{ route('backend.guests.cashbox.sheet', $variant) }}" target="_blank" rel="noopener">{{ __('guest.cashbox_sheet_open') }}</a>
+                    <button type="button" class="btn small" data-png-download="{{ route('backend.guests.cashbox.sheet', $variant) }}" data-png-filename="kassen-qr-a4-{{ $file }}.png" data-png-error="#cashbox-png-error">{{ __('guest.cashbox_png') }}</button>
+                    <a class="btn small" href="{{ route('backend.guests.cashbox.sheet', ['variant' => $variant, 'download' => 1]) }}">{{ __('guest.cashbox_download') }}</a>
+                </span>
+            </li>
+        @endforeach
+    </ul>
+    <p class="alert bad" id="cashbox-png-error" role="alert" hidden>{{ __('settings.flyer_png_error') }}</p>
 </section>
 
 <section class="card">

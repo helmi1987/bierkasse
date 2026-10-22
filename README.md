@@ -265,8 +265,11 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     und öffnet nur `/kasse/<code>`. Seite: Anzahl 1–10 wählen und bestätigen, sofort als Gäste-Verkauf gebucht
     (`guest_sales.source = cashbox`, Liste "Kassen-QR"). Die Bar-Seite zeigt nie TWINT-Daten; die TWINT-Seite zeigt die
     Empfänger wie hinterlegt (Kopier-Knopf nur mit Nummer) und funktioniert nur, solange TWINT aktiv ist. Ungültiger
-    Code = 404 (10 Fehlversuche/Minute pro IP). Im Backend Vorschau, "SVG herunterladen" (80 x 110 mm,
-    `app/Support/CashboxQrSvg.php`) und "Neuer Code" pro Aufkleber (alte Aufkleber werden ungültig).
+    Code = 404 (10 Fehlversuche/Minute pro IP). Im Backend Vorschau, PNG (945 x 1299 px = 300 dpi, im Browser
+    gerendert) und SVG (80 x 110 mm, `app/Support/CashboxQrSvg.php`) und "Neuer Code" pro Aufkleber (alte Aufkleber
+    werden ungültig). A4-Bogen mit 2 x 2 Aufklebern, 10 mm Abstand, gestrichelte Schnittlinien (Rand 20 mm seitlich,
+    33.5 mm oben/unten; **Annahme** 2026-10-22): "4 × Bar", "4 × TWINT", "2 × Bar + 2 × TWINT", je Öffnen/Drucken,
+    PNG (A4 300 dpi) und SVG (`/backend/gaeste/kassen-qr-a4/{cash|twint|mixed}`). Drucken mit 100 %.
 - Runde spendieren (Entscheid 2026-10-21): Dashboard-Karte "Runde spendieren" (nach "Bier für Gast"). Angehakte
   aktive Kollegen (alle aktiven Benutzer ausser einem selbst, nach Name sortiert, mit Suchfeld) bekommen je 1 Bier,
   dazu 0–20 "weitere Biere" ohne Namen (z. B. Gäste) und eine freiwillige Nachricht (max. 140 Zeichen). Pro Runde

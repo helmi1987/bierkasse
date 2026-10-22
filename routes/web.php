@@ -135,6 +135,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::put('/gaeste', [Backend\GuestController::class, 'update'])->name('guests.update');
             Route::get('/gaeste/qr', [Backend\GuestController::class, 'qr'])->name('guests.qr');
             Route::get('/gaeste/kassen-qr/{method}', [Backend\GuestController::class, 'cashboxSvg'])->whereIn('method', ['cash', 'twint'])->name('guests.cashbox');
+            Route::get('/gaeste/kassen-qr-a4/{variant}', [Backend\GuestController::class, 'cashboxSheet'])->whereIn('variant', ['cash', 'twint', 'mixed'])->name('guests.cashbox.sheet');
             Route::post('/gaeste/kassen-qr/{method}/neuer-code', [Backend\GuestController::class, 'regenerateCashbox'])->whereIn('method', ['cash', 'twint'])->name('guests.cashbox.regenerate');
             Route::delete('/gaeste/{sale}', [Backend\GuestController::class, 'destroy'])->whereNumber('sale')->name('guests.destroy');
             Route::get('/runden', [Backend\RoundController::class, 'index'])->name('rounds');

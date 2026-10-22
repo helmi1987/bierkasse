@@ -151,6 +151,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 // No .svg extension: Plesk/nginx may treat such URLs as static files.
                 Route::get('/registrierung-qr/flyer-bild', [Backend\SettingsController::class, 'flyerSvg'])->name('registration.flyer-svg');
                 Route::post('/registrierung-qr/neuer-code', [Backend\SettingsController::class, 'regenerateFlyerCode'])->name('registration.flyer-code');
+                Route::post('/registrierung-qr/codes', [Backend\RegistrationCodeController::class, 'store'])->name('registration.codes.store');
+                Route::put('/registrierung-qr/codes/{registrationCode}/sperre', [Backend\RegistrationCodeController::class, 'lock'])->whereNumber('registrationCode')->name('registration.codes.lock');
+                Route::delete('/registrierung-qr/codes/{registrationCode}', [Backend\RegistrationCodeController::class, 'destroy'])->whereNumber('registrationCode')->name('registration.codes.destroy');
                 Route::get('/feedback', [Backend\FeedbackController::class, 'index'])->name('feedback');
                 Route::put('/feedback/empfaenger', [Backend\FeedbackController::class, 'recipients'])->name('feedback.recipients');
                 Route::post('/feedback/{feedback}/gelesen', [Backend\FeedbackController::class, 'read'])->whereNumber('feedback')->name('feedback.read');

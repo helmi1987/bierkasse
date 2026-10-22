@@ -33,6 +33,8 @@ return [
     'submit' => 'Konto erstellen',
     'back' => 'Zurück zur Anmeldung',
     'intro_flyer' => 'Neues Konto für die Bierkasse. Über den QR-Code brauchst du kein Registrierungspasswort.',
+    'reg_code_invalid' => 'Dieser Registrierungscode ist nicht mehr gültig.',
+    'reg_code_locked' => 'Dieser Registrierungscode ist gesperrt.',
     'flyer_invalid' => 'Dieser QR-Code ist nicht mehr gültig (vielleicht ein alter Flyer). Das Registrierungspasswort gibt es beim Kassier.',
     'code_wrong' => 'Registrierungspasswort falsch.',
     'done' => 'Willkommen! Dein Konto ist bereit.',

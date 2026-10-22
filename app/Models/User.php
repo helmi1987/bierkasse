@@ -30,7 +30,7 @@ class User extends Authenticatable
     public const STATUS_LEFT = 'left';
 
     protected $fillable = [
-        'username', 'first_name', 'last_name', 'email', 'password', 'role', 'status',
+        'username', 'first_name', 'last_name', 'email', 'password', 'role', 'status', 'registration_code_id',
         'overdraft_limit', 'stats_opt_out', 'must_change_password', 'last_login_at', 'left_at',
     ];
 

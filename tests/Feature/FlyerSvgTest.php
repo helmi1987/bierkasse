@@ -57,6 +57,7 @@ class FlyerSvgTest extends TestCase
 
     public function test_access_is_admin_only_like_the_qr_page(): void
     {
+        $this->open();
         $this->actingAs($this->user())->get(self::URL)->assertForbidden();
         $this->actingAs($this->kassier())->get(self::URL)->assertForbidden();
         $this->actingAs($this->admin())->get(self::URL)->assertOk();
@@ -120,21 +121,20 @@ class FlyerSvgTest extends TestCase
         $this->assertStringNotContainsString(AppSettings::flyerCode(), $svg);
         $this->assertStringNotContainsString('durst', $svg);
         $this->assertStringContainsString('Benutzername und Passwort wählen. Dauert kürzer', $this->text($svg));
-
-        $svg = $this->get(self::URL.'?code=0')->assertOk()->getContent();
-        $this->assertStringNotContainsString($this->qrPath($withCode), $svg);
-        $this->assertStringContainsString($this->qrPath(route('register')), $svg);
-        $this->assertStringContainsString('Das Registrierungspasswort gibt', $this->text($svg));
     }
 
-    public function test_invite_mode_has_no_code_and_no_password_note(): void
+    public function test_without_code_there_is_no_flyer_and_registration_codes_have_no_password_note(): void
     {
         Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_INVITE);
-        $svg = $this->actingAs($this->admin())->get(self::URL)->assertOk()->getContent();
+        $this->actingAs($this->admin())->get(self::URL)->assertNotFound();
 
-        $this->assertStringContainsString($this->qrPath(route('register')), $svg);
-        $this->assertStringContainsString('Einladungslink', $this->text($svg));
+        $code = \App\Models\RegistrationCode::generate('Kaffeeküche', null);
+        $svg = $this->get(self::URL.'?qr='.$code->id)->assertOk()->getContent();
+        $this->assertStringContainsString($this->qrPath($code->url()), $svg);
         $this->assertStringNotContainsString('Ohne QR-Code', $svg);
+
+        $code->forceFill(['locked_at' => now()])->save();
+        $this->get(self::URL.'?qr='.$code->id)->assertNotFound();
     }
 
     public function test_wrap_breaks_by_words_and_splits_long_words(): void

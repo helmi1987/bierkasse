@@ -155,15 +155,13 @@ class RegistrationTest extends TestCase
 
         $this->get('/backend/registrierung-qr?view=flyer')->assertOk()
             ->assertSee('class="flyer-image"', false)
-            ->assertSee('<img src="'.route('backend.registration.flyer-svg').'"', false)
-            ->assertSee('data-png-download="'.route('backend.registration.flyer-svg').'"', false)
-            ->assertSee(route('backend.registration.flyer-svg', ['download' => 1]), false)
+            ->assertSee('<img src="'.route('backend.registration.flyer-svg', ['qr' => 'flyer']).'"', false)
+            ->assertSee('data-png-download="'.route('backend.registration.flyer-svg', ['qr' => 'flyer']).'"', false)
+            ->assertSee(route('backend.registration.flyer-svg', ['qr' => 'flyer', 'download' => 1]))
             ->assertSee('Als PNG herunterladen')->assertSee('Als SVG herunterladen')
             ->assertSee('An Seite anpassen')->assertSee('data-print', false)
             ->assertDontSee('class="flyer"', false)
             ->assertDontSee('flyer='.AppSettings::flyerCode())->assertDontSee('durst');
-        $this->get('/backend/registrierung-qr?view=flyer&code=0')->assertOk()
-            ->assertSee('<img src="'.route('backend.registration.flyer-svg', ['code' => 0]).'"', false);
         $this->get('/backend/registrierung-qr')->assertOk()->assertDontSee('class="flyer-image"', false);
     }
 
@@ -178,9 +176,6 @@ class RegistrationTest extends TestCase
             ->assertDontSee('durst')->assertDontSee('flyer='.AppSettings::flyerCode());
         $this->assertStringNotContainsString('durst', RegistrationLink::url(true));
         $this->assertStringStartsWith(route('register').'?flyer=', RegistrationLink::url(true));
-        $this->get('/backend/registrierung-qr?code=0')->assertOk()
-            ->assertSee(Qr::dataUri(route('register'), 480), false)
-            ->assertDontSee('enthält den Flyer-Code');
     }
 
     public function test_flyer_code_is_random_and_stable_until_regenerated(): void
@@ -197,7 +192,7 @@ class RegistrationTest extends TestCase
 
         $this->actingAs($this->user())->post('/backend/registrierung-qr/neuer-code')->assertForbidden();
         $this->actingAs($this->admin())->post('/backend/registrierung-qr/neuer-code')
-            ->assertRedirect(route('backend.registration.qr'))->assertSessionHas('status');
+            ->assertRedirect(route('backend.registration.qr', ['qr' => 'flyer']))->assertSessionHas('status');
         Setting::flushCache();
         $this->assertNotSame($code, AppSettings::flyerCode());
         $this->assertFalse(AppSettings::flyerCodeValid($code));

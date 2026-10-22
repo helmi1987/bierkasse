@@ -349,15 +349,13 @@ class InviteTest extends TestCase
         $this->mode(AppSettings::MODE_INVITE);
         $this->actingAs($this->admin());
 
+        // Without a registration code there is nothing to show (no QR without a code).
         $this->get('/backend/registrierung-qr')->assertOk()
-            ->assertSee('Nur per Einladung')
+            ->assertSee('Kein aktiver Registrierungscode')
             ->assertDontSee('code=durst')
             ->assertDontSee('Flyer-Code neu erzeugen')
-            ->assertSee(Qr::dataUri(route('register'), 480), false)
-            ->assertSee(route('register'));
-        $this->get('/backend/registrierung-qr?view=flyer')->assertOk()
-            ->assertDontSee('code=durst')
-            ->assertSee('Einladungslink');
+            ->assertDontSee(Qr::dataUri(route('register'), 480), false);
+        $this->get('/backend/registrierung-qr?view=flyer')->assertOk()->assertDontSee('class="flyer-image"', false);
     }
 
     // --- Settings ----------------------------------------------------------------------

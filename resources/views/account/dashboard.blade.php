@@ -163,9 +163,6 @@
         <details @if ($guestUndoable->isNotEmpty() || $errors->hasAny(['guest_quantity', 'guest_method', 'guest_name']) || old('guest_quantity')) open @endif>
             <summary><h2>{{ __('guest.book_heading') }}</h2></summary>
             <p class="muted">{{ __('guest.book_intro') }}</p>
-            @if ($guestAvailable === 0)
-                <p class="alert warn" role="alert">{{ trans_choice('guest.stock_short', 0) }}</p>
-            @endif
             <form method="post" action="{{ route('account.guest') }}" class="stack">
                 @csrf
                 {!! \App\Support\FormToken::field('guest-booking') !!}
@@ -174,7 +171,7 @@
                     <div class="stepper" data-stepper>
                         <button type="button" class="btn round" data-step="-1" aria-label="{{ __('account.less') }}">−</button>
                         <label class="sr-only" for="guest_quantity">{{ __('guest.quantity') }}</label>
-                        <input type="number" id="guest_quantity" name="guest_quantity" value="{{ old('guest_quantity', 1) }}" min="1" max="{{ max(1, $guestAvailable) }}" inputmode="numeric" data-price="{{ $price }}">
+                        <input type="number" id="guest_quantity" name="guest_quantity" value="{{ old('guest_quantity', 1) }}" min="1" max="{{ \App\Services\GuestSales::MAX_BEERS }}" inputmode="numeric" data-price="{{ $price }}">
                         <button type="button" class="btn round" data-step="1" aria-label="{{ __('account.more') }}">+</button>
                     </div>
                     <p class="muted center">{{ __('guest.price', ['price' => chf($price)]) }} · <strong data-total>{{ chf($price) }}</strong></p>
@@ -195,7 +192,7 @@
                     <label for="guest_name">{{ __('guest.name') }}</label>
                     <input type="text" id="guest_name" name="guest_name" value="{{ old('guest_name') }}" maxlength="100" autocomplete="off">
                 </div>
-                <button type="submit" class="btn primary big" @disabled($guestAvailable === 0)>{{ __('guest.book_submit') }}</button>
+                <button type="submit" class="btn primary big">{{ __('guest.book_submit') }}</button>
             </form>
 
             @if ($guestUndoable->isNotEmpty())

@@ -121,20 +121,18 @@ class GuestBookingTest extends TestCase
         $this->assertSame(1, GuestSale::query()->count());
     }
 
-    public function test_stock_limit_is_enforced(): void
+    public function test_stock_never_blocks_booking(): void
     {
         CashEntry::query()->delete();
         $this->stock(3);
         $this->actingAs($this->user());
-        $this->get('/konto')->assertOk()->assertSee('id="guest_quantity" name="guest_quantity" value="1" min="1" max="3"', false);
+        $this->get('/konto')->assertOk()->assertSee('id="guest_quantity" name="guest_quantity" value="1" min="1" max="10"', false);
 
-        $this->post('/konto/gast', $this->sale(['guest_quantity' => 4]))->assertSessionHas('error', 'Nur noch 3 Biere an Lager.');
-        $this->post('/konto/gast', $this->sale(['guest_quantity' => 3]))->assertSessionHas('status');
-        $this->post('/konto/gast', $this->sale(['guest_quantity' => 1]))->assertSessionHas('error', 'Zurzeit ist kein Bier an Lager.');
-        $this->get('/konto')->assertOk()->assertSee('Zurzeit ist kein Bier an Lager.');
+        $this->post('/konto/gast', $this->sale(['guest_quantity' => 4]))->assertSessionHas('status');
+        $this->post('/konto/gast', $this->sale(['guest_quantity' => 1]))->assertSessionHas('status');
 
-        $this->assertSame(3, (int) GuestSale::query()->sum('beers'));
-        $this->assertSame(0, BeerStock::current());
+        $this->assertSame(5, (int) GuestSale::query()->sum('beers'));
+        $this->assertSame(-2, BeerStock::current());
     }
 
     public function test_disabled_hides_form_and_refuses_booking(): void

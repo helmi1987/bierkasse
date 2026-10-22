@@ -72,7 +72,6 @@ class AccountController extends Controller
             'stock' => $stock,
             'stockLow' => $stock !== null && BeerStock::isLow($stock),
             'guestBooking' => $guestBooking,
-            'guestAvailable' => $guestBooking ? min(GuestSales::MAX_BEERS, max(0, $stock ?? BeerStock::current())) : 0,
             'guestUndoable' => $guestUndoable,
             'rounds' => $rounds,
             'colleagues' => $rounds ? Rounds::colleagues($user) : collect(),

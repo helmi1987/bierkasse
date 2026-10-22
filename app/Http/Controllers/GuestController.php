@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
-use App\Services\BeerStock;
 use App\Services\GuestSales;
 use App\Services\LedgerException;
 use App\Support\AppSettings;
@@ -30,7 +29,6 @@ class GuestController extends Controller
         return view('guest.form', [
             'code' => (string) $request->query('code', ''),
             'price' => AppSettings::beerPrice(),
-            'available' => min(GuestSales::MAX_BEERS, max(0, BeerStock::current())),
             'twintEnabled' => AppSettings::twintEnabled(),
             'twintRecipients' => AppSettings::twintRecipients(),
             'twintHtml' => AppSettings::twintRecipientText(true),

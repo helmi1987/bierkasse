@@ -76,10 +76,18 @@ class AppSettings
     /** Users may pay a round for colleagues/guests ("Runde spendieren"). Planned to move to the tenant settings. */
     public const ROUNDS_ENABLED = 'rounds_enabled';
 
-    /** "Bier verschenken" on/off and the undo window of the giver in minutes. */
+    /** "Bier verschenken" on/off. */
     public const GIFTS_ENABLED = 'gifts_enabled';
 
+    /** Former undo window of a gift (1.7.0), read as fallback for UNDO_MINUTES['gift']. */
     public const GIFT_UNDO_MINUTES = 'gift_undo_minutes';
+
+    /** Undo windows in minutes per booking kind (admin settings). */
+    public const UNDO_MINUTES = 'undo_minutes';
+
+    public const UNDO_DEFAULTS = ['consume' => 10, 'round' => 10, 'guest' => 10, 'gift' => 5];
+
+    public const UNDO_MAX = 60;
 
     /** Preselected deposit proposal in Rappen; null = first proposal. */
     public const DEPOSIT_DEFAULT = 'deposit_suggestion_default';
@@ -328,10 +336,13 @@ class AppSettings
         return (bool) self::get(self::GIFTS_ENABLED, true);
     }
 
-    /** Undo window of a gift (0–60 minutes, default 5; 0 = no undo). */
-    public static function giftUndoMinutes(): int
+    /** Undo window of a booking kind (key of UNDO_DEFAULTS) in minutes, 0–UNDO_MAX; 0 = no undo. */
+    public static function undoMinutes(string $kind): int
     {
-        return max(0, min(60, (int) self::get(self::GIFT_UNDO_MINUTES, 5)));
+        $stored = (array) self::get(self::UNDO_MINUTES, []);
+        $default = $kind === 'gift' ? self::get(self::GIFT_UNDO_MINUTES, self::UNDO_DEFAULTS['gift']) : self::UNDO_DEFAULTS[$kind];
+
+        return max(0, min(self::UNDO_MAX, (int) ($stored[$kind] ?? $default)));
     }
 
     /** Minimum beer stock (low-stock mail and warning); 0 = off. */

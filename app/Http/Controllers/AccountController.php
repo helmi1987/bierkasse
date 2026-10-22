@@ -38,7 +38,7 @@ class AccountController extends Controller
         $undoable = Transaction::query()->where('user_id', $user->id)
             ->where('type', Transaction::TYPE_CONSUMPTION)
             ->where('created_by', $user->id)
-            ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
+            ->where('created_at', '>', now()->subMinutes(AppSettings::undoMinutes('consume')))
             ->latest('id')->get();
 
         $suggestions = DepositSuggestions::for($balance, $price, AppSettings::depositSuggestions());
@@ -55,22 +55,22 @@ class AccountController extends Controller
         // Booking for guests (own guest sales within the undo window can be undone).
         $guestBooking = AppSettings::guestUserBooking();
         $guestUndoable = GuestSale::query()->where('booked_by', $user->id)
-            ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
+            ->where('created_at', '>', now()->subMinutes(AppSettings::undoMinutes('guest')))
             ->latest('id')->get();
 
         // "Runde spendieren": colleagues to choose from, own rounds within the undo window, rounds received.
         $rounds = AppSettings::roundsAllowed();
         $roundUndoable = $rounds ? Transaction::query()->with('roundItems.user')->where('user_id', $user->id)
             ->where('type', Transaction::TYPE_ROUND)->where('created_by', $user->id)
-            ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
+            ->where('created_at', '>', now()->subMinutes(AppSettings::undoMinutes('round')))
             ->latest('id')->get() : collect();
 
         // "Bier verschenken": own gifts within the undo window, gifts received.
         $gifts = AppSettings::giftsAllowed();
         $giftUndoable = $gifts ? Transaction::query()->with('giftParts.user')->where('user_id', $user->id)
             ->where('type', Transaction::TYPE_GIFT)->whereNull('parent_id')
-            ->where('created_at', '>', now()->subMinutes(AppSettings::giftUndoMinutes()))
-            ->latest('id')->get() : collect();
+            ->where('created_at', '>', now()->subMinutes(AppSettings::undoMinutes('gift')))
+            ->latest('id')->get()->reject(fn (Transaction $tx) => Gifts::recipientsBookedSince($tx))->values() : collect();
 
         // Beers left in the cellar (only once the kassier maintains the stock).
         $stock = BeerStock::isTracked() ? BeerStock::current() : null;

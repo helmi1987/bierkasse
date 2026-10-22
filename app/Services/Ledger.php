@@ -242,7 +242,13 @@ class Ledger
         }
         if ($tx->type === Transaction::TYPE_GIFT) {
             DB::transaction(function () use ($tx, $user) {
-                $old = self::auditValues($tx) + ['recipients' => $tx->giftParts()->pluck('user_id')->all()];
+                // Lock the recipients (as their bookings do) and check again: no beer booked since the gift.
+                $recipients = $tx->giftParts()->pluck('user_id')->all();
+                User::query()->whereIn('id', $recipients)->orderBy('id')->lockForUpdate()->get();
+                if (Gifts::recipientsBookedSince($tx)) {
+                    throw new LedgerException(__('gift.undo_used'));
+                }
+                $old = self::auditValues($tx) + ['recipients' => $recipients];
                 $tx->giftParts()->delete();
                 $tx->delete();
                 Audit::log('gift.undo', $tx, $old, [], $user);

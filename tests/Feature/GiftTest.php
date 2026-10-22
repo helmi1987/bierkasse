@@ -80,8 +80,43 @@ class GiftTest extends TestCase
         $this->actingAs($this->giver)->post(route('account.undo', $tx))->assertSessionHas('error');
         $this->actingAs($anna)->post(route('account.undo', $tx->giftParts()->first()))->assertSessionHas('error');
 
-        Setting::put(AppSettings::GIFT_UNDO_MINUTES, 10);
+        Setting::put(AppSettings::UNDO_MINUTES, ['gift' => 10]);
         $this->actingAs($this->giver)->post(route('account.undo', $tx))->assertSessionHas('status');
+    }
+
+    public function test_undo_ends_once_a_recipient_booked_a_beer(): void
+    {
+        $anna = $this->user();
+        $beat = $this->user();
+        $tx = Ledger::giveBeers($this->giver, [$anna->id, $beat->id], 1);
+        Ledger::bookDeposit($beat, 1000, 'cash', $this->kassier());
+        $this->assertTrue($tx->canBeUndoneBy($this->giver));
+
+        Ledger::consume($beat, 1);
+        $this->assertFalse($tx->fresh()->canBeUndoneBy($this->giver));
+        $this->actingAs($this->giver)->get('/konto')->assertOk()->assertDontSee(route('account.undo', $tx));
+        $this->actingAs($this->giver)->post(route('account.undo', $tx))->assertSessionHas('error');
+        $this->assertSame(150, Ledger::balance($anna));
+    }
+
+    public function test_admin_sets_undo_minutes_per_kind(): void
+    {
+        Setting::put(AppSettings::GIFT_UNDO_MINUTES, 7);
+        $this->assertSame([10, 10, 10, 7], array_map(fn ($k) => AppSettings::undoMinutes($k), ['consume', 'round', 'guest', 'gift']));
+        $admin = $this->admin();
+        $this->actingAs($admin)->get('/backend/einstellungen')->assertOk()->assertSee('name="undo_minutes[gift]" value="7"', false);
+
+        $form = ['beer_price' => '1.50', 'default_limit' => '0', 'registration_mode' => 'invite', 'mail_transport' => 'sendmail'];
+        $this->actingAs($admin)->put('/backend/einstellungen', $form + ['undo_minutes' => ['consume' => 3, 'round' => 0, 'guest' => 15, 'gift' => 61]])
+            ->assertSessionHasErrors('undo_minutes.gift');
+        $this->actingAs($admin)->put('/backend/einstellungen', $form + ['undo_minutes' => ['consume' => 3, 'round' => 0, 'guest' => 15, 'gift' => 60]])
+            ->assertSessionHas('status');
+        $this->assertSame([3, 0, 15, 60], array_map(fn ($k) => AppSettings::undoMinutes($k), ['consume', 'round', 'guest', 'gift']));
+
+        $tx = Ledger::consume($this->giver, 1);
+        $this->travel(4)->minutes();
+        $this->assertFalse($tx->canBeUndoneBy($this->giver));
+        $this->actingAs($this->kassier())->put('/backend/einstellungen', $form)->assertForbidden();
     }
 
     public function test_backend_switch_and_list(): void
@@ -92,9 +127,8 @@ class GiftTest extends TestCase
         $this->actingAs($kassier)->get('/backend/verschenkt')->assertOk()->assertSee('an Anna', false);
         $this->actingAs($this->user())->get('/backend/verschenkt')->assertForbidden();
 
-        $this->actingAs($kassier)->put('/backend/verschenkt', ['gift_undo_minutes' => 0])->assertSessionHas('status');
+        $this->actingAs($kassier)->put('/backend/verschenkt', [])->assertSessionHas('status');
         $this->assertFalse(AppSettings::giftsAllowed());
-        $this->assertSame(0, AppSettings::giftUndoMinutes());
         $this->actingAs($this->giver)->get('/konto')->assertOk()->assertDontSee('data-testid="gift"', false);
         $this->actingAs($this->giver)->post('/konto/verschenken', $this->tokened('gift', ['gift_recipients' => [$anna->id], 'gift_quantity' => 1]))->assertNotFound();
     }

@@ -186,7 +186,7 @@ class RoundTest extends TestCase
 
         $this->post('/konto/runde', $this->round(['extra' => 1]));
         $late = Transaction::query()->where('type', Transaction::TYPE_ROUND)->sole();
-        $this->travel(Transaction::UNDO_MINUTES + 1)->minutes();
+        $this->travel(AppSettings::undoMinutes('round') + 1)->minutes();
         $this->post('/konto/bier/'.$late->id.'/rueckgaengig')->assertSessionHas('error', 'Das kann nicht mehr zurückgenommen werden.');
         $this->assertModelExists($late);
     }

@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * "Bier verschenken" (kassier and admin): on/off switch, undo window and the list of the gifts.
+ * "Bier verschenken" (kassier and admin): on/off switch and the list of the gifts (undo window: admin settings).
  */
 class GiftController extends Controller
 {
@@ -21,7 +21,6 @@ class GiftController extends Controller
 
         return view('backend.gifts', [
             'allowed' => AppSettings::giftsAllowed(),
-            'undoMinutes' => AppSettings::giftUndoMinutes(),
             'gifts' => (clone $gifts)->with(['user', 'giftParts.user'])->latest('id')->paginate(30),
             'total' => ['beers' => (int) (clone $gifts)->sum('quantity'), 'amount' => (int) -(clone $gifts)->sum('amount')],
         ]);
@@ -29,11 +28,7 @@ class GiftController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $data = $request->validate(['gift_undo_minutes' => ['required', 'integer', 'between:0,60']]);
-        Setting::putMany([
-            AppSettings::GIFTS_ENABLED => $request->boolean('gifts_enabled'),
-            AppSettings::GIFT_UNDO_MINUTES => (int) $data['gift_undo_minutes'],
-        ]);
+        Setting::put(AppSettings::GIFTS_ENABLED, $request->boolean('gifts_enabled'));
 
         return back()->with('status', __('settings.saved'));
     }

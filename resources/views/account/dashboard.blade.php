@@ -84,7 +84,7 @@
                     </li>
                 @endforeach
             </ul>
-            <p class="hint">{{ __('account.undo_hint', ['minutes' => \App\Models\Transaction::UNDO_MINUTES]) }}</p>
+            <p class="hint">{{ __('account.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('consume')]) }}</p>
         @endif
     </section>
 @endif
@@ -154,7 +154,7 @@
                         </li>
                     @endforeach
                 </ul>
-                <p class="hint">{{ __('round.undo_hint', ['minutes' => \App\Models\Transaction::UNDO_MINUTES]) }}</p>
+                <p class="hint">{{ __('round.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('round')]) }}</p>
             @endif
         </details>
     </section>
@@ -218,7 +218,7 @@
                         </li>
                     @endforeach
                 </ul>
-                <p class="hint">{{ __('gift.undo_hint', ['minutes' => \App\Support\AppSettings::giftUndoMinutes()]) }}</p>
+                <p class="hint">{{ __('gift.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('gift')]) }}</p>
             @endif
         </details>
     </section>
@@ -274,7 +274,7 @@
                         </li>
                     @endforeach
                 </ul>
-                <p class="hint">{{ __('guest.undo_hint', ['minutes' => \App\Models\Transaction::UNDO_MINUTES]) }}</p>
+                <p class="hint">{{ __('guest.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('guest')]) }}</p>
             @endif
         </details>
     </section>

@@ -51,6 +51,13 @@ class Gifts
             ->where('type', Transaction::TYPE_GIFT)->whereNotNull('parent_id')->sum('quantity');
     }
 
+    /** A recipient booked a beer (own consumption or a round he paid) after the gift (giver's row). */
+    public static function recipientsBookedSince(Transaction $gift): bool
+    {
+        return Transaction::query()->whereIn('user_id', $gift->giftParts()->select('user_id'))
+            ->whereIn('type', Transaction::BEER_TYPES)->where('id', '>', $gift->id)->exists();
+    }
+
     /** Recipients of a gift (giver's row), e.g. "Anna, Beat". */
     public static function recipientsText(Transaction $gift): string
     {

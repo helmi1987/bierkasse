@@ -12,11 +12,6 @@
     @method('PUT')
     <label class="switch"><input type="checkbox" name="gifts_enabled" value="1" @checked($allowed)> <span>{{ __('gift.allowed') }}</span></label>
     <div class="hint">{{ __('gift.allowed_hint') }}</div>
-    <div class="field">
-        <label for="gift_undo_minutes">{{ __('gift.undo_minutes') }}</label>
-        <input type="number" id="gift_undo_minutes" name="gift_undo_minutes" value="{{ old('gift_undo_minutes', $undoMinutes) }}" min="0" max="60" inputmode="numeric" required>
-        <div class="hint">{{ __('gift.undo_minutes_hint') }}</div>
-    </div>
     <div class="row-buttons">
         <button type="submit" class="btn primary">{{ __('gift.save') }}</button>
     </div>

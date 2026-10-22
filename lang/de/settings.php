@@ -105,4 +105,14 @@ return [
     'flyer_joke' => 'Das Bier bleibt übrigens analog. Versprochen.',
     'flyer_install' => 'Als App aufs Handy: Teilen → Zum Home-Bildschirm',
     'flyer_questions' => 'Fragen? Der Kassier hilft gern (am liebsten nach Feierabend).',
+
+    // Undo windows
+    'undo' => 'Rückgängig (Minuten)',
+    'undo_hint' => 'Wie lange Benutzer eigene Buchungen zurücknehmen können, 0–:max Minuten (0 = nie). Ein Geschenk ist zudem nicht mehr rückgängig, sobald ein Empfänger seither Bier gebucht hat.',
+    'undo_kind' => [
+        'consume' => 'Bier abstreichen',
+        'round' => 'Runde spendieren',
+        'guest' => 'Bier für Gast',
+        'gift' => 'Bier verschenken',
+    ],
 ];

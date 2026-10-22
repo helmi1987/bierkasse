@@ -76,6 +76,9 @@ class AppSettings
 
     public const MAIL = 'mail';
 
+    /** Default order of the backend tabs per group (see BackendNav). */
+    public const NAV_ORDER = 'nav_order';
+
     /** Maintenance mode for users: only admins can use the app (see MaintenanceMode middleware). */
     public const MAINTENANCE = 'maintenance_mode';
 

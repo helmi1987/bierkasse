@@ -52,6 +52,7 @@ class User extends Authenticatable
             'stats_opt_out' => 'boolean',
             'must_change_password' => 'boolean',
             'admin_only' => 'boolean',
+            'nav_order' => 'array',
             'last_login_at' => 'datetime',
             'left_at' => 'datetime',
             'totp_secret' => 'encrypted',

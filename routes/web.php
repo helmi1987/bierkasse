@@ -82,6 +82,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         // Account settings
         Route::get('/konto/einstellungen', [AccountSettingsController::class, 'show'])->name('account.settings');
         Route::put('/konto/profil', [AccountSettingsController::class, 'profile'])->name('account.profile');
+        Route::put('/konto/navigation', [AccountSettingsController::class, 'navOrder'])->middleware('role:kassier')->name('account.nav');
+        Route::delete('/konto/navigation', [AccountSettingsController::class, 'navReset'])->middleware('role:kassier')->name('account.nav.reset');
         Route::put('/konto/passwort', [AccountSettingsController::class, 'password'])->name('account.password');
         Route::post('/konto/statistik', [AccountSettingsController::class, 'stats'])->name('account.stats');
         Route::post('/konto/nur-verwaltung', [AccountSettingsController::class, 'adminOnly'])->name('account.admin-only');
@@ -147,6 +149,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::middleware('role:admin')->group(function () {
                 Route::get('/einstellungen', [Backend\SettingsController::class, 'edit'])->name('settings');
                 Route::put('/einstellungen', [Backend\SettingsController::class, 'update'])->name('settings.update');
+                Route::get('/navigation', [Backend\NavController::class, 'edit'])->name('nav');
+                Route::put('/navigation', [Backend\NavController::class, 'update'])->name('nav.update');
+                Route::delete('/navigation', [Backend\NavController::class, 'reset'])->name('nav.reset');
                 Route::get('/registrierung-qr', [Backend\SettingsController::class, 'registrationQr'])->name('registration.qr');
                 // No .svg extension: Plesk/nginx may treat such URLs as static files.
                 Route::get('/registrierung-qr/flyer-bild', [Backend\SettingsController::class, 'flyerSvg'])->name('registration.flyer-svg');

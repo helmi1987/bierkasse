@@ -262,7 +262,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     (Vertrauensbasis, keine Ortsprüfung): "Kein Konto? Bar bezahlt" und "Kein Konto? Ich habe getwintet". Jeder hat
     einen eigenen geheimen Code (32 Zeichen URL-sicher, verschlüsselt, Settings `cashbox_qr_cash_token` /
     `cashbox_qr_twint_token`, beim ersten Aufruf erzeugt), unabhängig vom Gäste-Passwort; der Code bestimmt die Zahlart
-    und öffnet nur `/kasse/<code>`. Seite: Anzahl 1–10 wählen und bestätigen, sofort als Gäste-Verkauf gebucht
+    und öffnet nur `/kasse/<code>`. Seite: Anzahl 1–10 wählen und bestätigen ("Abbrechen" führt zu `/`: Login bzw. eigenes Konto), sofort als Gäste-Verkauf gebucht
     (`guest_sales.source = cashbox`, Liste "Kassen-QR"). Die Bar-Seite zeigt nie TWINT-Daten; die TWINT-Seite zeigt die
     Empfänger wie hinterlegt (Kopier-Knopf nur mit Nummer) und funktioniert nur, solange TWINT aktiv ist. Ungültiger
     Code = 404 (10 Fehlversuche/Minute pro IP). Im Backend Vorschau, PNG (945 x 1299 px = 300 dpi, im Browser

@@ -34,6 +34,9 @@
     @endif
 </section>
 
+@foreach ($giftsReceived as $gift)
+    <div class="alert ok round-notice" data-testid="gift-notice">🎁 {{ trans_choice('gift.notice', $gift->quantity, ['count' => $gift->quantity, 'giver' => $gift->giftParent?->user?->displayName() ?? '?']) }}@if ($gift->note) – {{ $gift->note }}@endif</div>
+@endforeach
 @foreach ($roundsReceived as $round)
     {{-- A colleague paid the user a beer in the last days ("Runde spendieren"). --}}
     <div class="alert ok round-notice" data-testid="round-notice">🍺 {{ __('round.notice', ['giver' => $round->user?->displayName() ?? '?']) }}@if ($round->note) – {{ $round->note }}@endif</div>
@@ -152,6 +155,70 @@
                     @endforeach
                 </ul>
                 <p class="hint">{{ __('round.undo_hint', ['minutes' => \App\Models\Transaction::UNDO_MINUTES]) }}</p>
+            @endif
+        </details>
+    </section>
+@endif
+
+@if ($gifts && $pending->where('type', 'payout')->isEmpty())
+    {{-- "Bier verschenken": the same number of beers as credit for each chosen colleague, paid by the user. --}}
+    @php($giftOld = array_map('intval', (array) old('gift_recipients', [])))
+    @php($giftQty = min(\App\Services\Gifts::MAX_PER_RECIPIENT, max(1, (int) old('gift_quantity', 1))))
+    <section class="card round-card" data-testid="gift">
+        <details @if ($giftUndoable->isNotEmpty() || $errors->hasAny(['gift_recipients', 'gift_recipients.*', 'gift_quantity', 'gift_message']) || old('gift_quantity')) open @endif>
+            <summary><h2>{{ __('gift.heading') }}</h2></summary>
+            <p class="muted">{{ __('gift.intro') }}</p>
+            <form method="post" action="{{ route('account.gift') }}" class="stack" data-gift data-price="{{ $price }}"
+                data-one="{{ trans_choice('round.beers', 1, ['count' => 1]) }}" data-many="{{ trans_choice('round.beers', 2, ['count' => ':count']) }}">
+                @csrf
+                {!! \App\Support\FormToken::field('gift') !!}
+                <fieldset class="field">
+                    <legend>{{ __('gift.colleagues') }}</legend>
+                    @if ($colleagues->isEmpty())
+                        <p class="hint">{{ __('round.no_colleagues') }}</p>
+                    @else
+                        <label class="sr-only" for="gift-filter">{{ __('gift.filter') }}</label>
+                        <input type="search" id="gift-filter" placeholder="{{ __('gift.filter') }}" autocomplete="off" data-round-filter hidden>
+                        <ul class="round-list">
+                            @foreach ($colleagues as $colleague)
+                                <li data-name="{{ mb_strtolower($colleague->displayName().' '.$colleague->username) }}">
+                                    <label class="check"><input type="checkbox" name="gift_recipients[]" value="{{ $colleague->id }}" @checked(in_array($colleague->id, $giftOld, true))> <span>{{ $colleague->displayName() }}</span></label>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </fieldset>
+                <div class="field">
+                    <span class="label">{{ __('gift.quantity') }}</span>
+                    <div class="stepper" data-stepper>
+                        <button type="button" class="btn round" data-step="-1" aria-label="{{ __('account.less') }}">−</button>
+                        <label class="sr-only" for="gift-quantity">{{ __('gift.quantity') }}</label>
+                        <input type="number" id="gift-quantity" name="gift_quantity" value="{{ $giftQty }}" min="1" max="{{ \App\Services\Gifts::MAX_PER_RECIPIENT }}" inputmode="numeric">
+                        <button type="button" class="btn round" data-step="1" aria-label="{{ __('account.more') }}">+</button>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="gift-message">{{ __('gift.message') }}</label>
+                    <input type="text" id="gift-message" name="gift_message" value="{{ old('gift_message') }}" maxlength="{{ \App\Services\Gifts::MESSAGE_MAX }}" placeholder="{{ __('gift.message_placeholder') }}" autocomplete="off">
+                </div>
+                @php($giftCount = count($giftOld) * $giftQty)
+                <p class="round-total center" aria-live="polite">{{ __('gift.total') }}: <strong data-gift-count>{{ trans_choice('round.beers', $giftCount, ['count' => $giftCount]) }}</strong> · <strong data-gift-amount>{{ chf($giftCount * $price) }}</strong></p>
+                <button type="submit" class="btn primary big" data-gift-submit @disabled($giftOld === [])>{{ __('gift.submit') }}</button>
+            </form>
+
+            @if ($giftUndoable->isNotEmpty())
+                <ul class="undo-list">
+                    @foreach ($giftUndoable as $tx)
+                        <li>
+                            <span>{{ local_time($tx->created_at, 'H:i') }} · {{ trans_choice('round.beers', $tx->quantity, ['count' => $tx->quantity]) }} · {{ chf(-$tx->amount) }}<br><small class="muted">{{ __('gift.tx_to', ['names' => \App\Services\Gifts::recipientsText($tx)]) }}</small></span>
+                            <form method="post" action="{{ route('account.undo', $tx) }}" class="inline">
+                                @csrf
+                                <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
+                            </form>
+                        </li>
+                    @endforeach
+                </ul>
+                <p class="hint">{{ __('gift.undo_hint', ['minutes' => \App\Support\AppSettings::giftUndoMinutes()]) }}</p>
             @endif
         </details>
     </section>
@@ -339,6 +406,12 @@
         <div class="kpi"><span>{{ __('account.per_week') }}</span><strong>{{ number_format($stats['per_week'], 1, '.', "'") }}</strong></div>
         @if ($stats['given'] > 0)
             <div class="kpi" data-testid="round-given"><span>{{ __('round.given_kpi') }}</span><strong>{{ $stats['given'] }}</strong></div>
+        @endif
+        @if ($stats['gifted'] > 0)
+            <div class="kpi" data-testid="gift-given"><span>{{ __('gift.given_kpi') }}</span><strong>{{ $stats['gifted'] }}</strong></div>
+        @endif
+        @if ($stats['gift_received'] > 0)
+            <div class="kpi" data-testid="gift-received"><span>{{ __('gift.received_kpi') }}</span><strong>{{ $stats['gift_received'] }}</strong></div>
         @endif
     </div>
     {!! $chart !!}

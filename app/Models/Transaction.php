@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\AppSettings;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,7 +29,13 @@ class Transaction extends Model
     /** A round paid by the user for colleagues and/or guests ("Runde spendieren"); beers in round_items. */
     public const TYPE_ROUND = 'round';
 
-    public const TYPES = [self::TYPE_CONSUMPTION, self::TYPE_DEPOSIT, self::TYPE_PAYOUT, self::TYPE_DONATION, self::TYPE_CORRECTION, self::TYPE_CARRYOVER, self::TYPE_ROUND];
+    /**
+     * "Bier verschenken": the giver's row is negative (parent_id null, quantity = all beers), each recipient
+     * gets a positive row (parent_id = giver's row, quantity = beers for this recipient). Credit in CHF.
+     */
+    public const TYPE_GIFT = 'gift';
+
+    public const TYPES = [self::TYPE_CONSUMPTION, self::TYPE_DEPOSIT, self::TYPE_PAYOUT, self::TYPE_DONATION, self::TYPE_CORRECTION, self::TYPE_CARRYOVER, self::TYPE_ROUND, self::TYPE_GIFT];
 
     /** Types that are beers paid by the user at the stored unit price (stock, open items). */
     public const BEER_TYPES = [self::TYPE_CONSUMPTION, self::TYPE_ROUND];
@@ -50,13 +57,14 @@ class Transaction extends Model
     public const UNDO_MINUTES = 10;
 
     protected $fillable = [
-        'user_id', 'type', 'status', 'method', 'quantity', 'unit_price', 'amount', 'note',
+        'user_id', 'parent_id', 'type', 'status', 'method', 'quantity', 'unit_price', 'amount', 'note',
         'created_by', 'confirmed_by', 'confirmed_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'parent_id' => 'integer',
             'quantity' => 'integer',
             'unit_price' => 'integer',
             'amount' => 'integer',
@@ -84,6 +92,23 @@ class Transaction extends Model
     public function roundItems(): HasMany
     {
         return $this->hasMany(RoundItem::class);
+    }
+
+    /** Recipient rows of a gift (giver's row). */
+    public function giftParts(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
+    /** Giver's row of a gift (recipient row). */
+    public function giftParent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function isGiftGiven(): bool
+    {
+        return $this->type === self::TYPE_GIFT && $this->parent_id === null;
     }
 
     public function scopeConfirmed(Builder $query): Builder
@@ -119,6 +144,13 @@ class Transaction extends Model
 
     public function canBeUndoneBy(User $user): bool
     {
+        if ($this->type === self::TYPE_GIFT) {
+            return $this->isGiftGiven()
+                && $this->user_id === $user->id
+                && $this->created_at !== null
+                && $this->created_at->gt(now()->subMinutes(AppSettings::giftUndoMinutes()));
+        }
+
         return in_array($this->type, self::BEER_TYPES, true)
             && $this->user_id === $user->id
             && $this->created_by === $user->id

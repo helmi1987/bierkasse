@@ -11,6 +11,7 @@ return [
         'stock' => 'Lager',
         'guests' => 'Gäste',
         'rounds' => 'Runden',
+        'gifts' => 'Verschenkt',
         'invitations' => 'Einladungen',
         'settings' => 'Einstellungen',
         'sso' => 'SSO',

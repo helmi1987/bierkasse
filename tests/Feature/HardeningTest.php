@@ -48,8 +48,8 @@ class HardeningTest extends TestCase
         $this->actingAs($this->user());
         $html = (string) $this->get('/konto')->getContent();
 
-        // Beer, beer for a guest, round, deposit report.
-        $this->assertSame(4, substr_count($html, 'name="'.FormToken::FIELD.'"'));
+        // Beer, round, gift, beer for a guest, deposit report.
+        $this->assertSame(5, substr_count($html, 'name="'.FormToken::FIELD.'"'));
     }
 
     public function test_payout_cannot_be_confirmed_twice(): void

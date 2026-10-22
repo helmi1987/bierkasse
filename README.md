@@ -291,6 +291,22 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     Der Schalter ist eine eigene Einstellung (`rounds_enabled`) und soll mit der Mandantenfähigkeit in die
     Mandanten-Einstellungen wandern.
     **Annahme:** Wird ein Empfänger gelöscht (nicht deaktiviert), zählt sein Bier danach als "Gäste (eingeladen)".
+- Bier verschenken (Entscheid 2026-10-22): Dashboard-Karte "Bier verschenken" (nach "Runde spendieren"). Ein oder
+  mehrere aktive Kollegen anhaken (Suchfeld wie bei der Runde), "Biere pro Person" 1–10 (alle bekommen gleich viele),
+  freiwillige Nachricht (max. 140 Zeichen); Total live.
+  - Gutschrift in CHF zum aktuellen Preis: Schenker Buchung Typ `gift` (Betrag negativ, Anzahl = alle Biere, gleiche
+    Limit-Regel wie Abstreichen, gesperrt bei beantragter Auszahlung, Einmal-Token), jeder Empfänger eine Buchung `gift`
+    mit positivem Betrag (`transactions.parent_id` = Buchung des Schenkers). Steigt der Preis später, reicht die
+    Gutschrift für weniger Biere. Kein Bier getrunken: Lager und Kassenstand unverändert; getrunken wird später normal.
+  - Schenker kann innerhalb der im Backend eingestellten Minuten zurücknehmen (Standard 5, 0–60, 0 = nie); dabei
+    werden alle Gutschriften gelöscht (**Annahme:** auch wenn der Empfänger sie schon verbraucht hat).
+  - Empfänger sehen 7 Tage lang "🎁 <Schenker> hat dir N Biere geschenkt – <Nachricht>" (max. 3), keine Mail.
+  - Statistik: "Verschenkt: N" (Schenker) und "Geschenkt bekommen: N" (Empfänger), auch in der Benutzer-Detailansicht;
+    zählen nicht als getrunkene Biere. **Annahme:** "Total ausgegeben" des Schenkers enthält die verschenkten Beträge.
+    Unter "Offen" zählt ein ungedecktes Geschenk wie eigene Biere (alter Preis).
+  - Backend `/backend/verschenkt` (Kassier und Admin, Reiter "Verschenkt"): Schalter "Bier verschenken erlauben"
+    (Standard an, `gifts_enabled`; aus: Karte ausgeblendet, `/konto/verschenken` 404), Rückgängig-Minuten
+    (`gift_undo_minutes`) und Liste der Geschenke.
 - Lager (`/backend/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
   Pflicht; alte Einträge ohne Anzahl zählen 0) + Inventur-Korrekturen (gezählter Bestand, gespeichert als Differenz
   mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere inkl. spendierter Runden (Rückgängig erhöht den

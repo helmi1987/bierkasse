@@ -24,6 +24,7 @@ class BackendNav
             'stats' => ['backend.stats', 'backend.stats'],
             'guests' => ['backend.guests', 'backend.guests*'],
             'rounds' => ['backend.rounds', 'backend.rounds*'],
+            'gifts' => ['backend.gifts', 'backend.gifts*'],
             'invitations' => ['backend.invitations', 'backend.invitations*'],
             'stock' => ['backend.stock', 'backend.stock*'],
             'deposit_suggestions' => ['backend.deposit-suggestions', 'backend.deposit-suggestions'],

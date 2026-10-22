@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\GuestSale;
 use App\Models\Transaction;
 use App\Services\BeerStock;
+use App\Services\Gifts;
 use App\Services\GuestSales;
 use App\Services\Ledger;
 use App\Services\LedgerException;
@@ -64,6 +65,13 @@ class AccountController extends Controller
             ->where('created_at', '>', now()->subMinutes(Transaction::UNDO_MINUTES))
             ->latest('id')->get() : collect();
 
+        // "Bier verschenken": own gifts within the undo window, gifts received.
+        $gifts = AppSettings::giftsAllowed();
+        $giftUndoable = $gifts ? Transaction::query()->with('giftParts.user')->where('user_id', $user->id)
+            ->where('type', Transaction::TYPE_GIFT)->whereNull('parent_id')
+            ->where('created_at', '>', now()->subMinutes(AppSettings::giftUndoMinutes()))
+            ->latest('id')->get() : collect();
+
         // Beers left in the cellar (only once the kassier maintains the stock).
         $stock = BeerStock::isTracked() ? BeerStock::current() : null;
 
@@ -74,7 +82,10 @@ class AccountController extends Controller
             'guestBooking' => $guestBooking,
             'guestUndoable' => $guestUndoable,
             'rounds' => $rounds,
-            'colleagues' => $rounds ? Rounds::colleagues($user) : collect(),
+            'colleagues' => $rounds || $gifts ? Rounds::colleagues($user) : collect(),
+            'gifts' => $gifts,
+            'giftUndoable' => $giftUndoable,
+            'giftsReceived' => Gifts::receivedRecently($user),
             'roundUndoable' => $roundUndoable,
             'roundsReceived' => $rounds ? Rounds::receivedRecently($user) : collect(),
             'pendingDeposit' => $pendingDeposit,
@@ -89,7 +100,7 @@ class AccountController extends Controller
             'twintHtml' => AppSettings::twintRecipientText(true),
             'suggestions' => $suggestions,
             'suggested' => $suggested,
-            'recent' => Transaction::query()->with('roundItems.user')->where('user_id', $user->id)->latest('id')->limit(5)->get(),
+            'recent' => Transaction::query()->with(['roundItems.user', 'giftParts.user', 'giftParent.user'])->where('user_id', $user->id)->latest('id')->limit(5)->get(),
             'stats' => $stats,
             'canInvite' => AppSettings::invitationsAllowed(),
             'chart' => BarChart::render(
@@ -124,7 +135,11 @@ class AccountController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('status', $transaction->type === Transaction::TYPE_ROUND ? __('round.undone') : __('ledger.undone'));
+        return back()->with('status', match ($transaction->type) {
+            Transaction::TYPE_ROUND => __('round.undone'),
+            Transaction::TYPE_GIFT => __('gift.undone'),
+            default => __('ledger.undone'),
+        });
     }
 
     /**
@@ -153,6 +168,33 @@ class AccountController extends Controller
         }
 
         return back()->with('status', trans_choice('round.booked', $tx->quantity, ['count' => $tx->quantity, 'amount' => chf(-$tx->amount)]));
+    }
+
+    /**
+     * "Bier verschenken": the same number of beers as CHF credit for each chosen colleague,
+     * paid by the logged-in user (same limit rules as own beers).
+     */
+    public function gift(Request $request): RedirectResponse
+    {
+        abort_unless(AppSettings::giftsAllowed(), 404);
+        $data = $request->validate([
+            'gift_recipients' => ['required', 'array', 'max:'.Gifts::MAX_RECIPIENTS],
+            'gift_recipients.*' => ['integer', 'distinct'],
+            'gift_quantity' => ['required', 'integer', 'between:1,'.Gifts::MAX_PER_RECIPIENT],
+            'gift_message' => ['nullable', 'string', 'max:'.Gifts::MESSAGE_MAX],
+        ], ['gift_recipients.required' => __('gift.none_selected')]);
+        $input = ['gift_recipients', 'gift_quantity', 'gift_message'];
+        if (! FormToken::consume($request, 'gift')) {
+            return back()->with('warning', __('ledger.duplicate'));
+        }
+
+        try {
+            $tx = Ledger::giveBeers($request->user(), array_map('intval', $data['gift_recipients']), (int) $data['gift_quantity'], $data['gift_message'] ?? null);
+        } catch (LedgerException $e) {
+            return back()->withInput($request->only($input))->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', trans_choice('gift.booked', $tx->quantity, ['count' => $tx->quantity, 'amount' => chf(-$tx->amount)]));
     }
 
     /**
@@ -270,7 +312,7 @@ class AccountController extends Controller
         return view('account.history', [
             'user' => $user,
             'balance' => $user->balance(),
-            'transactions' => Transaction::query()->with('roundItems.user')->where('user_id', $user->id)->latest('id')->paginate(25),
+            'transactions' => Transaction::query()->with(['roundItems.user', 'giftParts.user', 'giftParent.user'])->where('user_id', $user->id)->latest('id')->paginate(25),
         ]);
     }
 

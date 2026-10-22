@@ -28,7 +28,7 @@ class Stats
     public const INVITED_ID = -1;
 
     /**
-     * @return array{total_beers:int, total_amount:int, per_week:float, months: list<array{label:string, beers:int, amount:int}>, given:int}
+     * @return array{total_beers:int, total_amount:int, per_week:float, months: list<array{label:string, beers:int, amount:int}>, given:int, gifted:int, gift_received:int}
      */
     public static function forUser(User $user): array
     {
@@ -46,12 +46,16 @@ class Stats
 
         return [
             'total_beers' => $beers,
-            // Spent on beers: own consumption and the rounds paid for others.
-            'total_amount' => (int) -$own->sum('amount') - (int) $rounds->amount,
+            // Spent on beers: own consumption, the rounds paid for others and beers given away.
+            'total_amount' => (int) -$own->sum('amount') - (int) $rounds->amount - (int) Transaction::query()->confirmed()
+                ->where('user_id', $user->id)->where('type', Transaction::TYPE_GIFT)->whereNull('parent_id')->sum('amount'),
             'per_week' => round($beers / $weeks, 1),
             'months' => self::months($rows),
             // Paid for others: the own beer of "Runde inkl. mir" counts as own beer above.
             'given' => (int) $rounds->beers - Rounds::ownBeers($user),
+            // "Bier verschenken" (credit, not drunk): never counted as beers above.
+            'gifted' => Gifts::beersGiven($user),
+            'gift_received' => Gifts::beersReceived($user),
         ];
     }
 

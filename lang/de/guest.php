@@ -61,6 +61,7 @@ return [
     'cashbox_intro' => 'Anzahl Biere wählen und bestätigen. Danke!',
     'cashbox_submit_cash' => 'Bar bezahlt – bestätigen',
     'cashbox_submit_twint' => 'Getwintet – bestätigen',
+    'cashbox_cancel' => 'Abbrechen',
     'cashbox_thanks' => '{1} Danke! :count Bier erfasst (:amount).|[2,*] Danke! :count Biere erfasst (:amount).',
     'cashbox_sticker_question' => 'Kein Konto?',
     'cashbox_sticker_cash' => 'Bar bezahlt',

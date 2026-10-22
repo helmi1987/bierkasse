@@ -28,6 +28,9 @@ class CashboxQrTest extends TestCase
     {
         $code = AppSettings::cashboxQrCode('cash');
         $this->get('/kasse/'.$code)->assertOk()->assertSee('Kein Konto? Bar bezahlt')->assertDontSee('079 123 45 67');
+        $this->get('/kasse/'.$code)->assertSee('href="'.route('login').'">Abbrechen</a>', false);
+        $this->actingAs($this->user())->get('/')->assertRedirect(route('account.dashboard'));
+        auth()->logout();
 
         $this->post('/kasse/'.$code, $this->tokened('cashbox', ['quantity' => 3, 'method' => 'twint']))->assertRedirect(route('cashbox', $code));
         $this->get('/kasse/'.$code)->assertSee('3 Biere erfasst (CHF 4.50)');

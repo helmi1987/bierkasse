@@ -32,5 +32,7 @@
         @include('partials.twint-number')
     @endif
     <button class="btn primary big" type="submit">{{ __('guest.cashbox_submit_'.$method) }}</button>
+    {{-- Login page; logged-in users are redirected from there to their account. --}}
+    <a class="btn big" href="{{ route('login') }}">{{ __('guest.cashbox_cancel') }}</a>
 </form>
 @endsection

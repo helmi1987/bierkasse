@@ -241,8 +241,9 @@
         btn.addEventListener('click', function () { window.print(); });
     });
 
-    // PNG download of an SVG image: data-png-download="<svg url>", data-png-filename, data-png-error="#selector".
-    // Renders the (same-origin) SVG onto a white A4 canvas at 300 dpi (2480 x 3508 px).
+    // PNG download of an SVG image: data-png-download="<svg url>", data-png-filename, data-png-error="#selector",
+    // optional data-png-width/-height in px. Renders the (same-origin) SVG onto a white canvas, default A4 at
+    // 300 dpi (2480 x 3508 px).
     document.querySelectorAll('[data-png-download]').forEach(function (btn) {
         var errorBox = btn.dataset.pngError ? document.querySelector(btn.dataset.pngError) : null;
         var fail = function () {
@@ -268,8 +269,8 @@
             img.onload = function () {
                 try {
                     var canvas = document.createElement('canvas');
-                    canvas.width = 2480;
-                    canvas.height = 3508;
+                    canvas.width = parseInt(btn.dataset.pngWidth || '2480', 10);
+                    canvas.height = parseInt(btn.dataset.pngHeight || '3508', 10);
                     var ctx = canvas.getContext('2d');
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);

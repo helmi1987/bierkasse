@@ -20,6 +20,9 @@ use Illuminate\View\View;
  */
 class GuestController extends Controller
 {
+    /** File name part of the A4 sheet variants. */
+    public const SHEET_FILES = ['cash' => 'bar', 'twint' => 'twint', 'mixed' => 'bar-twint'];
+
     public function index(): View
     {
         return view('backend.guests', [
@@ -86,6 +89,22 @@ class GuestController extends Controller
         return response($svg, 200, [
             'Content-Type' => 'image/svg+xml; charset=UTF-8',
             'Content-Disposition' => $disposition.'; filename="kassen-qr-'.($method === 'cash' ? 'bar' : 'twint').'.svg"',
+            'Cache-Control' => 'no-store',
+        ]);
+    }
+
+    /** A4 sheet with 4 cashbox QR stickers (variant cash|twint|mixed, ?download=1 as attachment). */
+    public function cashboxSheet(Request $request, string $variant): Response
+    {
+        $urls = [];
+        foreach (array_unique(CashboxQrSvg::SHEETS[$variant]) as $method) {
+            $urls[$method] = route('cashbox', AppSettings::cashboxQrCode($method));
+        }
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return response(CashboxQrSvg::sheet(AppSettings::appName(), $variant, $urls), 200, [
+            'Content-Type' => 'image/svg+xml; charset=UTF-8',
+            'Content-Disposition' => $disposition.'; filename="kassen-qr-a4-'.self::SHEET_FILES[$variant].'.svg"',
             'Cache-Control' => 'no-store',
         ]);
     }

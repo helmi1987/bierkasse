@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\QrCode;
 use App\Models\Transaction;
 use App\Services\GuestSales;
 use App\Services\LedgerException;
@@ -14,8 +15,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Public guest sale (no login), only with the guest password. The guest QR code in
- * the backend may carry the password as ?code=… to prefill it. Booked immediately.
+ * Public guest sale (no login): with an active guest QR code (?zugang=…, no password field) or the
+ * guest password typed by hand (?code=… still prefills it). Booked immediately.
  */
 class GuestController extends Controller
 {
@@ -26,7 +27,10 @@ class GuestController extends Controller
     {
         abort_unless(AppSettings::guestOpen(), 404);
 
+        $access = QrCode::findActive(QrCode::KIND_GUEST, $this->access($request));
+
         return view('guest.form', [
+            'access' => $access?->code,
             'code' => (string) $request->query('code', ''),
             'price' => AppSettings::beerPrice(),
             'twintEnabled' => AppSettings::twintEnabled(),
@@ -47,10 +51,11 @@ class GuestController extends Controller
         }
         RateLimiter::hit($key, 60);
 
-        // The guest password is checked first; nothing else is processed without it.
+        // An active guest QR code or the guest password is checked first; nothing else is processed without it.
         $code = $request->input('code');
-        if (! is_string($code) || $code === '' || ! hash_equals(AppSettings::guestPassword(), $code)) {
-            return $back('code', __('guest.code_wrong'));
+        $byQr = QrCode::findActive(QrCode::KIND_GUEST, $this->access($request)) !== null;
+        if (! $byQr && (! is_string($code) || $code === '' || ! hash_equals(AppSettings::guestPassword(), $code))) {
+            return $back('code', __($this->access($request) !== '' ? 'guest.access_invalid' : 'guest.code_wrong'));
         }
 
         $data = $request->validate([
@@ -72,7 +77,15 @@ class GuestController extends Controller
             'beers' => $sale->beers,
             'amount' => $sale->amount,
             'method' => $sale->method,
+            'access' => $byQr ? $this->access($request) : null,
         ]);
+    }
+
+    private function access(Request $request): string
+    {
+        $access = $request->input(QrCode::GUEST_QUERY, $request->query(QrCode::GUEST_QUERY, ''));
+
+        return is_string($access) ? trim($access) : '';
     }
 
     public function thanks(Request $request): View|RedirectResponse

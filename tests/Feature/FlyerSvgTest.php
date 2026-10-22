@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\RegistrationCode;
 use App\Models\Setting;
 use App\Support\AppSettings;
 use App\Support\FlyerSvg;
@@ -59,7 +60,8 @@ class FlyerSvgTest extends TestCase
     {
         $this->open();
         $this->actingAs($this->user())->get(self::URL)->assertForbidden();
-        $this->actingAs($this->kassier())->get(self::URL)->assertForbidden();
+        // Kassiers see the active codes (read only).
+        $this->actingAs($this->kassier())->get(self::URL)->assertOk();
         $this->actingAs($this->admin())->get(self::URL)->assertOk();
     }
 
@@ -118,7 +120,7 @@ class FlyerSvgTest extends TestCase
         $svg = $this->get(self::URL)->assertOk()->getContent();
         $this->assertStringContainsString($this->qrPath($withCode), $svg);
         // The printed URL text never shows the code.
-        $this->assertStringNotContainsString(AppSettings::flyerCode(), $svg);
+        $this->assertStringNotContainsString($this->flyerCode(), $svg);
         $this->assertStringNotContainsString('durst', $svg);
         $this->assertStringContainsString('Benutzername und Passwort wählen. Dauert kürzer', $this->text($svg));
     }
@@ -128,7 +130,7 @@ class FlyerSvgTest extends TestCase
         Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_INVITE);
         $this->actingAs($this->admin())->get(self::URL)->assertNotFound();
 
-        $code = \App\Models\RegistrationCode::generate('Kaffeeküche', null);
+        $code = RegistrationCode::generate('Kaffeeküche', null);
         $svg = $this->get(self::URL.'?qr='.$code->id)->assertOk()->getContent();
         $this->assertStringContainsString($this->qrPath($code->url()), $svg);
         $this->assertStringNotContainsString('Ohne QR-Code', $svg);

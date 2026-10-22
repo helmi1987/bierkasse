@@ -18,6 +18,6 @@
     @else
         <p class="lead">{{ __('guest.thanks_cash', ['amount' => chf($sale['amount'])]) }}</p>
     @endif
-    <p><a href="{{ route('guest') }}">{{ __('guest.again') }}</a></p>
+    <p><a href="{{ route('guest', ! empty($sale['access']) ? [\App\Models\QrCode::GUEST_QUERY => $sale['access']] : []) }}">{{ __('guest.again') }}</a></p>
 </section>
 @endsection

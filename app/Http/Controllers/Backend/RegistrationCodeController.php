@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Multi-use registration codes (admins): create, lock/unlock, delete. Shown as QR/flyer on the
+ * Multi-use registration codes (admins): create, deactivate/reactivate (nothing is deleted). Shown as QR/flyer on the
  * registration QR page (SettingsController::registrationQr).
  */
 class RegistrationCodeController extends Controller
@@ -42,16 +42,5 @@ class RegistrationCodeController extends Controller
         });
 
         return back()->with('status', $lock ? __('settings.codes_locked') : __('settings.codes_unlocked'));
-    }
-
-    /** Deleting keeps the accounts registered with the code (their reference becomes empty). */
-    public function destroy(RegistrationCode $registrationCode): RedirectResponse
-    {
-        DB::transaction(function () use ($registrationCode) {
-            Audit::log('registration_code.delete', $registrationCode, ['label' => $registrationCode->label], []);
-            $registrationCode->delete();
-        });
-
-        return redirect()->route('backend.registration.qr')->with('status', __('settings.codes_deleted'));
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\QrCode;
 use App\Models\Setting;
 use Throwable;
 
@@ -48,9 +49,6 @@ class AppSettings
 
     public const REGISTRATION_PASSWORD = 'registration_password';
 
-    /** Random code in the flyer/backend registration QR (replaces the password there). */
-    public const FLYER_CODE = 'registration_flyer_code';
-
     public const NOTIFY_KASSIER = 'notify_kassier';
 
     public const PERSONAL_SSO = 'personal_sso_enabled';
@@ -66,10 +64,8 @@ class AppSettings
     /** Logged-in users may book beers for guests on their dashboard. */
     public const GUEST_USER_BOOKING = 'guest_user_booking';
 
-    /** Cashbox QR stickers ("Kein Konto? Bar bezahlt" / "… getwintet"): one switch, one secret code per method. */
+    /** Cashbox QR stickers ("Kein Konto? Bar bezahlt" / "… getwintet") on/off; codes in qr_codes. */
     public const CASHBOX_QR_ENABLED = 'cashbox_qr_enabled';
-
-    public const CASHBOX_QR_TOKENS = ['cash' => 'cashbox_qr_cash_token', 'twint' => 'cashbox_qr_twint_token'];
 
     public const STOCK_LOW_WARNED = 'stock_low_warned';
 
@@ -207,29 +203,10 @@ class AppSettings
         return (string) self::get(self::REGISTRATION_PASSWORD, '');
     }
 
-    /** Flyer code; generated on first use (random, URL-safe, 32 characters). */
-    public static function flyerCode(): string
-    {
-        $code = (string) self::get(self::FLYER_CODE, '');
-
-        return $code !== '' ? $code : self::regenerateFlyerCode();
-    }
-
-    /** New flyer code; QR codes printed with the old one stop working. */
-    public static function regenerateFlyerCode(): string
-    {
-        $code = rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=');
-        Setting::put(self::FLYER_CODE, $code);
-
-        return $code;
-    }
-
-    /** Valid flyer code: only in mode "password" (open registration); never generates one. */
+    /** Valid flyer code: an active one, only in mode "password" (open registration). */
     public static function flyerCodeValid(string $code): bool
     {
-        $stored = (string) self::get(self::FLYER_CODE, '');
-
-        return self::registrationOpen() && $stored !== '' && $code !== '' && hash_equals($stored, $code);
+        return self::registrationOpen() && QrCode::findActive(QrCode::KIND_FLYER, $code) !== null;
     }
 
     /** Registration mode; default for new installs: invitation only. */
@@ -283,40 +260,18 @@ class AppSettings
         return (bool) self::get(self::GUEST_ENABLED, false) && self::guestPassword() !== '';
     }
 
-    /** Cashbox QR code of a method ('cash'|'twint'); generated on first use (random, URL-safe, 32 characters). */
-    public static function cashboxQrCode(string $method): string
-    {
-        $code = (string) self::get(self::CASHBOX_QR_TOKENS[$method], '');
-
-        return $code !== '' ? $code : self::regenerateCashboxQrCode($method);
-    }
-
-    /** New cashbox QR code; stickers printed with the old one stop working. */
-    public static function regenerateCashboxQrCode(string $method): string
-    {
-        $code = rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=');
-        Setting::put(self::CASHBOX_QR_TOKENS[$method], $code);
-
-        return $code;
-    }
-
     /**
-     * Payment method of a valid cashbox QR code, null if invalid or switched off.
-     * The TWINT code only works while TWINT is active. Never generates a code.
+     * Payment method of an active cashbox QR code, null if invalid or switched off.
+     * TWINT codes only work while TWINT is active.
      */
     public static function cashboxQrMethod(string $code): ?string
     {
-        if ($code === '' || ! (bool) self::get(self::CASHBOX_QR_ENABLED, false)) {
+        if (! (bool) self::get(self::CASHBOX_QR_ENABLED, false)) {
             return null;
         }
-        foreach (self::CASHBOX_QR_TOKENS as $method => $key) {
-            $stored = (string) self::get($key, '');
-            if ($stored !== '' && hash_equals($stored, $code)) {
-                return $method === 'twint' && ! self::twintEnabled() ? null : $method;
-            }
-        }
+        $method = QrCode::findActive([QrCode::KIND_CASH, QrCode::KIND_TWINT], $code)?->method();
 
-        return null;
+        return $method === 'twint' && ! self::twintEnabled() ? null : $method;
     }
 
     /** Logged-in users may book beers for guests (default on, independent of the public guest page). */

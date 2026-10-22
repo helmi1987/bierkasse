@@ -134,9 +134,12 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::get('/gaeste', [Backend\GuestController::class, 'index'])->name('guests');
             Route::put('/gaeste', [Backend\GuestController::class, 'update'])->name('guests.update');
             Route::get('/gaeste/qr', [Backend\GuestController::class, 'qr'])->name('guests.qr');
-            Route::get('/gaeste/kassen-qr/{method}', [Backend\GuestController::class, 'cashboxSvg'])->whereIn('method', ['cash', 'twint'])->name('guests.cashbox');
-            Route::get('/gaeste/kassen-qr-a4/{variant}', [Backend\GuestController::class, 'cashboxSheet'])->whereIn('variant', ['cash', 'twint', 'mixed'])->name('guests.cashbox.sheet');
-            Route::post('/gaeste/kassen-qr/{method}/neuer-code', [Backend\GuestController::class, 'regenerateCashbox'])->whereIn('method', ['cash', 'twint'])->name('guests.cashbox.regenerate');
+            // QR images (kassiers: active codes only). No .svg extension: Plesk/nginx may treat such URLs as static files.
+            Route::get('/gaeste/kassen-qr/{qrCode}', [Backend\GuestController::class, 'cashboxSvg'])->whereNumber('qrCode')->name('guests.cashbox');
+            Route::get('/gaeste/kassen-qr/{qrCode}/a4', [Backend\GuestController::class, 'cashboxSheet'])->whereNumber('qrCode')->name('guests.cashbox.sheet');
+            Route::get('/gaeste/kassen-qr-a4/gemischt', [Backend\GuestController::class, 'cashboxMixedSheet'])->name('guests.cashbox.mixed');
+            Route::get('/registrierung-qr', [Backend\SettingsController::class, 'registrationQr'])->name('registration.qr');
+            Route::get('/registrierung-qr/flyer-bild', [Backend\SettingsController::class, 'flyerSvg'])->name('registration.flyer-svg');
             Route::delete('/gaeste/{sale}', [Backend\GuestController::class, 'destroy'])->whereNumber('sale')->name('guests.destroy');
             Route::get('/runden', [Backend\RoundController::class, 'index'])->name('rounds');
             Route::put('/runden', [Backend\RoundController::class, 'update'])->name('rounds.update');
@@ -162,13 +165,12 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 Route::get('/navigation', [Backend\NavController::class, 'edit'])->name('nav');
                 Route::put('/navigation', [Backend\NavController::class, 'update'])->name('nav.update');
                 Route::delete('/navigation', [Backend\NavController::class, 'reset'])->name('nav.reset');
-                Route::get('/registrierung-qr', [Backend\SettingsController::class, 'registrationQr'])->name('registration.qr');
-                // No .svg extension: Plesk/nginx may treat such URLs as static files.
-                Route::get('/registrierung-qr/flyer-bild', [Backend\SettingsController::class, 'flyerSvg'])->name('registration.flyer-svg');
-                Route::post('/registrierung-qr/neuer-code', [Backend\SettingsController::class, 'regenerateFlyerCode'])->name('registration.flyer-code');
                 Route::post('/registrierung-qr/codes', [Backend\RegistrationCodeController::class, 'store'])->name('registration.codes.store');
                 Route::put('/registrierung-qr/codes/{registrationCode}/sperre', [Backend\RegistrationCodeController::class, 'lock'])->whereNumber('registrationCode')->name('registration.codes.lock');
-                Route::delete('/registrierung-qr/codes/{registrationCode}', [Backend\RegistrationCodeController::class, 'destroy'])->whereNumber('registrationCode')->name('registration.codes.destroy');
+                // QR codes with history (cashbox, flyer, guest page).
+                Route::post('/qr-codes', [Backend\QrCodeController::class, 'store'])->name('qr-codes.store');
+                Route::put('/qr-codes/{qrCode}/aktiv', [Backend\QrCodeController::class, 'active'])->whereNumber('qrCode')->name('qr-codes.active');
+                Route::put('/qr-codes/{qrCode}/name', [Backend\QrCodeController::class, 'label'])->whereNumber('qrCode')->name('qr-codes.label');
                 Route::get('/feedback', [Backend\FeedbackController::class, 'index'])->name('feedback');
                 Route::put('/feedback/empfaenger', [Backend\FeedbackController::class, 'recipients'])->name('feedback.recipients');
                 Route::post('/feedback/{feedback}/gelesen', [Backend\FeedbackController::class, 'read'])->whereNumber('feedback')->name('feedback.read');

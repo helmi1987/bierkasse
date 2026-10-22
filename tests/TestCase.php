@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Models\QrCode;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\AppSettings;
@@ -58,6 +59,14 @@ abstract class TestCase extends BaseTestCase
         $this->startSession();
 
         return $data + [FormToken::FIELD => FormToken::issue($form)];
+    }
+
+    /** Newest active flyer code (the first one is created when there never was one). */
+    protected function flyerCode(): string
+    {
+        QrCode::ensureFirst(QrCode::KIND_FLYER);
+
+        return QrCode::newestActive(QrCode::KIND_FLYER)->code;
     }
 
     protected function user(array $attributes = []): User

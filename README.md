@@ -72,27 +72,34 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Änderung gilt sofort, kein Cron.
      Rate-Limit pro IP: 10 Fehlversuche (falsches Passwort, ungültiger Einladungslink oder Flyer-Code oder
      Formularfehler) in 15 Minuten, max. 60 Anfragen in 10 Minuten (ein Büro teilt meist eine IP).
-     QR-Code zum Aushängen unter `/backend/registrierung-qr` (Admin), dort auch als druckfertiger A4-Flyer
+     QR-Code zum Aushängen unter `/backend/registrierung-qr` (Kassier und Admin, siehe "QR-Codes" unten), dort auch als druckfertiger A4-Flyer
      (Reiter "Flyer"). Der Flyer ist ein SVG-Bild in exakt A4 (`/backend/registrierung-qr/flyer-bild`, gleicher
      Parameter `qr`, `?download=1` zum Herunterladen; `app/Support/FlyerSvg.php`), damit jeder Browser gleich
      druckt. Auf der Seite: "Flyer drucken" (nur das Bild, zentriert, max. 92 % Breite bzw. 235 mm Höhe),
      "Als PNG herunterladen" (im Browser gerendert, 2480 x 3508 px = A4 300 dpi) und "Als SVG herunterladen".
      Texte im SVG werden nach Zeichenanzahl umbrochen (**Annahme:** Systemschriften sind nicht breiter als
      angenommen). Entscheid 2026-10-21: Der QR-Code enthält nie das Registrierungspasswort, sondern einen
-     eigenen zufälligen Flyer-Code (`/registrieren?flyer=<code>`, 32 Zeichen URL-sicher, Setting
-     `registration_flyer_code`, verschlüsselt, beim ersten Aufruf erzeugt). Gültig nur im Modus "Offen mit
+     zufälligen Flyer-Code (`/registrieren?flyer=<code>`, Tabelle `qr_codes`, Art `flyer`; mehrere aktiv möglich,
+     der erste wird automatisch erzeugt). Gültig nur im Modus "Offen mit
      Registrierungspasswort"; dann zeigt die Registrierung kein Passwortfeld. Falscher Code zählt wie ein falsches
-     Passwort. "Flyer-Code neu erzeugen" macht alle gedruckten Flyer/QR-Codes mit Code ungültig. Gedruckt wird
+     Passwort. Ein deaktivierter Flyer-Code macht die damit gedruckten Flyer ungültig, bis er reaktiviert wird. Gedruckt wird
      als Text nur `/registrieren` plus Hinweis "Registrierungspasswort beim Kassier", nie die URL mit Code.
      Alte QR-Codes mit `?code=<passwort>` füllen das Passwortfeld weiterhin aus.
      Registrierungscodes (Entscheid 2026-10-22, nur Admin, gleiche Seite): mehrere, beschriftet, für beliebig viele
      Personen, ohne Ablauf, gültig in **jedem** Modus (auch "Geschlossen"); Konto sofort aktiv
      (`/registrieren?zugang=<code>`, 32 Zeichen, Tabelle `registration_codes`, Code verschlüsselt + SHA-256 für die
-     Suche, `users.registration_code_id`). Sperren/Entsperren und Löschen (Konten bleiben); gesperrter oder
-     unbekannter Code → Startseite mit Hinweis "gesperrt" bzw. "nicht mehr gültig" (unbekannt zählt fürs Rate-Limit).
+     Suche, `users.registration_code_id`). Deaktivieren/Reaktivieren (Entscheid 2026-10-23: kein Löschen mehr);
+     deaktivierter oder unbekannter Code → Startseite mit Hinweis "gesperrt" bzw. "nicht mehr gültig" (unbekannt zählt fürs Rate-Limit).
      Mail an Kassier/Admin wie jede Selbst-Registrierung (folgt dem Schalter), mit Zeile "Registrierungscode".
      Die QR-Seite zeigt nur Mögliches: Registrierungscodes und im Modus "Offen mit Registrierungspasswort"
-     zusätzlich den Flyer-Code; einen QR-Code ohne Code gibt es nicht. Gedruckt wird die vollständige URL mit Code.
+     zusätzlich die Flyer-Codes; einen QR-Code ohne Code gibt es nicht. Gedruckt wird die vollständige URL mit Code.
+   - QR-Codes (Entscheid 2026-10-23, gilt für Kassen-QR, Flyer-Codes, Gäste-QR und Registrierungscodes): Kassiers sehen
+     nur aktive Codes (anzeigen, drucken, herunterladen); nur Admins erstellen, benennen, deaktivieren und reaktivieren
+     Codes und ändern die zugehörigen Schalter (Kassen-QR aktiv, öffentliche Gäste-Seite, Gäste-Passwort). Mehrere
+     Codes pro Art können aktiv sein; nichts wird gelöscht, deaktivierte bleiben als Historie (nur Admin sichtbar).
+     Tabelle `qr_codes` (Art `cashbox_cash`/`cashbox_twint`/`flyer`/`guest`, Name freiwillig, Code verschlüsselt +
+     SHA-256 für die Suche, `deactivated_at`); die früheren Einzel-Codes aus den Settings werden beim Migrieren
+     übernommen (gedruckte Aufkleber/Flyer bleiben gültig). Audit: `qr_code.create/label/deactivate/activate`.
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.
      Alle Mails (auch Passwort-Reset) nutzen ein gemeinsames HTML-Layout (`resources/views/mail/layout.blade.php`, Inline-CSS, Logo `public/icon-192.png` als CID eingebettet, fehlt es, entfällt das Logo) plus Textversion; Fakten als Tabelle, Link als Button.
@@ -243,7 +250,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     Guthaben aller Benutzer und damit den Überschuss.
 - Kasse (`/backend/kasse`): Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen ±
   Korrekturen, getrennt nach Bar und TWINT. Überschuss = Kassenstand − Guthaben aller Benutzer.
-- Gäste (`/backend/gaeste`, Kassier und Admin): zwei Schalter, Liste aller Gäste-Verkäufe ("gebucht von <Benutzer>"
+- Gäste (`/backend/gaeste`, Kassier und Admin; QR-Schalter und Gäste-Passwort nur Admin): Schalter, Liste aller Gäste-Verkäufe ("gebucht von <Benutzer>"
   bzw. "öffentlich") mit Storno. Alle Gäste-Verkäufe werden sofort gebucht (Tabelle `guest_sales`, Preis zum
   Zeitpunkt): zählen als Einnahme in der Kasse (Bar/TWINT), reduzieren das Lager (können die Lager-Mail auslösen)
   und erscheinen in der Statistik als "Gäste" (nie als Benutzer).
@@ -254,22 +261,25 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     erfasst – bitte CHF 4.50 bar in die Kasse legen". Eigene Gäste-Buchungen rückgängig machbar (Zeit siehe Einstellungen),
     Einmal-Token gegen Doppelbuchung.
   - "Öffentliche Gäste-Seite (QR + Gäste-Passwort)" (Standard aus): eigenes Gäste-Passwort (verschlüsselt, nicht das
-    Registrierungspasswort; zum Einschalten Pflicht), druckbarer Gäste-QR-Code (mit/ohne Passwort).
-    Öffentliche Seite `/gast` (Passwort per `?code=` vorausgefüllt oder eingeben): Name freiwillig, 1–10 Biere,
+    Registrierungspasswort; zum Einschalten Pflicht). Druckbarer Gäste-QR-Code (`/backend/gaeste/qr`): enthält nie das
+    Passwort, sondern einen Gäste-Code (`/gast?zugang=<code>`, Tabelle `qr_codes`, Art `guest`, mehrere aktiv
+    möglich) – damit entfällt das Passwortfeld; deaktivierter Code → Passwortfeld mit Hinweis. Variante "Ohne Code":
+    nur die Adresse, Passwort von Hand.
+    Öffentliche Seite `/gast` (mit Gäste-Code, oder Passwort eingeben bzw. per `?code=` vorausgefüllt): Name freiwillig, 1–10 Biere,
     Bar oder TWINT (TWINT-Nummer mit Kopier-Knopf). Passwort wird zuerst geprüft; 10 Versuche/Minute pro IP (auch
     falsche Passwörter), Einmal-Token gegen Doppelbuchung.
-  - "Kassen-QR aktiv" (Entscheid 2026-10-22, Standard aus): zwei feste Aufkleber für die Kasse, für Gäste ohne Konto
+  - "Kassen-QR aktiv" (Entscheid 2026-10-22, Standard aus): feste Aufkleber für die Kasse, für Gäste ohne Konto
     (Vertrauensbasis, keine Ortsprüfung): "Kein Konto? Bar bezahlt" und "Kein Konto? Ich habe getwintet". Jeder hat
-    einen eigenen geheimen Code (32 Zeichen URL-sicher, verschlüsselt, Settings `cashbox_qr_cash_token` /
-    `cashbox_qr_twint_token`, beim ersten Aufruf erzeugt), unabhängig vom Gäste-Passwort; der Code bestimmt die Zahlart
+    einen eigenen geheimen Code (Tabelle `qr_codes`, Art `cashbox_cash`/`cashbox_twint`, je einer automatisch
+    erzeugt, mehrere aktiv möglich), unabhängig vom Gäste-Passwort; der Code bestimmt die Zahlart
     und öffnet nur `/kasse/<code>`. Seite: Anzahl 1–10 wählen und bestätigen ("Abbrechen" führt zu `/`: Login bzw. eigenes Konto), sofort als Gäste-Verkauf gebucht
     (`guest_sales.source = cashbox`, Liste "Kassen-QR"). Die Bar-Seite zeigt nie TWINT-Daten; die TWINT-Seite zeigt die
     Empfänger wie hinterlegt (Kopier-Knopf nur mit Nummer) und funktioniert nur, solange TWINT aktiv ist. Ungültiger
-    Code = 404 (10 Fehlversuche/Minute pro IP). Im Backend Vorschau, PNG (945 x 1299 px = 300 dpi, im Browser
-    gerendert) und SVG (80 x 110 mm, `app/Support/CashboxQrSvg.php`) und "Neuer Code" pro Aufkleber (alte Aufkleber
-    werden ungültig). A4-Bogen mit 2 x 2 Aufklebern, 10 mm Abstand, gestrichelte Schnittlinien (Rand 20 mm seitlich,
-    33.5 mm oben/unten; **Annahme** 2026-10-22): "4 × Bar", "4 × TWINT", "2 × Bar + 2 × TWINT", je Öffnen/Drucken,
-    PNG (A4 300 dpi) und SVG (`/backend/gaeste/kassen-qr-a4/{cash|twint|mixed}`). Drucken mit 100 %.
+    Code = 404 (10 Fehlversuche/Minute pro IP). Im Backend pro aktivem Code Vorschau, PNG (945 x 1299 px = 300 dpi, im Browser
+    gerendert) und SVG (80 x 110 mm, `app/Support/CashboxQrSvg.php`, `/backend/gaeste/kassen-qr/<id>`) sowie A4-Bogen
+    mit 4 Aufklebern dieses Codes (`…/<id>/a4`); dazu "2 × Bar + 2 × TWINT" mit dem jeweils neuesten Code
+    (`/backend/gaeste/kassen-qr-a4/gemischt`). A4: 2 x 2, 10 mm Abstand, gestrichelte Schnittlinien (Rand 20 mm
+    seitlich, 33.5 mm oben/unten; **Annahme** 2026-10-22), je Öffnen/Drucken, PNG (A4 300 dpi) und SVG. Drucken mit 100 %.
 - Runde spendieren (Entscheid 2026-10-21): Dashboard-Karte "Runde spendieren" (nach "Bier für Gast"). Angehakte
   aktive Kollegen (alle aktiven Benutzer ausser einem selbst, nach Name sortiert, mit Suchfeld) bekommen je 1 Bier,
   dazu 0–20 "weitere Biere" ohne Namen (z. B. Gäste) und eine freiwillige Nachricht (max. 140 Zeichen). Pro Runde

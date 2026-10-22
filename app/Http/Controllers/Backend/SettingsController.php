@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\QrCode;
 use App\Models\RegistrationCode;
 use App\Models\Setting;
 use App\Models\User;
@@ -10,7 +11,6 @@ use App\Support\AppSettings;
 use App\Support\FlyerSvg;
 use App\Support\Money;
 use App\Support\Qr;
-use App\Support\RegistrationLink;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -121,17 +121,24 @@ class SettingsController extends Controller
     }
 
     /**
-     * Registration QR page: list of the multi-use registration codes (valid in every mode) and, in
-     * mode "password", the flyer code. QR and flyer of the selected one (?qr=<id>|flyer); there is
-     * no QR without a code. The registration password is never put into a QR code.
+     * Registration QR page (kassiers and admins): the multi-use registration codes (valid in every mode)
+     * and, in mode "password", the flyer codes. QR and flyer of the selected one (?qr=<id>|flyer-<id>);
+     * there is no QR without a code. Kassiers only see active codes; admins also manage them and see
+     * the deactivated ones. The registration password is never put into a QR code.
      */
     public function registrationQr(Request $request): View
     {
+        $admin = $request->user()->isAdmin();
         $target = $this->qrTarget($request);
+        $flyerCodes = QrCode::query()->with('creator')->where('kind', QrCode::KIND_FLYER)->orderBy('id')->get();
 
         return view('backend.registration-qr', [
+            'admin' => $admin,
             'view' => $request->query('view') === 'flyer' ? 'flyer' : 'qr',
-            'codes' => RegistrationCode::query()->with('creator')->withCount('users')->orderBy('label')->get(),
+            'codes' => RegistrationCode::query()->with('creator')->withCount('users')
+                ->when(! $admin, fn ($q) => $q->whereNull('locked_at'))->orderBy('label')->get(),
+            'flyerCodes' => $flyerCodes->filter->isActive()->values(),
+            'flyerHistory' => $admin ? $flyerCodes->reject->isActive()->values() : collect(),
             'target' => $target,
             'qr' => $target ? Qr::dataUri($target['url'], 480) : null,
             'open' => AppSettings::registrationOpen(),
@@ -145,7 +152,7 @@ class SettingsController extends Controller
         $target = $this->qrTarget($request);
         abort_if($target === null, 404);
 
-        $svg = FlyerSvg::render(AppSettings::appName(), $target['url'], $target['printed_url'], __('settings.flyer_step2_text'), $target['key'] === 'flyer');
+        $svg = FlyerSvg::render(AppSettings::appName(), $target['url'], $target['printed_url'], __('settings.flyer_step2_text'), $target['flyer']);
         $disposition = $request->boolean('download') ? 'attachment' : 'inline';
 
         return response($svg, 200, [
@@ -157,31 +164,26 @@ class SettingsController extends Controller
     }
 
     /**
-     * Selected QR target: an unlocked registration code or the flyer code (only in mode "password");
+     * Selected QR target: an active registration code or an active flyer code (only in mode "password");
      * default the first available one. Null when none is available.
      *
-     * @return array{key: string, label: string, url: string, printed_url: string}|null
+     * @return array{key: string, label: string, url: string, printed_url: string, flyer: bool}|null
      */
     private function qrTarget(Request $request): ?array
     {
         $targets = RegistrationCode::query()->whereNull('locked_at')->orderBy('label')->get()
-            ->map(fn (RegistrationCode $c) => ['key' => (string) $c->id, 'label' => $c->label, 'url' => $c->url(), 'printed_url' => $c->url()])
+            ->map(fn (RegistrationCode $c) => ['key' => (string) $c->id, 'label' => $c->label, 'url' => $c->url(), 'printed_url' => $c->url(), 'flyer' => false])
             ->all();
         if (AppSettings::registrationOpen()) {
+            QrCode::ensureFirst(QrCode::KIND_FLYER);
             // The URL with the flyer code is not printed (only the plain registration URL).
-            $targets[] = ['key' => 'flyer', 'label' => __('settings.flyer_code_label'), 'url' => RegistrationLink::url(true), 'printed_url' => route('register')];
+            foreach (QrCode::query()->active()->where('kind', QrCode::KIND_FLYER)->orderBy('id')->get() as $code) {
+                $targets[] = ['key' => 'flyer-'.$code->id, 'label' => __('settings.flyer_code_label').' · '.$code->displayName(),
+                    'url' => $code->url(), 'printed_url' => route('register'), 'flyer' => true];
+            }
         }
         $selected = (string) $request->query('qr', '');
 
         return collect($targets)->firstWhere('key', $selected) ?? ($targets[0] ?? null);
-    }
-
-    /** New flyer code: every printed flyer/QR code with the old code stops working. */
-    public function regenerateFlyerCode(Request $request): RedirectResponse
-    {
-        AppSettings::regenerateFlyerCode();
-
-        return redirect()->route('backend.registration.qr', ['qr' => 'flyer'] + ($request->query('view') === 'flyer' ? ['view' => 'flyer'] : []))
-            ->with('status', __('settings.flyer_code_regenerated'));
     }
 }

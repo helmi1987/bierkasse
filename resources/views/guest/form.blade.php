@@ -14,10 +14,14 @@
 <form method="post" action="{{ route('guest.store') }}" class="card stack">
     @csrf
     {!! \App\Support\FormToken::field('guest') !!}
-    <div class="field">
-        <label for="code">{{ __('guest.code') }}</label>
-        <input type="text" id="code" name="code" value="{{ old('code', $code) }}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="100" required>
-    </div>
+    @if ($access)
+        <input type="hidden" name="{{ \App\Models\QrCode::GUEST_QUERY }}" value="{{ $access }}">
+    @else
+        <div class="field">
+            <label for="code">{{ __('guest.code') }}</label>
+            <input type="text" id="code" name="code" value="{{ old('code', $code) }}" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="100" required>
+        </div>
+    @endif
     <div class="field">
         <label for="name">{{ __('guest.name') }}</label>
         <input type="text" id="name" name="name" value="{{ old('name') }}" maxlength="100" autocomplete="name">

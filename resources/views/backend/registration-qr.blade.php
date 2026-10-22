@@ -17,16 +17,9 @@
         <h2>{{ __('settings.codes_heading') }}</h2>
         <p class="hint">{{ __('settings.codes_intro') }}</p>
         @if ($admin)
-            <form method="post" action="{{ route('backend.registration.codes.store') }}" class="inline-form">
-                @csrf
-                <label for="code_label">{{ __('settings.codes_label') }}</label>
-                <input type="text" id="code_label" name="label" maxlength="100" required placeholder="{{ __('settings.codes_label_placeholder') }}">
-                <button type="submit" class="btn small">{{ __('settings.codes_create') }}</button>
-            </form>
-        @else
-            <p class="hint">{{ __('qr.admin_only') }}</p>
+            <p><a class="btn small" href="{{ route('backend.qr-admin') }}">{{ __('qr.manage_link') }} →</a></p>
         @endif
-        @if ($codes->whereNull('locked_at')->isEmpty())
+        @if ($codes->isEmpty())
             <p class="muted">{{ __('settings.codes_none') }}</p>
         @endif
         <ul class="list">
@@ -34,22 +27,11 @@
                 <li class="wrap-row">
                     <span>
                         <strong>{{ $code->label }}</strong>
-                        @if ($code->isLocked())<span class="pill">{{ __('settings.codes_status_locked') }}</span>@endif
                         @if ($target && $target['key'] === (string) $code->id)<span class="pill ok">{{ __('settings.codes_shown') }}</span>@endif
                         <br><small class="muted">{{ __('settings.codes_meta', ['user' => $code->creator?->username ?? '?', 'date' => local_time($code->created_at), 'count' => $code->users_count]) }}</small>
                     </span>
                     <span class="row-buttons">
-                        @unless ($code->isLocked())
-                            <a href="{{ route('backend.registration.qr', ['qr' => $code->id] + $viewQuery) }}" class="btn small">{{ __('settings.codes_show') }}</a>
-                        @endunless
-                        @if ($admin)
-                            <form method="post" action="{{ route('backend.registration.codes.lock', $code) }}" class="inline">
-                                @csrf
-                                @method('PUT')
-                                <input type="hidden" name="locked" value="{{ $code->isLocked() ? 0 : 1 }}">
-                                <button type="submit" class="btn small">{{ $code->isLocked() ? __('settings.codes_unlock') : __('settings.codes_lock') }}</button>
-                            </form>
-                        @endif
+                        <a href="{{ route('backend.registration.qr', ['qr' => $code->id] + $viewQuery) }}" class="btn small">{{ __('settings.codes_show') }}</a>
                     </span>
                 </li>
             @endforeach
@@ -61,9 +43,6 @@
         <section class="card stack">
             <h2>{{ __('settings.flyer_codes_heading') }}</h2>
             <p class="hint">{{ __('settings.flyer_codes_intro') }} {{ __('settings.qr_warning') }}</p>
-            @if ($admin)
-                @include('partials.qr.new', ['kind' => \App\Models\QrCode::KIND_FLYER, 'button' => __('qr.new')])
-            @endif
             @if ($flyerCodes->isEmpty())
                 <p class="muted">{{ __('qr.none_active') }}</p>
             @endif
@@ -77,16 +56,10 @@
                         </span>
                         <span class="row-buttons">
                             <a href="{{ route('backend.registration.qr', ['qr' => 'flyer-'.$code->id] + $viewQuery) }}" class="btn small">{{ __('settings.codes_show') }}</a>
-                            @if ($admin)
-                                @include('partials.qr.manage', ['code' => $code])
-                            @endif
                         </span>
                     </li>
                 @endforeach
             </ul>
-            @if ($admin)
-                @include('partials.qr.history', ['history' => $flyerHistory])
-            @endif
         </section>
     @endif
 

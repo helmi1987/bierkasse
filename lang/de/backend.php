@@ -20,6 +20,8 @@ return [
         'feedback' => 'Feedback',
         'audit' => 'Protokoll',
         'nav' => 'Navigation',
+        'qr_admin' => 'QR-Codes',
+        'audit_admin' => 'Protokoll',
     ],
     'nav_intro' => 'Standard-Reihenfolge der Reiter für alle Kassiere und Admins. Ziehen oder mit ↑/↓ verschieben. Jeder kann sie unter Konto → Einstellungen für sich anpassen.',
     'nav_own_intro' => 'Reihenfolge der Reiter für dein Konto. Ziehen oder mit ↑/↓ verschieben.',

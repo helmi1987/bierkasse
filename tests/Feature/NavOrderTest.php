@@ -59,4 +59,15 @@ class NavOrderTest extends TestCase
         $this->put('/konto/navigation', ['order' => ['kassier' => ['stock']]])->assertForbidden();
         $this->get('/konto/einstellungen')->assertOk()->assertDontSee('data-sortable', false);
     }
+
+    public function test_built_in_order_and_admin_tabs_for_qr_management_and_audit(): void
+    {
+        $this->assertSame(['dashboard', 'cash', 'stock', 'rounds', 'guests', 'invitations', 'gifts', 'stats', 'users', 'qr', 'deposit_suggestions', 'audit'], array_keys(BackendNav::ITEMS['kassier']));
+        $this->assertSame(['settings', 'feedback', 'sso', 'nav', 'qr_admin', 'audit_admin', 'maintenance'], array_keys(BackendNav::ITEMS['backend']));
+
+        $this->actingAs($this->admin())->get('/backend/verwaltung/protokoll')->assertOk()
+            ->assertSee('href="'.route('backend.audit-admin').'" class="active"', false);
+        $this->actingAs($this->kassier())->get('/backend/verwaltung/protokoll')->assertForbidden();
+        $this->get('/backend/protokoll')->assertOk();
+    }
 }

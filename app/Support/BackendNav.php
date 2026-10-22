@@ -20,28 +20,31 @@ class BackendNav
         self::KASSIER => [
             'dashboard' => ['backend.dashboard', 'backend.dashboard'],
             'cash' => ['backend.cash', 'backend.cash'],
-            'users' => ['backend.users.index', 'backend.users.*'],
-            'stats' => ['backend.stats', 'backend.stats'],
-            'guests' => ['backend.guests', 'backend.guests*'],
-            'rounds' => ['backend.rounds', 'backend.rounds*'],
-            'gifts' => ['backend.gifts', 'backend.gifts*'],
-            'invitations' => ['backend.invitations', 'backend.invitations*'],
             'stock' => ['backend.stock', 'backend.stock*'],
+            'rounds' => ['backend.rounds', 'backend.rounds*'],
+            'guests' => ['backend.guests', 'backend.guests*'],
+            'invitations' => ['backend.invitations', 'backend.invitations*'],
+            'gifts' => ['backend.gifts', 'backend.gifts*'],
+            'stats' => ['backend.stats', 'backend.stats'],
+            'users' => ['backend.users.index', 'backend.users.*'],
+            // QR codes: view only (also for admins); managed under "Backend".
+            'qr' => ['backend.qr-codes.index', ['backend.qr-codes.index', 'backend.registration.qr', 'backend.registration.flyer-svg']],
             'deposit_suggestions' => ['backend.deposit-suggestions', 'backend.deposit-suggestions'],
-            'audit' => ['backend.audit', 'backend.audit*'],
-            'qr' => ['backend.qr-codes.index', ['backend.qr-codes.*', 'backend.registration.*']],
+            'audit' => ['backend.audit', ['backend.audit', 'backend.audit.*']],
         ],
         self::BACKEND => [
             'settings' => ['backend.settings', 'backend.settings'],
-            'nav' => ['backend.nav', 'backend.nav'],
-            'sso' => ['backend.sso.index', 'backend.sso.*'],
             'feedback' => ['backend.feedback', 'backend.feedback*'],
+            'sso' => ['backend.sso.index', 'backend.sso.*'],
+            'nav' => ['backend.nav', 'backend.nav'],
+            'qr_admin' => ['backend.qr-admin', 'backend.qr-admin*'],
+            'audit_admin' => ['backend.audit-admin', 'backend.audit-admin*'],
             'maintenance' => ['backend.maintenance', 'backend.maintenance*'],
         ],
     ];
 
     /** Route patterns of the admin-only pages. */
-    public const ADMIN_ROUTES = ['backend.settings*', 'backend.nav*', 'backend.feedback*', 'backend.maintenance*', 'backend.sso.*'];
+    public const ADMIN_ROUTES = ['backend.settings*', 'backend.nav*', 'backend.feedback*', 'backend.maintenance*', 'backend.sso.*', 'backend.qr-admin*', 'backend.audit-admin*'];
 
     public static function isAdminPage(): bool
     {

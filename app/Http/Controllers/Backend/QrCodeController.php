@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\QrCode;
 use App\Models\RegistrationCode;
+use App\Models\Setting;
 use App\Services\Audit;
 use App\Support\AppSettings;
 use Illuminate\Http\RedirectResponse;
@@ -14,33 +15,73 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * QR codes: overview of all kinds (kassiers and admins, kassiers only count active ones);
- * management (admins): new code with optional name, deactivate / reactivate. Nothing is deleted,
- * deactivated codes stay as history. Shown on the guest and registration QR pages.
+ * QR codes. View (Kassier bar, kassiers and admins): overview of the active codes per kind with the
+ * pages that show and print them. Management (Backend bar, admins): switches and guest password,
+ * new code with optional name, rename, deactivate / reactivate. Nothing is deleted, deactivated
+ * codes stay as history.
  */
 class QrCodeController extends Controller
 {
-    /** Overview: active (and for admins deactivated) codes per kind with the page that shows them. */
+    /** View: active codes per kind with the page that shows them. */
     public function index(Request $request): View
     {
-        $admin = $request->user()->isAdmin();
-        $count = fn (string $kind, bool $active) => QrCode::query()->where('kind', $kind)
-            ->when($active, fn ($q) => $q->whereNull('deactivated_at'), fn ($q) => $q->whereNotNull('deactivated_at'))->count();
-        $row = fn (string $key, string $url, int $active, int $inactive) => compact('key', 'url', 'active', 'inactive');
+        $active = fn (string $kind) => QrCode::query()->active()->where('kind', $kind)->count();
+        $row = fn (string $key, string $url, int $active) => compact('key', 'url', 'active');
 
         return view('backend.qr-codes', [
-            'admin' => $admin,
+            'admin' => $request->user()->isAdmin(),
             'rows' => [
-                $row('cashbox_cash', route('backend.guests').'#kassen-qr', $count(QrCode::KIND_CASH, true), $count(QrCode::KIND_CASH, false)),
-                $row('cashbox_twint', route('backend.guests').'#kassen-qr', $count(QrCode::KIND_TWINT, true), $count(QrCode::KIND_TWINT, false)),
-                $row('guest', route('backend.guests.qr'), $count(QrCode::KIND_GUEST, true), $count(QrCode::KIND_GUEST, false)),
-                $row('registration', route('backend.registration.qr'), RegistrationCode::query()->whereNull('locked_at')->count(), RegistrationCode::query()->whereNotNull('locked_at')->count()),
-                $row('flyer', route('backend.registration.qr'), $count(QrCode::KIND_FLYER, true), $count(QrCode::KIND_FLYER, false)),
+                $row('cashbox_cash', route('backend.guests').'#kassen-qr', $active(QrCode::KIND_CASH)),
+                $row('cashbox_twint', route('backend.guests').'#kassen-qr', $active(QrCode::KIND_TWINT)),
+                $row('guest', route('backend.guests.qr'), $active(QrCode::KIND_GUEST)),
+                $row('registration', route('backend.registration.qr'), RegistrationCode::query()->whereNull('locked_at')->count()),
+                $row('flyer', route('backend.registration.qr'), $active(QrCode::KIND_FLYER)),
             ],
             'cashboxEnabled' => (bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED, false),
             'guestOpen' => AppSettings::guestOpen(),
             'registrationOpen' => AppSettings::registrationOpen(),
         ]);
+    }
+
+    /** Management (admins): settings and all codes per kind, deactivated ones as history. */
+    public function manage(): View
+    {
+        foreach ([QrCode::KIND_CASH, QrCode::KIND_TWINT, QrCode::KIND_GUEST] as $kind) {
+            QrCode::ensureFirst($kind);
+        }
+        if (AppSettings::registrationOpen()) {
+            QrCode::ensureFirst(QrCode::KIND_FLYER);
+        }
+        $codes = QrCode::query()->with('creator')->orderBy('id')->get()->groupBy('kind');
+
+        return view('backend.qr-admin', [
+            'kinds' => array_map(fn (string $kind) => [
+                'kind' => $kind,
+                'active' => ($codes[$kind] ?? collect())->filter->isActive()->values(),
+                'history' => ($codes[$kind] ?? collect())->reject->isActive()->values(),
+            ], QrCode::KINDS),
+            'registrationCodes' => RegistrationCode::query()->with('creator')->withCount('users')->orderBy('label')->get(),
+            'cashboxEnabled' => (bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED, false),
+            'guestEnabled' => (bool) AppSettings::get(AppSettings::GUEST_ENABLED, false),
+            'guestPassword' => AppSettings::guestPassword(),
+            'twintEnabled' => AppSettings::twintEnabled(),
+            'registrationOpen' => AppSettings::registrationOpen(),
+        ]);
+    }
+
+    /** Switches of the QR pages and the guest password (admins). */
+    public function settings(Request $request): RedirectResponse
+    {
+        // The public guest page can only be enabled together with a guest password.
+        $data = $request->validate(['guest_password' => ['nullable', 'required_if_accepted:guest_enabled', 'string', 'min:4', 'max:100']],
+            ['guest_password.required_if_accepted' => __('guest.password_required')]);
+        Setting::putMany([
+            AppSettings::CASHBOX_QR_ENABLED => $request->boolean('cashbox_qr_enabled'),
+            AppSettings::GUEST_ENABLED => $request->boolean('guest_enabled'),
+            AppSettings::GUEST_PASSWORD => (string) ($data['guest_password'] ?? ''),
+        ]);
+
+        return back()->with('status', __('settings.saved'));
     }
 
     public function store(Request $request): RedirectResponse

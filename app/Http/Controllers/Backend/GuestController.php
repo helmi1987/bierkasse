@@ -17,48 +17,32 @@ use Illuminate\View\View;
 
 /**
  * Guests (kassier and admin): booking by logged-in users on/off, guest sales with storno.
- * QR codes (public guest page, cashbox stickers cash / TWINT): kassiers see the active codes,
- * only admins change the switches, the guest password and the codes (QrCodeController).
+ * QR codes (public guest page, cashbox stickers cash / TWINT): view of the active codes only;
+ * switches, guest password and codes are managed by admins (QrCodeController).
  */
 class GuestController extends Controller
 {
     public function index(Request $request): View
     {
-        $admin = $request->user()->isAdmin();
         QrCode::ensureFirst(QrCode::KIND_CASH);
         QrCode::ensureFirst(QrCode::KIND_TWINT);
-        $codes = QrCode::query()->with('creator')->whereIn('kind', [QrCode::KIND_CASH, QrCode::KIND_TWINT])->orderBy('id')->get();
 
         return view('backend.guests', [
-            'admin' => $admin,
+            'admin' => $request->user()->isAdmin(),
             'userBooking' => AppSettings::guestUserBooking(),
-            'enabled' => (bool) AppSettings::get(AppSettings::GUEST_ENABLED, false),
-            'password' => $admin ? AppSettings::guestPassword() : '',
             'open' => AppSettings::guestOpen(),
             'cashboxEnabled' => (bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED, false),
             'twintEnabled' => AppSettings::twintEnabled(),
-            'cashboxActive' => $codes->filter->isActive()->values(),
-            'cashboxHistory' => $admin ? $codes->reject->isActive()->values() : collect(),
+            'cashboxActive' => QrCode::query()->active()->whereIn('kind', [QrCode::KIND_CASH, QrCode::KIND_TWINT])->orderBy('id')->get(),
             'sales' => GuestSale::query()->with('bookedBy')->latest('id')->paginate(30),
             'total' => ['beers' => (int) GuestSale::query()->sum('beers'), 'amount' => (int) GuestSale::query()->sum('amount')],
         ]);
     }
 
-    /** Kassiers only switch the booking by users; the QR related settings are admin only. */
+    /** Booking by users on/off; the QR switches and the guest password are on the QR management page. */
     public function update(Request $request): RedirectResponse
     {
-        $values = [AppSettings::GUEST_USER_BOOKING => $request->boolean('guest_user_booking')];
-        if ($request->user()->isAdmin()) {
-            // The public guest page can only be enabled together with a guest password.
-            $data = $request->validate(['guest_password' => ['nullable', 'required_if_accepted:guest_enabled', 'string', 'min:4', 'max:100']],
-                ['guest_password.required_if_accepted' => __('guest.password_required')]);
-            $values += [
-                AppSettings::GUEST_ENABLED => $request->boolean('guest_enabled'),
-                AppSettings::GUEST_PASSWORD => (string) ($data['guest_password'] ?? ''),
-                AppSettings::CASHBOX_QR_ENABLED => $request->boolean('cashbox_qr_enabled'),
-            ];
-        }
-        Setting::putMany($values);
+        Setting::put(AppSettings::GUEST_USER_BOOKING, $request->boolean('guest_user_booking'));
 
         return back()->with('status', __('settings.saved'));
     }
@@ -76,17 +60,14 @@ class GuestController extends Controller
      */
     public function qr(Request $request): View
     {
-        $admin = $request->user()->isAdmin();
         QrCode::ensureFirst(QrCode::KIND_GUEST);
-        $codes = QrCode::query()->with('creator')->where('kind', QrCode::KIND_GUEST)->orderBy('id')->get();
-        $active = $codes->filter->isActive()->values();
+        $active = QrCode::query()->with('creator')->active()->where('kind', QrCode::KIND_GUEST)->orderBy('id')->get();
         $selected = $request->query('qr') === '0' ? null : ($active->firstWhere('id', (int) $request->query('qr')) ?? $active->first());
         $url = $selected?->url() ?? route('guest');
 
         return view('backend.guests-qr', [
-            'admin' => $admin,
+            'admin' => $request->user()->isAdmin(),
             'active' => $active,
-            'history' => $admin ? $codes->reject->isActive()->values() : collect(),
             'selected' => $selected,
             'url' => $url,
             'qr' => Qr::dataUri($url, 480),
@@ -125,7 +106,7 @@ class GuestController extends Controller
         ]), 'kassen-qr-a4-bar-twint.svg');
     }
 
-    /** Method of a cashbox code; kassiers only get active codes. */
+    /** Method of a cashbox code; deactivated codes only for admins (management page). */
     private function cashboxMethod(Request $request, QrCode $qrCode): string
     {
         $method = $qrCode->method();

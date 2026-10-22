@@ -93,15 +93,20 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Mail an Kassier/Admin wie jede Selbst-Registrierung (folgt dem Schalter), mit Zeile "Registrierungscode".
      Die QR-Seite zeigt nur Mögliches: Registrierungscodes und im Modus "Offen mit Registrierungspasswort"
      zusätzlich die Flyer-Codes; einen QR-Code ohne Code gibt es nicht. Gedruckt wird die vollständige URL mit Code.
-   - QR-Codes (Entscheid 2026-10-23, gilt für Kassen-QR, Flyer-Codes, Gäste-QR und Registrierungscodes): Kassiers sehen
-     nur aktive Codes (anzeigen, drucken, herunterladen); nur Admins erstellen, benennen, deaktivieren und reaktivieren
-     Codes und ändern die zugehörigen Schalter (Kassen-QR aktiv, öffentliche Gäste-Seite, Gäste-Passwort). Mehrere
+   - QR-Codes (Entscheid 2026-10-23, gilt für Kassen-QR, Flyer-Codes, Gäste-QR und Registrierungscodes): Ansicht und
+     Verwaltung getrennt. Ansicht (Kassier-Leiste, Reiter "QR-Codes", für Kassier und Admin gleich): nur aktive Codes
+     anzeigen, drucken, herunterladen; Admins sehen dort nur einen Link "QR-Codes verwalten". Verwaltung (Backend-Leiste,
+     Reiter "QR-Codes", `/backend/verwaltung/qr-codes`, nur Admin): Schalter "Kassen-QR aktiv", "Öffentliche
+     Gäste-Seite", Gäste-Passwort; pro Art neuer Code (Name freiwillig), umbenennen, deaktivieren, Historie mit
+     Reaktivieren; Registrierungscodes erstellen, deaktivieren, reaktivieren. Mehrere
      Codes pro Art können aktiv sein; nichts wird gelöscht, deaktivierte bleiben als Historie (nur Admin sichtbar).
      Tabelle `qr_codes` (Art `cashbox_cash`/`cashbox_twint`/`flyer`/`guest`, Name freiwillig, Code verschlüsselt +
      SHA-256 für die Suche, `deactivated_at`); die früheren Einzel-Codes aus den Settings werden beim Migrieren
      übernommen (gedruckte Aufkleber/Flyer bleiben gültig). Audit: `qr_code.create/label/deactivate/activate`.
-     Reiter "QR-Codes" in der Kassier-Leiste (`/backend/qr-codes`, Kassier und Admin): Übersicht aller Arten mit Anzahl
-     aktiver (Admin zusätzlich deaktivierter) Codes und Link zur jeweiligen Seite; ersetzt den Reiter "Registrierungs-QR".
+     Übersicht in der Kassier-Leiste (`/backend/qr-codes`): alle Arten mit Anzahl aktiver Codes und Link zur Seite.
+   - Reiter-Reihenfolge Standard (Entscheid 2026-10-23): Kassier: Übersicht, Kasse, Lager, Runden, Gäste, Einladungen,
+     Verschenkt, Statistik, Benutzer, QR-Codes, Vorschläge, Protokoll. Backend: Einstellungen, Feedback, SSO, Navigation,
+     QR-Codes (Verwaltung), Protokoll (gleiche Seite wie beim Kassier, `/backend/verwaltung/protokoll`), Wartung.
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.
      Alle Mails (auch Passwort-Reset) nutzen ein gemeinsames HTML-Layout (`resources/views/mail/layout.blade.php`, Inline-CSS, Logo `public/icon-192.png` als CID eingebettet, fehlt es, entfällt das Logo) plus Textversion; Fakten als Tabelle, Link als Button.

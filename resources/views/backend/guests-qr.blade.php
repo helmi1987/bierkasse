@@ -13,7 +13,7 @@
     <section class="card stack">
         <p class="hint">{{ __('guest.qr_codes_intro') }}</p>
         @if ($admin)
-            @include('partials.qr.new', ['kind' => \App\Models\QrCode::KIND_GUEST, 'button' => __('qr.new')])
+            <p><a class="btn small" href="{{ route('backend.qr-admin') }}">{{ __('qr.manage_link') }} →</a></p>
         @endif
         <ul class="list">
             @foreach ($active as $code)
@@ -25,9 +25,6 @@
                     </span>
                     <span class="row-buttons">
                         <a href="{{ route('backend.guests.qr', ['qr' => $code->id]) }}" class="btn small">{{ __('settings.codes_show') }}</a>
-                        @if ($admin)
-                            @include('partials.qr.manage', ['code' => $code])
-                        @endif
                     </span>
                 </li>
             @endforeach
@@ -40,9 +37,6 @@
                 <a href="{{ route('backend.guests.qr', ['qr' => 0]) }}" class="btn small">{{ __('settings.codes_show') }}</a>
             </li>
         </ul>
-        @if ($admin)
-            @include('partials.qr.history', ['history' => $history])
-        @endif
     </section>
     <div class="row-buttons">
         <button type="button" class="btn" data-print>{{ __('settings.qr_print') }}</button>

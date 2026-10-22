@@ -3,6 +3,8 @@
 @section('title', __('audit.entry', ['id' => $entry->id]))
 
 @section('content')
+{{-- Kassier bar or admin bar (same page). --}}
+@php($auditBase = request()->routeIs('backend.audit-admin*') ? 'backend.audit-admin' : 'backend.audit')
 @include('partials.backend-nav')
 <h1>{{ __('audit.entry', ['id' => $entry->id]) }} <code>{{ $entry->action }}</code></h1>
 <p class="muted">{{ local_time($entry->at(), 'd.m.Y H:i:s') }} · {{ $entry->actor_name ?? __('audit.system') }}@if ($entry->subject_type) · {{ $entry->subject_type }} #{{ $entry->subject_id }}@endif</p>
@@ -42,5 +44,5 @@
     </dl>
 </section>
 
-<p><a href="{{ route('backend.audit') }}">← {{ __('audit.back') }}</a></p>
+<p><a href="{{ route($auditBase) }}">← {{ __('audit.back') }}</a></p>
 @endsection

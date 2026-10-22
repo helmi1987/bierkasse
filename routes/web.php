@@ -138,6 +138,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::get('/gaeste/kassen-qr/{qrCode}', [Backend\GuestController::class, 'cashboxSvg'])->whereNumber('qrCode')->name('guests.cashbox');
             Route::get('/gaeste/kassen-qr/{qrCode}/a4', [Backend\GuestController::class, 'cashboxSheet'])->whereNumber('qrCode')->name('guests.cashbox.sheet');
             Route::get('/gaeste/kassen-qr-a4/gemischt', [Backend\GuestController::class, 'cashboxMixedSheet'])->name('guests.cashbox.mixed');
+            Route::get('/qr-codes', [Backend\QrCodeController::class, 'index'])->name('qr-codes.index');
             Route::get('/registrierung-qr', [Backend\SettingsController::class, 'registrationQr'])->name('registration.qr');
             Route::get('/registrierung-qr/flyer-bild', [Backend\SettingsController::class, 'flyerSvg'])->name('registration.flyer-svg');
             Route::delete('/gaeste/{sale}', [Backend\GuestController::class, 'destroy'])->whereNumber('sale')->name('guests.destroy');

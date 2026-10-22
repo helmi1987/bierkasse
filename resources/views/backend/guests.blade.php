@@ -33,7 +33,7 @@
     @endunless
 </form>
 
-<section class="card stack">
+<section class="card stack" id="kassen-qr">
     <h2>{{ __('guest.cashbox_heading') }}</h2>
     <p class="muted">{{ __('guest.cashbox_intro_backend') }}</p>
     @unless ($cashboxEnabled)

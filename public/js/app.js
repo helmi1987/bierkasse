@@ -121,6 +121,47 @@
         render();
     });
 
+    // "Bier verschenken": search filter and live total (recipients × beers per person).
+    document.querySelectorAll('form[data-gift]').forEach(function (form) {
+        var price = parseInt(form.dataset.price || '0', 10);
+        var count = form.querySelector('[data-gift-count]');
+        var amount = form.querySelector('[data-gift-amount]');
+        var submit = form.querySelector('[data-gift-submit]');
+        var qty = form.querySelector('input[name=gift_quantity]');
+        var filter = form.querySelector('[data-round-filter]');
+        var render = function () {
+            var q = parseInt(qty.value, 10);
+            var people = form.querySelectorAll('input[name="gift_recipients[]"]:checked').length;
+            var n = people * (isNaN(q) ? 1 : Math.max(1, q));
+            var rappen = n * price;
+            count.textContent = n === 1 ? form.dataset.one : form.dataset.many.replace(':count', String(n));
+            amount.textContent = 'CHF ' + Math.floor(rappen / 100) + '.' + String(rappen % 100).padStart(2, '0');
+            submit.disabled = people < 1;
+        };
+        form.addEventListener('change', render);
+        form.addEventListener('input', function (e) {
+            if (e.target !== filter) {
+                render();
+            }
+        });
+        if (filter) {
+            filter.hidden = false;
+            filter.addEventListener('input', function () {
+                var term = filter.value.trim().toLowerCase();
+                form.querySelectorAll('.round-list li').forEach(function (li) {
+                    var checked = li.querySelector('input:checked');
+                    li.hidden = term !== '' && !checked && li.dataset.name.indexOf(term) === -1;
+                });
+            });
+            filter.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            });
+        }
+        render();
+    });
+
     // Copy buttons: data-copy="#selector" (text of that element) or data-copy-text="value".
     document.querySelectorAll('[data-copy], [data-copy-text]').forEach(function (btn) {
         btn.addEventListener('click', function () {

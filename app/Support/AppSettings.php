@@ -76,6 +76,11 @@ class AppSettings
     /** Users may pay a round for colleagues/guests ("Runde spendieren"). Planned to move to the tenant settings. */
     public const ROUNDS_ENABLED = 'rounds_enabled';
 
+    /** "Bier verschenken" on/off and the undo window of the giver in minutes. */
+    public const GIFTS_ENABLED = 'gifts_enabled';
+
+    public const GIFT_UNDO_MINUTES = 'gift_undo_minutes';
+
     /** Preselected deposit proposal in Rappen; null = first proposal. */
     public const DEPOSIT_DEFAULT = 'deposit_suggestion_default';
 
@@ -316,6 +321,17 @@ class AppSettings
     public static function roundsAllowed(): bool
     {
         return (bool) self::get(self::ROUNDS_ENABLED, true);
+    }
+
+    public static function giftsAllowed(): bool
+    {
+        return (bool) self::get(self::GIFTS_ENABLED, true);
+    }
+
+    /** Undo window of a gift (0–60 minutes, default 5; 0 = no undo). */
+    public static function giftUndoMinutes(): int
+    {
+        return max(0, min(60, (int) self::get(self::GIFT_UNDO_MINUTES, 5)));
     }
 
     /** Minimum beer stock (low-stock mail and warning); 0 = off. */

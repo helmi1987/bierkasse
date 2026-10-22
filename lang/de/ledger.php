@@ -10,6 +10,7 @@ return [
         'correction' => 'Korrektur',
         'carryover' => 'Übertrag alte Strichliste',
         'round' => 'Runde spendiert',
+        'gift' => 'Bier verschenkt',
     ],
     'status' => [
         'pending' => 'offen',

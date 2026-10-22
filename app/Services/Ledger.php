@@ -173,11 +173,82 @@ class Ledger
         return $tx;
     }
 
+    /**
+     * "Bier verschenken": $perRecipient beers for each recipient as CHF credit at the current price.
+     * The giver pays all (same limit rules as own beers); stock and cash stay unchanged.
+     *
+     * @param  list<int>  $recipientIds
+     */
+    public static function giveBeers(User $giver, array $recipientIds, int $perRecipient, ?string $message = null): Transaction
+    {
+        $recipientIds = array_values(array_unique(array_map('intval', $recipientIds)));
+        if ($recipientIds === []) {
+            throw new LedgerException(__('gift.none_selected'));
+        }
+        if (count($recipientIds) > Gifts::MAX_RECIPIENTS || $perRecipient < 1 || $perRecipient > Gifts::MAX_PER_RECIPIENT) {
+            throw new LedgerException(__('ledger.quantity_invalid'));
+        }
+        $message = $message !== null && trim($message) !== '' ? trim($message) : null;
+        if ($message !== null && mb_strlen($message) > Gifts::MESSAGE_MAX) {
+            throw new LedgerException(__('round.message_too_long', ['max' => Gifts::MESSAGE_MAX]));
+        }
+
+        return DB::transaction(function () use ($giver, $recipientIds, $perRecipient, $message) {
+            self::lock($giver);
+            self::assertActive($giver);
+            self::assertBeerAccount($giver);
+            if (self::hasPendingPayout($giver)) {
+                throw new LedgerException(__('ledger.payout_pending'));
+            }
+            if (in_array($giver->id, $recipientIds, true)
+                || User::query()->whereIn('id', $recipientIds)->where('status', User::STATUS_ACTIVE)->hasBeerAccount()->count() !== count($recipientIds)) {
+                throw new LedgerException(__('round.recipient_invalid'));
+            }
+
+            $price = AppSettings::beerPrice();
+            $total = $perRecipient * count($recipientIds);
+            if (self::balance($giver) - $total * $price < -$giver->effectiveLimit()) {
+                throw new LedgerException(__('ledger.limit_reached'));
+            }
+
+            $row = fn (int $userId, int $quantity, int $amount, ?int $parentId) => Transaction::query()->create([
+                'user_id' => $userId,
+                'parent_id' => $parentId,
+                'type' => Transaction::TYPE_GIFT,
+                'status' => Transaction::STATUS_CONFIRMED,
+                'quantity' => $quantity,
+                'unit_price' => $price,
+                'amount' => $amount,
+                'note' => $message,
+                'created_by' => $giver->id,
+                'confirmed_by' => $giver->id,
+                'confirmed_at' => now(),
+            ]);
+            $tx = $row($giver->id, $total, -$total * $price, null);
+            foreach ($recipientIds as $id) {
+                $row($id, $perRecipient, $perRecipient * $price, $tx->id);
+            }
+            Audit::log('gift.create', $tx, [], self::auditValues($tx) + ['recipients' => $recipientIds, 'per_recipient' => $perRecipient], $giver);
+
+            return $tx;
+        });
+    }
+
     /** Undo of an own consumption or round within the undo window (a round with its beers). */
     public static function undo(Transaction $tx, User $user): void
     {
         if (! $tx->canBeUndoneBy($user)) {
             throw new LedgerException(__('ledger.undo_expired'));
+        }
+        if ($tx->type === Transaction::TYPE_GIFT) {
+            DB::transaction(function () use ($tx, $user) {
+                $old = self::auditValues($tx) + ['recipients' => $tx->giftParts()->pluck('user_id')->all()];
+                $tx->giftParts()->delete();
+                $tx->delete();
+                Audit::log('gift.undo', $tx, $old, [], $user);
+            });
+
+            return;
         }
         DB::transaction(function () use ($tx, $user) {
             $old = self::auditValues($tx);
@@ -532,7 +603,7 @@ class Ledger
             }
 
             $price = (int) $row->unit_price;
-            $beerRow = in_array($row->type, [...Transaction::BEER_TYPES, Transaction::TYPE_CARRYOVER], true);
+            $beerRow = in_array($row->type, [...Transaction::BEER_TYPES, Transaction::TYPE_CARRYOVER, Transaction::TYPE_GIFT], true);
             if (! $beerRow || $price <= 0 || (int) $row->quantity * $price !== $debit) {
                 $other += $debit - $covered;
 

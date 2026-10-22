@@ -68,6 +68,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/konto/gast', [AccountController::class, 'guest'])->middleware('throttle:30,1')->name('account.guest');
             Route::post('/konto/gast/{sale}/rueckgaengig', [AccountController::class, 'undoGuest'])->whereNumber('sale')->name('account.guest.undo');
             Route::post('/konto/runde', [AccountController::class, 'round'])->middleware('throttle:20,1')->name('account.round');
+            Route::post('/konto/verschenken', [AccountController::class, 'gift'])->middleware('throttle:20,1')->name('account.gift');
             Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
             Route::put('/konto/einzahlung/{transaction}', [AccountController::class, 'updateDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.update');
             Route::delete('/konto/einzahlung/{transaction}', [AccountController::class, 'cancelDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.cancel');
@@ -138,6 +139,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::delete('/gaeste/{sale}', [Backend\GuestController::class, 'destroy'])->whereNumber('sale')->name('guests.destroy');
             Route::get('/runden', [Backend\RoundController::class, 'index'])->name('rounds');
             Route::put('/runden', [Backend\RoundController::class, 'update'])->name('rounds.update');
+            Route::get('/verschenkt', [Backend\GiftController::class, 'index'])->name('gifts');
+            Route::put('/verschenkt', [Backend\GiftController::class, 'update'])->name('gifts.update');
             Route::get('/einladungen', [Backend\InvitationController::class, 'index'])->name('invitations');
             Route::delete('/einladungen/{invitation}', [Backend\InvitationController::class, 'destroy'])->whereNumber('invitation')->name('invitations.destroy');
             Route::get('/lager', [Backend\StockController::class, 'index'])->name('stock');

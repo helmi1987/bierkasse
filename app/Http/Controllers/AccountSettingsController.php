@@ -9,6 +9,7 @@ use App\Services\Ledger;
 use App\Services\LedgerException;
 use App\Services\Sso;
 use App\Support\AppSettings;
+use App\Support\BackendNav;
 use App\Support\Qr;
 use App\Support\Totp;
 use App\Support\UserRules;
@@ -73,6 +74,28 @@ class AccountSettingsController extends Controller
         Audit::save('user.profile', $user->fill($data));
 
         return back()->with('status', __('account.profile_saved'));
+    }
+
+    /** Own order of the backend tabs (kassiers: "Kassier", admins: both groups). */
+    public function navOrder(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $request->validate(['order' => ['required', 'array']]);
+        $order = [];
+        foreach (BackendNav::groups($user) as $group) {
+            $order[$group] = BackendNav::normalize($group, $request->input('order.'.$group));
+        }
+        // Groups the account cannot order keep the default.
+        Audit::save('user.nav_order', $user->forceFill(['nav_order' => $order]));
+
+        return back()->with('status', __('backend.nav_saved'));
+    }
+
+    public function navReset(Request $request): RedirectResponse
+    {
+        Audit::save('user.nav_order', $request->user()->forceFill(['nav_order' => null]));
+
+        return back()->with('status', __('backend.nav_reset_done'));
     }
 
     public function stats(Request $request): RedirectResponse

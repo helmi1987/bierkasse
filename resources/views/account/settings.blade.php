@@ -77,6 +77,27 @@
     </section>
 @endif
 
+@if ($user->isKassier())
+    <section class="card" id="navigation">
+        <h2>{{ __('backend.nav.nav') }}</h2>
+        <form method="post" action="{{ route('account.nav') }}" class="stack">
+            @csrf
+            @method('PUT')
+            <p class="hint">{{ __('backend.nav_own_intro') }}@if ($user->nav_order === null) {{ __('backend.nav_own_default') }}@endif</p>
+            @php($navGroups = \App\Support\BackendNav::groups($user))
+            @include('partials.nav-order', ['groups' => $navGroups, 'orders' => collect($navGroups)->mapWithKeys(fn ($g) => [$g => \App\Support\BackendNav::order($g, $user)])->all()])
+            <button type="submit" class="btn small">{{ __('account.save') }}</button>
+        </form>
+        @if ($user->nav_order !== null)
+            <form method="post" action="{{ route('account.nav.reset') }}" class="inline">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn small ghost">{{ __('backend.nav_reset') }}</button>
+            </form>
+        @endif
+    </section>
+@endif
+
 @if ($user->hasBeerAccount())
 <section class="card">
     <h2>{{ __('account.stats_heading') }}</h2>

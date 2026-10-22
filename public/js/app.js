@@ -340,6 +340,46 @@
         nav.addEventListener('click', store);
     });
 
+    // Sortable lists: drag and drop, or the ↑/↓ buttons (data-move).
+    document.querySelectorAll('[data-sortable]').forEach(function (list) {
+        var dragged = null;
+        list.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-move]');
+            if (!btn) {
+                return;
+            }
+            var item = btn.closest('li');
+            if (btn.dataset.move === '-1' && item.previousElementSibling) {
+                list.insertBefore(item, item.previousElementSibling);
+            } else if (btn.dataset.move === '1' && item.nextElementSibling) {
+                list.insertBefore(item.nextElementSibling, item);
+            }
+            btn.focus();
+        });
+        list.addEventListener('dragstart', function (e) {
+            dragged = e.target.closest('li');
+            if (dragged) {
+                dragged.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        });
+        list.addEventListener('dragend', function () {
+            if (dragged) {
+                dragged.classList.remove('dragging');
+            }
+            dragged = null;
+        });
+        list.addEventListener('dragover', function (e) {
+            var over = e.target.closest('li');
+            if (!dragged || !over || over === dragged || over.parentNode !== list) {
+                return;
+            }
+            e.preventDefault();
+            var rect = over.getBoundingClientRect();
+            list.insertBefore(dragged, e.clientY > rect.top + rect.height / 2 ? over.nextSibling : over);
+        });
+    });
+
     // PWA: register the (network-only) service worker.
     if ('serviceWorker' in navigator && window.isSecureContext) {
         navigator.serviceWorker.register('/sw.js').catch(function () {});

@@ -7,6 +7,7 @@ use App\Models\QrCode;
 use App\Models\RegistrationCode;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Audit;
 use App\Support\AppSettings;
 use App\Support\FlyerSvg;
 use App\Support\LegalTexts;
@@ -50,14 +51,15 @@ class SettingsController extends Controller
                 'location' => AppSettings::legalLocation(),
                 'texts' => array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalTexts::text($kind), LegalTexts::KINDS)),
                 'dates' => array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalTexts::versionDate(LegalTexts::version($kind)), LegalTexts::KINDS)),
+                'changed' => array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalTexts::changedAt($kind) !== null ? LegalTexts::versionDate(LegalTexts::changedAt($kind)) : null, LegalTexts::KINDS)),
             ],
         ]);
     }
 
     /**
-     * Privacy policy / terms of use with contact data. Per text: "Alle Benutzer müssen erneut zustimmen"
-     * sets a new version (now) and every user has to accept again; without it the change is editorial
-     * (version unchanged). An empty text falls back to the default text.
+     * Privacy policy / terms of use with contact data. Per text a mode: silent (only "last changed"),
+     * update (dismissible notice for all users), reaccept (new version, consent gate) or auto
+     * (update if the text changed, else silent). An empty text falls back to the default text.
      */
     public function legal(Request $request): RedirectResponse
     {
@@ -67,6 +69,8 @@ class SettingsController extends Controller
             'legal_location' => ['required', 'string', 'max:100'],
             'privacy_text' => ['nullable', 'string', 'max:'.LegalTexts::TEXT_MAX],
             'terms_text' => ['nullable', 'string', 'max:'.LegalTexts::TEXT_MAX],
+            'privacy_mode' => ['nullable', Rule::in(LegalTexts::MODES)],
+            'terms_mode' => ['nullable', Rule::in(LegalTexts::MODES)],
         ]);
 
         $values = [
@@ -75,21 +79,45 @@ class SettingsController extends Controller
             AppSettings::LEGAL_LOCATION => trim($data['legal_location']),
         ];
         $reaccept = false;
+        $update = false;
+        $modes = [];
         foreach (LegalTexts::KINDS as $kind) {
             $text = str_replace(["\r\n", "\r"], "\n", trim((string) ($data[$kind.'_text'] ?? '')));
             // Unchanged default text is not stored, so a later default update still applies.
             $text = $text === trim(str_replace(["\r\n", "\r"], "\n", LegalTexts::defaultText($kind))) ? '' : $text;
-            if ($text !== (string) AppSettings::get(LegalTexts::textKey($kind), '')) {
+            $textChanged = $text !== (string) AppSettings::get(LegalTexts::textKey($kind), '');
+            if ($textChanged) {
                 $values[LegalTexts::textKey($kind)] = $text;
             }
-            if ($request->boolean($kind.'_reaccept')) {
-                $values[LegalTexts::versionKey($kind)] = LegalTexts::newVersion();
+
+            // "auto": update notice if the text changed, silent otherwise (name/e-mail/location only).
+            $mode = $data[$kind.'_mode'] ?? LegalTexts::MODE_AUTO;
+            if ($mode === LegalTexts::MODE_AUTO) {
+                $mode = $textChanged ? LegalTexts::MODE_UPDATE : LegalTexts::MODE_SILENT;
+            }
+            $now = LegalTexts::newVersion();
+            if ($mode === LegalTexts::MODE_REACCEPT) {
+                $values[LegalTexts::versionKey($kind)] = $now;
                 $reaccept = true;
+            } elseif ($mode === LegalTexts::MODE_UPDATE) {
+                $values[LegalTexts::noticeKey($kind)] = $now;
+                $update = true;
+            }
+            // Any stored change or announced change updates "last changed".
+            if ($textChanged || $mode !== LegalTexts::MODE_SILENT) {
+                $values[LegalTexts::changedKey($kind)] = $now;
+            }
+            if ($mode !== LegalTexts::MODE_SILENT) {
+                $modes[$kind] = $mode;
             }
         }
         Setting::putMany($values, 'legal.update');
+        if ($modes !== []) {
+            // Which announcement was chosen (the settings diff above only shows the changed keys).
+            Audit::log('legal.mode', null, [], $modes);
+        }
 
-        return redirect()->to(route('backend.settings').'#rechtliches')->with('status', __($reaccept ? 'legal.saved_reaccept' : 'legal.saved'));
+        return redirect()->to(route('backend.settings').'#rechtliches')->with('status', __($reaccept ? 'legal.saved_reaccept' : ($update ? 'legal.saved_update' : 'legal.saved')));
     }
 
     public function update(Request $request): RedirectResponse
@@ -142,7 +170,12 @@ class SettingsController extends Controller
             $smtpPassword = $old['smtp_password'];
         }
 
-        Setting::putMany([
+        // Values used in the legal texts ({bierpreis}, {limit}, {undo_minuten}): a real change is announced.
+        $newUndo = (int) ($data['undo_minutes']['consume'] ?? AppSettings::undoMinutes('consume'));
+        $legalChanged = $price !== AppSettings::beerPrice() || $limit !== AppSettings::defaultLimit()
+            || $newUndo !== AppSettings::undoMinutes('consume');
+
+        Setting::putMany(($legalChanged ? LegalTexts::settingChangeValues() : []) + [
             AppSettings::BEER_PRICE => $price,
             AppSettings::DEFAULT_LIMIT => $limit,
             AppSettings::APP_NAME => trim((string) ($data['app_name'] ?? '')),

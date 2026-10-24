@@ -62,13 +62,22 @@ class LegalController extends Controller
         return redirect()->intended($user->homeUrl())->with('status', __('legal.consent_saved'));
     }
 
+    /** Dismisses the update notice of one text (no audit entry: personal and low value). */
+    public function dismissNotice(Request $request, string $kind): RedirectResponse
+    {
+        abort_unless(in_array($kind, LegalTexts::KINDS, true), 404);
+        $request->user()->forceFill([LegalTexts::seenColumn($kind) => now()])->save();
+
+        return back();
+    }
+
     private function page(string $kind): View
     {
         return view('legal.page', ['kind' => $kind] + $this->text($kind));
     }
 
     /**
-     * @return array{title: string, html: HtmlString, date: string, url: string}
+     * @return array{title: string, html: HtmlString, date: string, changed: ?string, url: string}
      */
     private function text(string $kind): array
     {
@@ -78,7 +87,20 @@ class LegalController extends Controller
             'title' => $rendered['title'] ?? __('legal.title.'.$kind),
             'html' => $rendered['html'],
             'date' => LegalTexts::versionDate(LegalTexts::version($kind)),
+            'changed' => $this->changedDate($kind),
             'url' => route($kind === LegalTexts::PRIVACY ? 'legal.privacy' : 'legal.terms'),
         ];
+    }
+
+    /** "Last changed" date, only when it differs from the "Stand" date. */
+    private function changedDate(string $kind): ?string
+    {
+        $changed = LegalTexts::changedAt($kind);
+        if ($changed === null) {
+            return null;
+        }
+        $date = LegalTexts::versionDate($changed);
+
+        return $date !== LegalTexts::versionDate(LegalTexts::version($kind)) ? $date : null;
     }
 }

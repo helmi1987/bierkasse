@@ -4,7 +4,7 @@
 
 @section('content')
 <article class="card legal-text" data-testid="legal-{{ $kind }}">
-    <p class="muted">{{ __('legal.as_of', ['date' => $date]) }}</p>
+    <p class="muted">{{ __('legal.as_of', ['date' => $date]) }}@if ($changed) · {{ __('legal.last_changed', ['date' => $changed]) }}@endif</p>
     <h1>{{ $title }}</h1>
     {{ $html }}
 </article>

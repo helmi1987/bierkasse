@@ -70,6 +70,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::get('/zustimmung', [LegalController::class, 'consent'])->name('consent.show');
         Route::post('/zustimmung', [LegalController::class, 'accept'])->middleware('throttle:20,1')->name('consent.store');
 
+        Route::post('/rechtliches/{kind}/gelesen', [LegalController::class, 'dismissNotice'])->whereIn('kind', ['privacy', 'terms'])->name('legal.notice.dismiss');
+
         // Beer account (balance, beers, deposits, rounds, guests, leaving); not for "Nur Verwaltung" accounts.
         Route::middleware('beer')->group(function () {
             Route::get('/konto', [AccountController::class, 'dashboard'])->name('account.dashboard');

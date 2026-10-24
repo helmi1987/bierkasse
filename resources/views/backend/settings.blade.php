@@ -158,7 +158,7 @@
     <button type="submit" class="btn primary big">{{ __('settings.save') }}</button>
 </form>
 
-{{-- Own form: the "re-accept" checkboxes belong to the texts only. --}}
+{{-- Own form: the announcement modes belong to the texts only. --}}
 <form method="post" action="{{ route('backend.settings.legal') }}" class="stack" id="rechtliches" autocomplete="off">
     @csrf
     @method('PUT')
@@ -184,11 +184,16 @@
             <div class="field">
                 <label for="{{ $kind }}_text">{{ __('legal.text_'.$kind) }}</label>
                 <textarea id="{{ $kind }}_text" name="{{ $kind }}_text" rows="14" maxlength="{{ \App\Support\LegalTexts::TEXT_MAX }}">{{ old($kind.'_text', $legal['texts'][$kind]) }}</textarea>
-                <div class="hint">{{ __('legal.current_version', ['date' => $legal['dates'][$kind]]) }} · <a href="{{ route($kind === 'privacy' ? 'legal.privacy' : 'legal.terms') }}" target="_blank" rel="noopener">{{ __('legal.consent_open_page') }}</a> · {{ __('legal.reset_default') }}</div>
-                <label class="check"><input type="checkbox" name="{{ $kind }}_reaccept" value="1" @checked(old($kind.'_reaccept'))> {{ __('legal.reaccept') }}</label>
+                <div class="hint">{{ __('legal.current_version', ['date' => $legal['dates'][$kind]]) }}@if ($legal['changed'][$kind]) · {{ __('legal.last_changed', ['date' => $legal['changed'][$kind]]) }}@endif · <a href="{{ route($kind === 'privacy' ? 'legal.privacy' : 'legal.terms') }}" target="_blank" rel="noopener">{{ __('legal.consent_open_page') }}</a> · {{ __('legal.reset_default') }}</div>
+                <label for="{{ $kind }}_mode">{{ __('legal.mode') }}</label>
+                <select id="{{ $kind }}_mode" name="{{ $kind }}_mode">
+                    @foreach (\App\Support\LegalTexts::MODES as $mode)
+                        <option value="{{ $mode }}" @selected(old($kind.'_mode', 'auto') === $mode)>{{ __('legal.mode_'.$mode) }}</option>
+                    @endforeach
+                </select>
             </div>
         @endforeach
-        <p class="hint">{{ __('legal.reaccept_hint') }}</p>
+        <p class="hint">{{ __('legal.mode_hint') }}</p>
         <button type="submit" class="btn primary">{{ __('legal.save') }}</button>
     </section>
 </form>

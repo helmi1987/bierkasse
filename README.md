@@ -183,7 +183,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Kopfzeile: Kassier und Admin sehen "Kassier" (Kassier-Seiten inkl. Protokoll, mit der Zahl offener Posten),
   Admins zusätzlich "Backend" (Einstellungen, SSO, Registrierungs-QR, Feedback mit Zahl ungelesener, Wartung).
   Die Zahl offener Posten (Einzahlungen, Auszahlungen, Überträge; `Ledger::pendingCount()`) steht zusätzlich als Badge am Reiter
-  "Übersicht" (dort werden sie bestätigt); bei 0 ausgeblendet. Mobil scrollt die Seite nie seitlich: Kopfzeile bricht um,
+  "Übersicht" (dort werden sie bestätigt); bei 0 ausgeblendet. Mobil scrollt die Seite nie seitlich: Kopfzeile (Logo, Navigation, Benutzer, Abmelden) steht ab Telefonbreite (bis 520 px, Name
+  ausgeblendet, enge Abstände) in einer Zeile und bricht erst unter 360 px um,
   nur die Reiterleiste scrollt/wischt in ihrem eigenen Container, Tabellen in `.table-wrap`.
   So sieht der Admin unter "Kassier" dieselben Seiten wie ein Kassier (plus Rolle/Nur-Verwaltung in der Benutzer-Detailansicht).
   Reihenfolge der Reiter (`App\Support\BackendNav`): Admin legt den Standard unter Backend → Navigation fest
@@ -306,6 +307,9 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     mit 4 Aufklebern dieses Codes (`…/<id>/a4`); dazu "2 × Bar + 2 × TWINT" mit dem jeweils neuesten Code
     (`/backend/gaeste/kassen-qr-a4/gemischt`). A4: 2 x 2, 10 mm Abstand, gestrichelte Schnittlinien (Rand 20 mm
     seitlich, 33.5 mm oben/unten; **Annahme** 2026-10-22), je Öffnen/Drucken, PNG (A4 300 dpi) und SVG. Drucken mit 100 %.
+- Dashboard-Karten (Entscheid 2026-10-24): "Einzahlen" (Einzahlung melden + TWINT-Empfänger/Nummer, TWINT nur wenn aktiv; "Wartet auf
+  Bestätigung" darunter) und "Meine Buchungen & Statistik" (Kennzahlen, Diagramm, letzte Buchungen) sind je eine Karte.
+- PWA-Name: `short_name` im Manifest = voller App-Name (Home-Bildschirm-Vorschlag z. B. "Bierkasse LUKS").
 - Runde spendieren (Entscheid 2026-10-21): Dashboard-Karte "Runde spendieren" (nach "Bier für Gast"). Angehakte
   aktive Kollegen (alle aktiven Benutzer ausser einem selbst, nach Name sortiert, mit Suchfeld) bekommen je 1 Bier,
   dazu 0–20 "weitere Biere" ohne Namen (z. B. Gäste) und eine freiwillige Nachricht (max. 140 Zeichen). Pro Runde
@@ -321,7 +325,11 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     die Runde zurücknehmen (Zeit siehe Einstellungen). Unter "Offen" zählen Runden-Biere wie eigene Biere (alter Preis).
     Kassenstand unverändert (wie Abstreichen); Lager sinkt um alle Biere der Runde (Lager-Mail wie beim Abstreichen); wie Abstreichen
     nicht durch den Lagerbestand begrenzt. Kollegen-Liste sortiert nach letztem eigenem Bier.
-  - Empfänger sehen 7 Tage lang im Dashboard "🍺 <Spender> hat dir ein Bier spendiert – <Nachricht>" (max. 3). Keine Mail an Empfänger (Entscheid 2026-10-22: alle sitzen am selben Tisch).
+  - Favoriten (Entscheid 2026-10-24): Jeder Benutzer kann Kollegen mit ☆/★ anheften (Tabelle `user_favorites`, gleiche Favoriten für
+    "Runde spendieren" und "Bier verschenken"); Favoriten stehen oben, der Rest darunter in bisheriger Reihenfolge. Umschalten per
+    `fetch` (`POST /konto/favorit/{id}`, JSON), die Liste sortiert sich in place um, die Auswahl der Häkchen bleibt; ohne JS normales
+    Formular mit Redirect. Inaktive/gelöschte Kollegen erscheinen nicht und lassen sich nicht anheften (Abheften geht immer).
+  - Empfänger sehen 1 Tag lang (`NOTICE_DAYS`, Entscheid 2026-10-24) im Dashboard "🍺 <Spender> hat dir ein Bier spendiert – <Nachricht>" (max. 3), mit ×-Knopf: ausgeblendet wird pro Benutzer serverseitig gespeichert (Tabelle `notice_dismissals`, geräteübergreifend, nie wieder sichtbar; `POST /konto/hinweis/{id}`). Keine Mail an Empfänger (Entscheid 2026-10-22: alle sitzen am selben Tisch).
   - Statistik: Biere zählen beim Trinker. Kollegen-Biere zählen beim Kollegen (eigene Statistik, Rangliste, Totals),
     Biere ohne Namen als eigene Zeile "Gäste (eingeladen)" in der Rangliste. Monate/Wochentage nach Zeitpunkt der
     Runde. Total = Abstreichen + Gäste-Verkäufe + Runden-Biere (die Runde selbst zählt nicht zusätzlich).
@@ -343,7 +351,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   - Schenker kann zurücknehmen (Zeit siehe Einstellungen, Standard 5 Minuten); dabei werden alle Gutschriften
     gelöscht. Entscheid 2026-10-22: nicht mehr möglich, sobald ein Empfänger seit dem Geschenk selbst Bier
     abgestrichen oder eine Runde spendiert hat (Einzahlungen zählen nicht).
-  - Empfänger sehen 7 Tage lang "🎁 <Schenker> hat dir N Biere geschenkt – <Nachricht>" (max. 3), keine Mail.
+  - Empfänger sehen 1 Tag lang "🎁 <Schenker> hat dir N Biere geschenkt – <Nachricht>" (max. 3) mit ×-Knopf (wie bei Runden), keine Mail.
   - Statistik: "Verschenkt: N" (Schenker) und "Geschenkt bekommen: N" (Empfänger), auch in der Benutzer-Detailansicht;
     zählen nicht als getrunkene Biere. **Annahme:** "Total ausgegeben" des Schenkers enthält die verschenkten Beträge.
     Unter "Offen" zählt ein ungedecktes Geschenk wie eigene Biere (alter Preis).

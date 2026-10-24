@@ -48,6 +48,31 @@
         return list;
     }
 
+    // Marks a colleague as pinned/unpinned in all colleague lists and re-sorts them in place
+    // (favourites first, then the server order data-pos). Moving the <li> keeps the checkbox state.
+    function setPinned(userId, pinned) {
+        document.querySelectorAll('[data-pin="' + userId + '"]').forEach(function (b) {
+            var li = b.closest('li');
+            b.setAttribute('aria-pressed', pinned ? 'true' : 'false');
+            b.textContent = pinned ? '\u2605' : '\u2606';
+            var label = pinned ? b.dataset.labelUnpin : b.dataset.labelPin;
+            b.setAttribute('aria-label', label);
+            b.title = label;
+            if (li) {
+                li.classList.toggle('is-fav', pinned);
+            }
+        });
+        document.querySelectorAll('.round-list').forEach(function (list) {
+            var items = Array.prototype.slice.call(list.children);
+            items.sort(function (a, b) {
+                var fa = a.classList.contains('is-fav') ? 0 : 1;
+                var fb = b.classList.contains('is-fav') ? 0 : 1;
+                return fa - fb || (parseInt(a.dataset.pos, 10) || 0) - (parseInt(b.dataset.pos, 10) || 0);
+            });
+            items.forEach(function (li) { list.appendChild(li); });
+        });
+    }
+
     // Widgets bound to elements; run once for the page and again for content swapped in by the live
     // refresh (public/js/live.js calls window.BierkasseUi.init(newElement)).
     function initUi(root) {
@@ -172,6 +197,43 @@
                 });
             }
             render();
+        });
+
+        // Favourites: pin/unpin a colleague (buttons of the "Runde spendieren" and "Bier verschenken" lists).
+        // POST via fetch so the checkbox selection stays; the lists are re-sorted in place (favourites first,
+        // the rest in server order = data-pos). Without JavaScript the button submits #favorites-form normally.
+        all(root, '[data-pin]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                var form = btn.form;
+                if (!form || !window.fetch || !window.FormData) {
+                    return;
+                }
+                e.preventDefault();
+                if (btn.disabled) {
+                    return;
+                }
+                btn.disabled = true;
+                window.fetch(btn.formAction, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                }).then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('pin failed');
+                    }
+                    return response.json();
+                }).then(function (data) {
+                    setPinned(btn.dataset.pin, !!data.pinned, btn);
+                }).catch(function () {
+                    // Fall back to the normal form post (reloads the page).
+                    form.action = btn.formAction;
+                    form.submit();
+                }).then(function () {
+                    btn.disabled = false;
+                    btn.focus({ preventScroll: true });
+                });
+            });
         });
 
         // Copy buttons: data-copy="#selector" (text of that element) or data-copy-text="value".

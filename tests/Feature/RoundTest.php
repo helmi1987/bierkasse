@@ -208,8 +208,8 @@ class RoundTest extends TestCase
             ->assertSee('🍺 Gabi Geber hat dir ein Bier spendiert – Prost zum Geburtstag!');
         $this->actingAs($other)->get('/konto')->assertOk()->assertDontSee('hat dir ein Bier spendiert');
 
-        // Only the last 7 days.
-        $this->travel(8)->days();
+        // Only the last day.
+        $this->travel(2)->days();
         $this->actingAs($anna)->get('/konto')->assertOk()->assertDontSee('hat dir ein Bier spendiert');
 
     }

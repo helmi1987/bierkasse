@@ -16,7 +16,7 @@ class ManifestController extends Controller
 
         return response()->json([
             'name' => $name,
-            'short_name' => mb_substr($name, 0, 12),
+            'short_name' => $name,
             'description' => __('site.manifest_description'),
             'lang' => 'de-CH',
             'start_url' => '/konto',

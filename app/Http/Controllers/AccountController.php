@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\GuestSale;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\BeerStock;
+use App\Services\Favorites;
 use App\Services\Gifts;
 use App\Services\GuestSales;
 use App\Services\Ledger;
 use App\Services\LedgerException;
+use App\Services\NoticeDismissals;
 use App\Services\Rounds;
 use App\Services\Stats;
 use App\Support\AppSettings;
@@ -16,9 +19,11 @@ use App\Support\BarChart;
 use App\Support\DepositSuggestions;
 use App\Support\FormToken;
 use App\Support\Money;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -75,7 +80,7 @@ class AccountController extends Controller
             'guestBooking' => $guestBooking,
             'guestUndoable' => $guestUndoable,
             'rounds' => $rounds,
-            'colleagues' => $rounds || $gifts ? Rounds::colleagues($user) : collect(),
+            'colleagues' => $rounds || $gifts ? Favorites::arrange(Rounds::colleagues($user), Favorites::ids($user)) : collect(),
             'gifts' => $gifts,
             'giftUndoable' => $giftUndoable,
             'giftsReceived' => Gifts::receivedRecently($user),
@@ -100,6 +105,35 @@ class AccountController extends Controller
                 __('stats.chart_my_months'),
             ),
         ]);
+    }
+
+    /** Hides a "Runde/Bier erhalten" notice for good (stored per user, works on every device). */
+    public function dismissNotice(Request $request, Transaction $transaction): RedirectResponse
+    {
+        abort_unless(NoticeDismissals::dismiss($request->user(), $transaction), 404);
+
+        return back();
+    }
+
+    /**
+     * Pins or unpins a colleague (top of the "Runde spendieren" / "Bier verschenken" lists).
+     * JSON answer for the script (keeps the form selection), redirect without JavaScript.
+     * Only active colleagues with a beer account can be pinned; unpinning always works.
+     */
+    public function toggleFavorite(Request $request, int $colleague): RedirectResponse|JsonResponse
+    {
+        $user = $request->user();
+        $target = User::query()->find($colleague);
+        $isFavorite = in_array($colleague, Favorites::ids($user), true);
+        if (! $isFavorite) {
+            abort_unless($target !== null && Rounds::colleagues($user)->contains('id', $colleague), 404);
+        }
+        $pinned = $target !== null ? Favorites::toggle($user, $target) : false;
+        if ($target === null) {
+            DB::table('user_favorites')->where(['user_id' => $user->id, 'favorite_user_id' => $colleague])->delete();
+        }
+
+        return $request->expectsJson() ? response()->json(['pinned' => $pinned]) : back();
     }
 
     public function consume(Request $request): RedirectResponse

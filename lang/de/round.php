@@ -5,6 +5,8 @@ return [
     'heading' => 'Runde spendieren',
     'intro' => 'Du bezahlst die Biere, die Kollegen trinken sie. Jeder angehakte Kollege bekommt 1 Bier. Mit «Runde inkl. mir» ist dein eigenes Bier gleich dabei.',
     'filter' => 'Kollegen suchen',
+    'pin' => ':name oben anheften',
+    'unpin' => ':name nicht mehr oben anheften',
     'colleagues' => 'Kollegen',
     'no_colleagues' => 'Noch keine anderen aktiven Benutzer.',
     'extra' => 'Weitere Biere (z. B. für Gäste)',

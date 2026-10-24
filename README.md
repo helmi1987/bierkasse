@@ -104,6 +104,9 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      SHA-256 für die Suche, `deactivated_at`); die früheren Einzel-Codes aus den Settings werden beim Migrieren
      übernommen (gedruckte Aufkleber/Flyer bleiben gültig). Audit: `qr_code.create/label/deactivate/activate`.
      Übersicht in der Kassier-Leiste (`/backend/qr-codes`): alle Arten mit Anzahl aktiver Codes und Link zur Seite.
+   - Alle QR-Codes (`App\Support\Qr`, SVG serverseitig, Fehlerkorrektur H) zeigen in der Mitte das Bierkrug-Logo (`public/logo.svg`,
+     weisse Fläche mit Rand, ca. 21 % der Code-Breite) auf Bildschirm, Download und A4-Druck; wird beim Erzeugen eingebettet,
+     bestehende Codes bleiben gültig und lesbar (Inhalt unverändert).
    - Reiter-Reihenfolge Standard (Entscheid 2026-10-23): Kassier: Übersicht, Kasse, Lager, Runden, Gäste, Einladungen,
      Verschenkt, Statistik, Benutzer, QR-Codes, Vorschläge, Protokoll. Backend: Einstellungen, Feedback, SSO, Navigation,
      QR-Codes (Verwaltung), Protokoll (gleiche Seite wie beim Kassier, `/backend/verwaltung/protokoll`), Wartung.
@@ -179,6 +182,9 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 - Rollen: `admin`, `kassier`, `user`. Admin hat alle Kassier-Rechte; mehrere Kassiers möglich.
   Kopfzeile: Kassier und Admin sehen "Kassier" (Kassier-Seiten inkl. Protokoll, mit der Zahl offener Posten),
   Admins zusätzlich "Backend" (Einstellungen, SSO, Registrierungs-QR, Feedback mit Zahl ungelesener, Wartung).
+  Die Zahl offener Posten (Einzahlungen, Auszahlungen, Überträge; `Ledger::pendingCount()`) steht zusätzlich als Badge am Reiter
+  "Übersicht" (dort werden sie bestätigt); bei 0 ausgeblendet. Mobil scrollt die Seite nie seitlich: Kopfzeile bricht um,
+  nur die Reiterleiste scrollt/wischt in ihrem eigenen Container, Tabellen in `.table-wrap`.
   So sieht der Admin unter "Kassier" dieselben Seiten wie ein Kassier (plus Rolle/Nur-Verwaltung in der Benutzer-Detailansicht).
   Reihenfolge der Reiter (`App\Support\BackendNav`): Admin legt den Standard unter Backend → Navigation fest
   (Setting `nav_order`), jeder Kassier/Admin kann sie in den Konto-Einstellungen für sich ändern (`users.nav_order`,

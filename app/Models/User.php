@@ -4,9 +4,11 @@ namespace App\Models;
 
 use App\Services\Ledger;
 use App\Support\AppSettings;
+use App\Support\LegalTexts;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -28,6 +30,9 @@ class User extends Authenticatable
     public const STATUS_ACTIVE = 'active';
 
     public const STATUS_LEFT = 'left';
+
+    /** Locked by a kassier/admin: no login, balance and bookings stay (kassier can still book deposits/corrections). */
+    public const STATUS_LOCKED = 'locked';
 
     protected $fillable = [
         'username', 'first_name', 'last_name', 'email', 'password', 'role', 'status', 'registration_code_id',
@@ -55,6 +60,8 @@ class User extends Authenticatable
             'nav_order' => 'array',
             'last_login_at' => 'datetime',
             'left_at' => 'datetime',
+            'consent_accepted_at' => 'datetime',
+            'locked_at' => 'datetime',
             'totp_secret' => 'encrypted',
             'totp_confirmed_at' => 'datetime',
             'totp_last_step' => 'integer',
@@ -89,6 +96,23 @@ class User extends Authenticatable
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function isLocked(): bool
+    {
+        return $this->status === self::STATUS_LOCKED;
+    }
+
+    /** Kassier/admin who locked the account. */
+    public function lockedBy(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'locked_by');
+    }
+
+    /** Accepted versions differ from the current privacy policy / terms of use (consent page). */
+    public function needsConsent(): bool
+    {
+        return ! LegalTexts::accepted($this);
     }
 
     public function isAdmin(): bool

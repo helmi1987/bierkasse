@@ -12,6 +12,7 @@ use App\Services\Audit;
 use App\Services\KassierNotifier;
 use App\Services\Ledger;
 use App\Support\AppSettings;
+use App\Support\LegalTexts;
 use App\Support\Money;
 use App\Support\RegistrationLink;
 use App\Support\UserRules;
@@ -172,7 +173,9 @@ class RegisterController extends Controller
             $data = $request->validate([
                 'username' => UserRules::username(),
                 'password' => UserRules::password(),
-            ] + UserRules::profile());
+                // Privacy policy and terms of use (one checkbox, both current versions are stored).
+                'consent' => ['accepted'],
+            ] + UserRules::profile(), ['consent.accepted' => __('legal.consent_required')]);
             $carryover = $this->carryover($request);
         } catch (ValidationException $e) {
             // Failed attempts (e.g. taken user names) count towards the limit as well.
@@ -183,7 +186,7 @@ class RegisterController extends Controller
 
         try {
             [$user, $carryoverTx] = DB::transaction(function () use ($data, $carryover, $invitation, $regCode) {
-                $user = User::query()->create([
+                $user = User::query()->forceCreate(LegalTexts::consentAttributes() + [
                     'username' => $data['username'],
                     'first_name' => $data['first_name'] ?? null,
                     'last_name' => $data['last_name'] ?? null,
@@ -203,6 +206,8 @@ class RegisterController extends Controller
                     'email' => $user->email,
                     'invitation_id' => $invitation?->id,
                     'registration_code_id' => $regCode?->id,
+                    'privacy_accepted_version' => $user->privacy_accepted_version,
+                    'terms_accepted_version' => $user->terms_accepted_version,
                 ], fn ($v) => $v !== null), $user);
                 $tx = $carryover ? Ledger::reportCarryover($user, ...$carryover) : null;
 

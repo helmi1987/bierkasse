@@ -13,6 +13,7 @@ return [
     'submit' => 'Verschenken',
     'booked' => '{1} :count Bier verschenkt (:amount).|[2,*] :count Biere verschenkt (:amount).',
     'undone' => 'Geschenk zurückgenommen.',
+    'storno_blocked' => 'Storno nicht möglich: ein Empfänger hat seit dem Geschenk schon Guthaben ausgegeben. Bitte stattdessen eine Korrektur buchen.',
     'undo_hint' => 'Eigene Geschenke kannst du :minutes Minuten lang zurücknehmen.',
     'undo_used' => 'Nicht mehr rückgängig: ein Empfänger hat seit dem Geschenk schon Guthaben ausgegeben (Bier, Verschenken, Auszahlung o. Ä.).',
     'none_selected' => 'Bitte mindestens einen Kollegen wählen.',

@@ -419,3 +419,16 @@ textarea { resize: vertical; line-height: 1.45; }
 .sortable li.dragging { opacity: .5; }
 .sortable-handle { color: var(--muted); }
 .sortable-label { flex: 1; }
+
+/* Privacy policy / terms of use (plain text rendered by LegalTexts) and consent */
+.legal-text h2 { font-size: 1.05rem; margin: 1.25rem 0 .35rem; }
+.legal-text ul { margin: .35rem 0 .75rem; padding-left: 1.2rem; }
+.legal-text p { margin: .35rem 0 .75rem; }
+.site-footer a { color: inherit; }
+.consent-check a { text-decoration: underline; }
+.consent-logout { margin-top: .75rem; }
+.legal-links { font-size: .85rem; }
+.tx-list details.storno { margin-top: .25rem; }
+.tx-list details.storno summary { min-height: 32px; font-weight: 500; font-size: .85rem; color: var(--muted); }
+.tx-list details.storno .inline-form { margin-top: .35rem; }
+.tx-list details.storno input { width: auto; flex: 1 1 10rem; }

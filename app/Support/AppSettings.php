@@ -24,6 +24,28 @@ class AppSettings
 
     public const COPYRIGHT_MAX = 100;
 
+    /** Legal texts (see LegalTexts): responsible person, public contact e-mail, server location. */
+    public const LEGAL_NAME = 'legal_name';
+
+    public const LEGAL_EMAIL = 'legal_email';
+
+    public const LEGAL_LOCATION = 'legal_location';
+
+    public const DEFAULT_LEGAL_NAME = 'Stefan Diethelm';
+
+    public const DEFAULT_LEGAL_EMAIL = 'bier@helminet.ch';
+
+    public const DEFAULT_LEGAL_LOCATION = 'Schweiz';
+
+    /** Privacy policy / terms of use: text (plain text, unset = default file) and version ("Stand"). */
+    public const PRIVACY_TEXT = 'privacy_text';
+
+    public const PRIVACY_VERSION = 'privacy_version';
+
+    public const TERMS_TEXT = 'terms_text';
+
+    public const TERMS_VERSION = 'terms_version';
+
     /** Old single TWINT number/name, replaced by TWINT_RECIPIENTS (still read as fallback). */
     public const TWINT_PHONE = 'twint_phone';
 
@@ -156,6 +178,30 @@ class AppSettings
         $value = self::get(self::COPYRIGHT);
 
         return $value === null ? self::DEFAULT_COPYRIGHT : trim((string) $value);
+    }
+
+    /** Responsible person named in the legal texts ({name}). */
+    public static function legalName(): string
+    {
+        $value = trim((string) self::get(self::LEGAL_NAME, ''));
+
+        return $value !== '' ? $value : self::DEFAULT_LEGAL_NAME;
+    }
+
+    /** Public contact e-mail ({email}, login message of locked accounts). */
+    public static function legalEmail(): string
+    {
+        $value = trim((string) self::get(self::LEGAL_EMAIL, ''));
+
+        return $value !== '' ? $value : self::DEFAULT_LEGAL_EMAIL;
+    }
+
+    /** Server location named in the privacy policy ({standort}). */
+    public static function legalLocation(): string
+    {
+        $value = trim((string) self::get(self::LEGAL_LOCATION, ''));
+
+        return $value !== '' ? $value : self::DEFAULT_LEGAL_LOCATION;
     }
 
     /**

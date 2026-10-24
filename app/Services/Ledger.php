@@ -284,6 +284,69 @@ class Ledger
         BeerStock::rearm();
     }
 
+    /** Bookings a kassier/admin can cancel (storno): beers, rounds and given gifts, confirmed. */
+    public static function canStorno(Transaction $tx): bool
+    {
+        return $tx->status === Transaction::STATUS_CONFIRMED
+            && (in_array($tx->type, Transaction::BEER_TYPES, true) || $tx->isGiftGiven());
+    }
+
+    /**
+     * Storno of a user's booking by a kassier/admin (any time, note required). Same effect as the user's
+     * own undo: the row (with its round items / gift recipient rows) is deleted, so balance, statistics and
+     * stock are restored; the audit entry keeps the full record and the note. Same safety rule as the gift
+     * undo: blocked once a recipient has an outgoing booking after the gift (use a correction instead).
+     * Not for accounts that left or have no beer account.
+     */
+    public static function storno(Transaction $tx, User $by, string $note): void
+    {
+        $note = trim($note);
+        if ($note === '') {
+            throw new LedgerException(__('ledger.note_required'));
+        }
+        if (! self::canStorno($tx)) {
+            throw new LedgerException(__('ledger.storno_invalid'));
+        }
+
+        DB::transaction(function () use ($tx, $by, $note) {
+            // Lock order as in the booking paths and the gift undo: users (by id), then the booking row.
+            $userIds = $tx->isGiftGiven()
+                ? Transaction::query()->where('parent_id', $tx->id)->pluck('user_id')->push($tx->user_id)->unique()->sort()->values()->all()
+                : [$tx->user_id];
+            $users = User::query()->whereIn('id', $userIds)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $locked = Transaction::query()->lockForUpdate()->find($tx->id);
+            if ($locked === null || ! self::canStorno($locked)) {
+                throw new LedgerException(__('ledger.storno_invalid'));
+            }
+            $owner = $users->get($locked->user_id);
+            if ($owner === null) {
+                throw new LedgerException(__('ledger.storno_invalid'));
+            }
+            self::assertNotLeft($owner);
+            self::assertBeerAccount($owner);
+            if ($locked->isGiftGiven() && Gifts::recipientsBookedSince($locked, true)) {
+                throw new LedgerException(__('gift.storno_blocked'));
+            }
+
+            $old = self::auditValues($locked) + ['created_by' => $locked->created_by, 'created_at' => $locked->created_at?->format(DATE_ATOM)];
+            if ($locked->type === Transaction::TYPE_ROUND) {
+                $old['recipients'] = $locked->roundItems()->pluck('user_id')->all();
+                $locked->roundItems()->delete();
+            } elseif ($locked->type === Transaction::TYPE_GIFT) {
+                $old['recipients'] = $locked->giftParts()->pluck('user_id')->all();
+                $locked->giftParts()->delete();
+            }
+            $locked->delete();
+            $action = match ($locked->type) {
+                Transaction::TYPE_ROUND => 'round.storno',
+                Transaction::TYPE_GIFT => 'gift.storno',
+                default => 'consume.storno',
+            };
+            Audit::log($action, $locked, $old, ['note' => $note, 'user_id' => $locked->user_id], $by);
+        });
+        BeerStock::rearm();
+    }
+
     /**
      * Re-loads the booking with a row lock inside the DB transaction; throws when it is gone (already undone)
      * or can no longer be undone, so an undo never writes a second audit entry. The check is a current read
@@ -341,14 +404,14 @@ class Ledger
         return $tx;
     }
 
-    /** Kassier books a deposit directly (confirmed). Not for accounts that left. */
+    /** Kassier books a deposit directly (confirmed). Not for accounts that left (locked ones are fine). */
     public static function bookDeposit(User $user, int $amount, string $method, User $by, ?string $note = null): Transaction
     {
         self::assertAmount($amount);
 
         return DB::transaction(function () use ($user, $amount, $method, $by, $note) {
             self::lock($user);
-            self::assertActive($user);
+            self::assertNotLeft($user);
             self::assertBeerAccount($user);
 
             $tx = Transaction::query()->create([
@@ -374,7 +437,7 @@ class Ledger
             $user = User::query()->findOrFail($tx->user_id);
             self::lock($user);
             $locked = self::lockPending($tx, Transaction::TYPE_DEPOSIT);
-            self::assertActive($user);
+            self::assertNotLeft($user);
             self::saveAudited($locked, ['status' => Transaction::STATUS_CONFIRMED, 'confirmed_by' => $by->id, 'confirmed_at' => now()], 'deposit.confirm', $by);
             $tx->setRawAttributes($locked->getAttributes(), true);
         });
@@ -413,7 +476,7 @@ class Ledger
         });
     }
 
-    /** Signed correction by kassier/admin; note is mandatory. Not for accounts that left. */
+    /** Signed correction by kassier/admin; note is mandatory. Not for accounts that left (locked ones are fine). */
     public static function correction(User $user, int $amount, string $note, User $by): Transaction
     {
         if ($amount === 0) {
@@ -425,7 +488,7 @@ class Ledger
 
         return DB::transaction(function () use ($user, $amount, $note, $by) {
             self::lock($user);
-            self::assertActive($user);
+            self::assertNotLeft($user);
             self::assertBeerAccount($user);
 
             $tx = Transaction::query()->create([
@@ -487,7 +550,7 @@ class Ledger
             $user = User::query()->findOrFail($tx->user_id);
             self::lock($user);
             $locked = self::lockPending($tx, Transaction::TYPE_CARRYOVER);
-            self::assertActive($user);
+            self::assertNotLeft($user);
             $changes = ['status' => Transaction::STATUS_CONFIRMED, 'confirmed_by' => $by->id, 'confirmed_at' => now()];
             if ($amount !== null && $amount !== $locked->amount) {
                 $changes += [
@@ -725,6 +788,14 @@ class Ledger
     private static function assertActive(User $user): void
     {
         if (! $user->isActive()) {
+            throw new LedgerException(__('ledger.user_left'));
+        }
+    }
+
+    /** Kassier bookings (deposit, correction, confirmations, storno) also work on locked accounts, not on left ones. */
+    private static function assertNotLeft(User $user): void
+    {
+        if (! $user->isActive() && ! $user->isLocked()) {
             throw new LedgerException(__('ledger.user_left'));
         }
     }

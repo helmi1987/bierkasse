@@ -34,7 +34,7 @@ class CarryoverTest extends TestCase
             'code' => 'durst',
             'username' => $username,
             'password' => 'password-123',
-            'password_confirmation' => 'password-123',
+            'password_confirmation' => 'password-123', 'consent' => '1',
         ], $carryover))->assertRedirect(route('account.dashboard'));
         auth()->logout();
 
@@ -96,7 +96,7 @@ class CarryoverTest extends TestCase
     {
         foreach ([['beers', '0'], ['beers', '501'], ['beers', '2.5'], ['chf', '0'], ['chf', '500.01'], ['chf', 'abc']] as [$unit, $value]) {
             $this->post('/registrieren', [
-                'code' => 'durst', 'username' => 'neu.user', 'password' => 'password-123', 'password_confirmation' => 'password-123',
+                'code' => 'durst', 'username' => 'neu.user', 'password' => 'password-123', 'password_confirmation' => 'password-123', 'consent' => '1',
                 'carryover_direction' => 'debt', 'carryover_unit' => $unit, 'carryover_value' => $value,
             ])->assertSessionHasErrors('carryover_value');
             RateLimiter::clear('register:127.0.0.1');

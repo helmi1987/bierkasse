@@ -183,7 +183,7 @@ class HardeningTest extends TestCase
         $this->user(['username' => 'taken']);
 
         $response = $this->post('/registrieren', [
-            'code' => 'falsch', 'username' => 'taken', 'password' => 'password-123', 'password_confirmation' => 'password-123',
+            'code' => 'falsch', 'username' => 'taken', 'password' => 'password-123', 'password_confirmation' => 'password-123', 'consent' => '1',
         ]);
         $response->assertSessionHasErrors('code')->assertSessionDoesntHaveErrors('username');
     }
@@ -193,7 +193,7 @@ class HardeningTest extends TestCase
         Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
         Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
         $this->user(['username' => 'taken']);
-        $data = ['code' => 'durst', 'username' => 'taken', 'password' => 'password-123', 'password_confirmation' => 'password-123'];
+        $data = ['code' => 'durst', 'username' => 'taken', 'password' => 'password-123', 'password_confirmation' => 'password-123', 'consent' => '1'];
 
         for ($i = 0; $i < 10; $i++) {
             $this->post('/registrieren', $data)->assertSessionHasErrors('username');

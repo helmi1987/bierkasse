@@ -28,9 +28,11 @@ class UserController extends Controller
     {
         $status = $request->query('status') === 'left' ? User::STATUS_LEFT : User::STATUS_ACTIVE;
         $balances = Ledger::balances();
+        // Locked accounts are listed with the active ones (badge "Gesperrt"): they still have a balance.
+        $statuses = $status === User::STATUS_LEFT ? [User::STATUS_LEFT] : [User::STATUS_ACTIVE, User::STATUS_LOCKED];
 
         return view('backend.users.index', [
-            'users' => User::query()->where('status', $status)->orderBy('username')->get(),
+            'users' => User::query()->whereIn('status', $statuses)->orderBy('username')->get(),
             'balances' => $balances,
             'status' => $status,
         ]);
@@ -39,7 +41,7 @@ class UserController extends Controller
     public function show(User $user): View
     {
         return view('backend.users.show', [
-            'user' => $user,
+            'user' => $user->loadMissing('lockedBy'),
             'adminOnlySettled' => \App\Services\Ledger::adminOnlySettled($user),
             'balance' => $user->balance(),
             'personalSso' => $user->personalSsoProvider()->withCount('identities')->first(),
@@ -97,6 +99,10 @@ class UserController extends Controller
     {
         $this->guardAdminTarget($request, $user);
         abort_if($user->id === $request->user()->id, 403);
+        // A locked account is unlocked (or deactivated after unlocking) via its own actions.
+        if ($user->isLocked()) {
+            return back()->with('error', __('users.status_locked'));
+        }
 
         $active = $request->boolean('active');
 
@@ -118,6 +124,71 @@ class UserController extends Controller
         ]));
 
         return back()->with('status', $active ? __('users.reactivated') : __('users.deactivated'));
+    }
+
+    /**
+     * Locks an account (kassier/admin, reason required). Unlike deactivating it works with debts or pending
+     * items: balance and bookings stay, the user can no longer sign in. Kassiers cannot lock admins, nobody
+     * locks himself, the last active admin cannot be locked.
+     */
+    public function lock(Request $request, User $user): RedirectResponse
+    {
+        $this->guardAdminTarget($request, $user);
+        abort_if($user->id === $request->user()->id, 403);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:500']], ['reason.required' => __('users.lock_reason_required')]);
+
+        $error = DB::transaction(function () use ($user, $data, $request) {
+            $fresh = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if (! $fresh->isActive()) {
+                return __('users.lock_not_active');
+            }
+            if ($fresh->isAdmin() && User::query()->where('role', User::ROLE_ADMIN)->where('status', User::STATUS_ACTIVE)->count() <= 1) {
+                return __('users.last_admin_lock');
+            }
+            Audit::save('user.lock', $fresh->forceFill([
+                'status' => User::STATUS_LOCKED,
+                'locked_at' => now(),
+                'locked_reason' => trim($data['reason']),
+                'locked_by' => $request->user()->id,
+            ]));
+
+            return null;
+        });
+
+        return $error !== null ? back()->with('error', $error) : back()->with('status', __('users.locked_done'));
+    }
+
+    /** Unlock: the account is active again (reason and lock data are cleared, the audit log keeps them). */
+    public function unlock(Request $request, User $user): RedirectResponse
+    {
+        $this->guardAdminTarget($request, $user);
+        if (! $user->isLocked()) {
+            return back()->with('error', __('users.unlock_not_locked'));
+        }
+
+        Audit::save('user.unlock', $user->forceFill([
+            'status' => User::STATUS_ACTIVE,
+            'locked_at' => null,
+            'locked_reason' => null,
+            'locked_by' => null,
+        ]));
+
+        return back()->with('status', __('users.unlocked_done'));
+    }
+
+    /** Storno of a beer, round or given gift of this user (any time after the undo window, note required). */
+    public function storno(Request $request, User $user, Transaction $transaction): RedirectResponse
+    {
+        abort_unless($transaction->user_id === $user->id, 404);
+        $data = $request->validate(['note' => ['required', 'string', 'max:500']], ['note.required' => __('ledger.storno_note_required')]);
+
+        try {
+            Ledger::storno($transaction, $request->user(), $data['note']);
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', __('ledger.storno_done'));
     }
 
     public function deposit(Request $request, User $user): RedirectResponse

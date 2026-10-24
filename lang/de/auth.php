@@ -7,6 +7,7 @@ return [
     'throttle' => 'Zu viele Versuche. Bitte in :seconds s erneut versuchen.',
 
     'inactive' => 'Dieses Konto ist nicht mehr aktiv.',
+    'locked' => 'Konto gesperrt, bitte an :email wenden.',
     'login_expired' => 'Anmeldung abgelaufen. Bitte erneut anmelden.',
     'logged_out' => 'Abgemeldet. Prost!',
     'totp_invalid' => 'Code ungültig.',

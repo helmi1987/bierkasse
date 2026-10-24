@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Audit;
 use App\Support\DatabaseConnection;
 use App\Support\EnvEditor;
+use App\Support\LegalTexts;
 use App\Support\UserRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -107,6 +108,9 @@ class SetupController extends Controller
                     'status' => User::STATUS_ACTIVE,
                 ],
             );
+
+            // The first admin runs the installation and publishes the texts: counts as accepted (current versions).
+            $user->forceFill(LegalTexts::consentAttributes())->save();
 
             Audit::try('setup', $user, [], ['username' => $user->username, 'role' => $user->role], $user);
 

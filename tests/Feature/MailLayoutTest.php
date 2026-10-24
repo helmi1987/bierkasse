@@ -130,7 +130,7 @@ class MailLayoutTest extends TestCase
         $this->kassier(['email' => 'kassier@example.org']);
 
         $this->post('/registrieren', [
-            'code' => 'durst', 'username' => 'neu.user', 'password' => 'password-123', 'password_confirmation' => 'password-123',
+            'code' => 'durst', 'username' => 'neu.user', 'password' => 'password-123', 'password_confirmation' => 'password-123', 'consent' => '1',
         ]);
 
         Mail::assertSent(KassierNotice::class, function (KassierNotice $m) {

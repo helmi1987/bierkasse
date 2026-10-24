@@ -1,0 +1,47 @@
+Nutzungsbestimmungen
+
+1. Betreiber
+Die Bierkasse ist ein privates Angebot von {name}, Kontakt {email}. Kein kommerzielles Angebot, kein Gewinnzweck.
+
+2. Konto
+- Ein Konto pro Person, nicht übertragbar. Zugangsdaten nicht weitergeben.
+- Wer ein Konto nutzt, ist für die damit gemachten Buchungen verantwortlich.
+- Zwei-Faktor-Anmeldung wird empfohlen.
+
+3. Bier abstreichen
+- Jedes genommene Bier sofort in der App abstreichen.
+- Preis: {bierpreis} pro Bier. Es gilt der Preis zum Zeitpunkt der Buchung; spätere Preisänderungen ändern bestehende Buchungen nicht.
+- Falsche Buchungen können innerhalb von {undo_minuten} Minuten selbst rückgängig gemacht werden, danach storniert sie der Kassier.
+
+4. Einzahlungen und Saldo
+- Einzahlung bar in die Kasse oder per TWINT; in der App melden.
+- Gemeldete Einzahlungen zählen sofort, gelten aber erst nach Bestätigung durch den Kassier. Wird eine Meldung abgelehnt, wird der Betrag wieder abgezogen, auch wenn der Saldo dadurch unter das Limit fällt.
+- Limit: Der Saldo darf höchstens bis {limit} ins Minus gehen (persönliches Limit möglich). Darüber hinaus erst wieder einzahlen.
+
+5. Runden, Geschenke, Gäste
+- Runden und verschenkte Biere bezahlt der Spender.
+- Gäste-Biere werden direkt bar oder per TWINT bezahlt.
+
+6. Austritt
+- "Haus verlassen" ist nur mit Saldo 0 oder Guthaben möglich: Guthaben auszahlen lassen oder spenden.
+- Schulden sind vor dem Austritt zu begleichen.
+- Nach dem Austritt ist keine Anmeldung mehr möglich; die Buchungen bleiben gespeichert (siehe Datenschutzerklärung).
+
+7. Kassier und Admin
+- Der Kassier bestätigt Einzahlungen und Auszahlungen, kann Buchungen stornieren und mit Begründung korrigieren. Jede Änderung wird protokolliert.
+- Kassier und Admin können Konten sperren, z. B. bei Missbrauch.
+
+8. Missbrauch
+Absichtlich falsche Buchungen, nicht gemeldete Biere oder fremde Konten nutzen führen zur Sperrung des Kontos. Offene Beträge bleiben geschuldet.
+
+9. Haftung
+Die App wird ohne Gewähr betrieben. Bei technischen Fehlern gilt der tatsächliche Konsum; Differenzen werden mit dem Kassier geklärt. Keine Haftung für Ausfälle oder Datenverlust, soweit gesetzlich zulässig.
+
+10. Alkohol
+Abgabe nur an Personen ab 16 Jahren (Bier). Verantwortungsvoller Konsum.
+
+11. Änderungen
+Änderungen werden in der App angezeigt. Bei wesentlichen Änderungen muss erneut zugestimmt werden, bevor die App weiter genutzt werden kann.
+
+12. Recht
+Es gilt Schweizer Recht.

@@ -10,6 +10,7 @@ use App\Http\Controllers\CashboxQrController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GuestController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\LegalController;
 use App\Http\Controllers\LiveController;
 use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\PersonalSsoController;
@@ -50,6 +51,10 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     Route::get('/kasse/{code}', [CashboxQrController::class, 'show'])->where('code', '[A-Za-z0-9_-]{1,64}')->middleware('throttle:60,1')->name('cashbox');
     Route::post('/kasse/{code}', [CashboxQrController::class, 'store'])->where('code', '[A-Za-z0-9_-]{1,64}')->middleware('throttle:30,1')->name('cashbox.store');
 
+    // Privacy policy and terms of use (public, also while the consent is missing).
+    Route::get('/datenschutz', [LegalController::class, 'privacy'])->name('legal.privacy');
+    Route::get('/nutzungsbestimmungen', [LegalController::class, 'terms'])->name('legal.terms');
+
     // Registration and password reset (guests only)
     Route::middleware('guest')->group(function () {
         Route::get('/registrieren', [RegisterController::class, 'show'])->name('register');
@@ -61,6 +66,10 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     });
 
     Route::middleware(['auth', AuthenticateSession::class, 'active'])->group(function () {
+        // Consent to the current privacy policy / terms of use (EnsureActiveUser sends users here).
+        Route::get('/zustimmung', [LegalController::class, 'consent'])->name('consent.show');
+        Route::post('/zustimmung', [LegalController::class, 'accept'])->middleware('throttle:20,1')->name('consent.store');
+
         // Beer account (balance, beers, deposits, rounds, guests, leaving); not for "Nur Verwaltung" accounts.
         Route::middleware('beer')->group(function () {
             Route::get('/konto', [AccountController::class, 'dashboard'])->name('account.dashboard');
@@ -131,6 +140,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::put('/benutzer/{user}/passwort', [Backend\UserController::class, 'password'])->whereNumber('user')->name('users.password');
             Route::post('/benutzer/{user}/totp-zuruecksetzen', [Backend\UserController::class, 'resetTotp'])->whereNumber('user')->name('users.totp');
             Route::post('/benutzer/{user}/status', [Backend\UserController::class, 'status'])->whereNumber('user')->name('users.status');
+            Route::post('/benutzer/{user}/sperren', [Backend\UserController::class, 'lock'])->whereNumber('user')->name('users.lock');
+            Route::post('/benutzer/{user}/entsperren', [Backend\UserController::class, 'unlock'])->whereNumber('user')->name('users.unlock');
+            Route::post('/benutzer/{user}/buchungen/{transaction}/storno', [Backend\UserController::class, 'storno'])->whereNumber('user')->whereNumber('transaction')->name('users.storno');
             Route::post('/benutzer/{user}/einzahlung', [Backend\UserController::class, 'deposit'])->whereNumber('user')->name('users.deposit');
             Route::post('/benutzer/{user}/korrektur', [Backend\UserController::class, 'correction'])->whereNumber('user')->name('users.correction');
             Route::put('/benutzer/{user}/rolle', [Backend\UserController::class, 'role'])->whereNumber('user')->middleware('role:admin')->name('users.role');
@@ -169,6 +181,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::middleware('role:admin')->group(function () {
                 Route::get('/einstellungen', [Backend\SettingsController::class, 'edit'])->name('settings');
                 Route::put('/einstellungen', [Backend\SettingsController::class, 'update'])->name('settings.update');
+                Route::put('/einstellungen/rechtliches', [Backend\SettingsController::class, 'legal'])->name('settings.legal');
                 Route::get('/navigation', [Backend\NavController::class, 'edit'])->name('nav');
                 Route::put('/navigation', [Backend\NavController::class, 'update'])->name('nav.update');
                 Route::delete('/navigation', [Backend\NavController::class, 'reset'])->name('nav.reset');

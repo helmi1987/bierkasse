@@ -25,7 +25,7 @@ class RegistrationTest extends TestCase
             'last_name' => '',
             'email' => '',
             'password' => 'password-123',
-            'password_confirmation' => 'password-123',
+            'password_confirmation' => 'password-123', 'consent' => '1',
         ], $overrides);
     }
 

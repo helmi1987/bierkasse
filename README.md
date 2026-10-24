@@ -142,6 +142,8 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Backend `/backend/einladungen` (Kassier und Admin): alle Einladungen mit Ersteller, Status
      (offen / benutzt von X / abgelaufen), unbenutzte zurückziehen.
   - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
+  - Datenschutz und Nutzungsbestimmungen (eigenes Formular unten auf der Seite, siehe "Datenschutz und
+    Nutzungsbestimmungen" unter Funktionen): verantwortliche Person, Kontakt-E-Mail (Pflicht, öffentlich), Server-Standort, beide Texte.
 8. Steht ein Reverse-Proxy vor PHP, dessen IP in `.env` als `TRUSTED_PROXIES` (kommagetrennt, Standard: keine;
    gelesen in `bootstrap/app.php`, einzelne IPs oder CIDR, `*` = alle) eintragen, sonst werden `X-Forwarded-*`-Header
    ignoriert.
@@ -216,6 +218,31 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Kassiers können Admin-Konten nicht ändern (Passwort, TOTP, Status).
   Deaktivieren geht nur mit Saldo 0 und ohne offene Posten (sonst "Haus verlassen" oder Korrektur);
   der letzte aktive Admin kann nicht deaktiviert werden. Auf ausgetretene Konten wird nichts mehr gebucht.
+- Konto sperren (Entscheid 2026-10-24, Status `locked` neben `active`/`left`): Kassier und Admin in der Benutzer-Detailansicht,
+  Grund Pflicht (max. 500 Zeichen, `users.locked_reason`, `locked_at`, `locked_by`; angezeigt in der Detailansicht,
+  Audit `user.lock`/`user.unlock`). Anders als Deaktivieren auch mit Schulden oder offenen Posten. Kassiers können
+  keine Admins sperren, der letzte aktive Admin nicht; **Annahme:** niemand sperrt sich selbst (gegen Selbstaussperrung). Entsperren → `active`
+  (Sperrdaten werden geleert, das Protokoll behält sie). Ein gesperrtes Konto wird nicht über "Deaktivieren"
+  geändert (zuerst entsperren).
+  - Wirkung: keine Anmeldung (Passwort, SSO, eigener Anbieter, TOTP-Schritt), laufende Sitzungen enden bei der nächsten
+    Anfrage. Meldung "Konto gesperrt, bitte an <Kontakt-E-Mail> wenden" erst nach richtigem Passwort bzw. erfolgreicher
+    SSO-Anmeldung (verrät sonst keine Benutzernamen; Audit `auth.login_locked`). Der eigene Anbieter
+    (`/login/eigener/<name>`) zeigt wie für unbekannte Namen "nicht verfügbar" (vor der Anmeldung, nichts verraten). Kein Passwort-Reset, keine
+    Mails an gesperrte Kassiers, Einladungslinks gesperrter Benutzer ungültig (alles wie bisher über "nur aktive").
+  - Saldo und Verlauf bleiben; Kassier bucht weiter Einzahlungen, Korrekturen, bestätigt offene Posten und storniert
+    (Ledger `assertNotLeft`). Nicht in der Kollegen-Liste (Runde, Verschenken) und kein Empfänger.
+  - Benutzerliste: gesperrte Konten stehen unter "Aktiv" mit Badge "Gesperrt" (Entscheid: kein eigener Filter); in
+    "Im Minus" ebenfalls mit Badge. Rangliste/Statistik unverändert (filtern nicht nach Status).
+  - Zählt nicht als aktiver Admin (Regel "letzter Admin").
+- Storno durch Kassier/Admin (Entscheid 2026-10-24): in der Benutzer-Detailansicht im Verlauf pro Buchung Typ Bier,
+  Runde oder verschenkte Biere (Zeile des Schenkers, bestätigt) "Stornieren" mit Pflicht-Grund, jederzeit (auch nach
+  dem Rückgängig-Fenster). Wirkung wie das eigene Rückgängig: die Buchung wird gelöscht (samt `round_items` bzw.
+  Gutschriften der Empfänger), damit stimmen Saldo, Statistik und Lager wieder; Lager-Mail wird neu scharf gestellt.
+  Gleiche Sperren und Regeln (DB-Transaktion, Zeilensperren: Benutzer nach ID, dann Buchung; zweites Storno scheitert).
+  Geschenk: wie beim Rückgängig nicht mehr möglich, sobald ein Empfänger seit dem Geschenk eine Ausgangsbuchung hat
+  (Meldung: stattdessen Korrektur buchen). Nicht für ausgetretene Konten und "Nur Verwaltung"; gesperrte gehen.
+  Audit `consume.storno`/`round.storno`/`gift.storno` mit dem ganzen Datensatz (alte Werte inkl. Empfänger, Erstellt
+  von/am) und dem Grund. Der Benutzer sieht das Storno nicht im Verlauf (Zeile gelöscht wie beim Rückgängig), nur im Protokoll.
   **Annahme:** Kassier/Admin dürfen für sich selbst buchen (Limit, Einzahlung, Korrektur). Jede Buchung
   speichert, wer sie erfasst hat (`created_by`), damit bleibt das im Verlauf nachvollziehbar.
 - "Nur Verwaltung" (Entscheid 2026-10-22, `users.admin_only`): Admin- oder Kassier-Konto ohne Bierkonto, z. B. ein
@@ -325,9 +352,38 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     seitlich, 33.5 mm oben/unten; **Annahme** 2026-10-22), je Öffnen/Drucken, PNG (A4 300 dpi) und SVG. Drucken mit 100 %.
 - Dashboard-Karten (Entscheid 2026-10-24): "Einzahlen" (Einzahlung melden + TWINT-Empfänger/Nummer, TWINT nur wenn aktiv; "Wartet auf
   Bestätigung" darunter) und "Meine Buchungen & Statistik" (Kennzahlen, Diagramm, letzte Buchungen) sind je eine Karte.
-- Fusszeile auf allen Seiten (auch Anmeldung): "<App-Name> v<Version> · <Copyright>". Version aus `VERSION`;
+- Fusszeile auf allen Seiten (auch Anmeldung, Gäste-Seiten): "<App-Name> v<Version> · <Copyright> · Datenschutz ·
+  Nutzungsbestimmungen" (Links). Version aus `VERSION`;
   Copyright in den Einstellungen (max. 100 Zeichen, Text), Standard "© 2026 Stefan Diethelm", leer = ohne Copyright.
   Nicht im Druck.
+- Datenschutz und Nutzungsbestimmungen (Entscheid 2026-10-24): zwei getrennte Texte, öffentlich unter `/datenschutz` und
+  `/nutzungsbestimmungen` (abgemeldet und angemeldet, auch im Wartungsmodus und ohne Zustimmung), oben "Stand: <Datum>".
+  - Bearbeiten: Backend > Einstellungen, Karte "Datenschutz und Nutzungsbestimmungen" (nur Admin, eigenes Formular,
+    `PUT /backend/einstellungen/rechtliches`, Audit `legal.update` mit altem/neuem Text). Settings `legal_name`
+    (Standard "Stefan Diethelm"), `legal_email` (Pflicht, Standard "bier@helminet.ch", öffentlich sichtbar, auch in der
+    Meldung bei gesperrtem Konto), `legal_location` (Standard "Schweiz"), `privacy_text`/`terms_text` (leer bzw.
+    unverändert = Standardtext aus `resources/legal/privacy.txt` bzw. `terms.txt`).
+  - Platzhalter beim Anzeigen: `{name}`, `{email}`, `{standort}`, `{bierpreis}` (z. B. "CHF 1.50"), `{limit}`
+    (Standard-Limit, z. B. "CHF 0.00"), `{undo_minuten}` (Rückgängig-Minuten "Bier abstreichen").
+  - Darstellung (`App\Support\LegalTexts`): reiner Text, alles wird escaped (kein HTML). Leerzeile = neuer Absatz,
+    Zeilenumbruch bleibt, Zeilen mit "- " = Liste, Zeilen wie "1. Titel" = Überschrift, eine einzelne erste Zeile = Seitentitel.
+  - Version pro Text (`privacy_version`/`terms_version`, UTC, Standard `2026-10-24 00:00:00`). Beim Speichern pro Text
+    "Alle Benutzer müssen erneut zustimmen": angehakt = neuer Stand (jetzt), alle müssen erneut zustimmen; nicht
+    angehakt = redaktionelle Änderung, Stand bleibt (gilt auch für Name/E-Mail/Standort).
+  - Registrierung: eine Pflicht-Checkbox "Ich akzeptiere die Nutzungsbestimmungen und die Datenschutzerklärung" (beide
+    verlinkt, neuer Tab); ohne: "Bitte Nutzungsbestimmungen und Datenschutzerklärung akzeptieren", kein Konto (zählt
+    wie andere Formularfehler fürs Rate-Limit). Gespeichert: `users.privacy_accepted_version`,
+    `terms_accepted_version`, `consent_accepted_at`; die Versionen stehen im Audit `registration`.
+  - Zustimmungs-Sperre (`EnsureActiveUser`, für alle Rollen inkl. Admin und "Nur Verwaltung"): stimmen die akzeptierten
+    Versionen nicht mit den aktuellen überein, leitet jede Seite nach `/zustimmung` (beide Texte aufklappbar, Link zur
+    Einzelseite, eine Checkbox, "Weiter" und "Abmelden"). Erreichbar bleiben nur diese Seite, Abmelden und die zwei
+    öffentlichen Seiten. Reihenfolge: zuerst ein erzwungener Passwortwechsel, dann die Zustimmung. Danach zurück
+    zur ursprünglich aufgerufenen Seite (nur GET-Seiten). Audit `consent.accept`. Live-Abfragen (`/live`,
+    `X-Live-Refresh`) werden wie beim Passwortwechsel umgeleitet (`live.js` lädt bei Umleitung neu).
+    Bestehende Konten haben nach dem Update noch keine Zustimmung und sehen die Seite bei der nächsten Anfrage.
+  - **Annahme:** Der Admin aus dem Setup-Wizard gilt als zugestimmt (er betreibt die Installation und veröffentlicht die Texte).
+  - Benutzer-Detailansicht im Backend: "Zustimmung: <Datum> (Datenschutz Stand X, Nutzungsbestimmungen Stand Y)" bzw. "noch offen".
+  - Gäste ohne Konto (`/gast`, `/kasse/<code>`) sehen Links auf beide Texte, ohne Checkbox.
 - PWA-Name: `short_name` im Manifest = voller App-Name (Home-Bildschirm-Vorschlag z. B. "Bierkasse LUKS").
 - Runde spendieren (Entscheid 2026-10-21): Dashboard-Karte "Runde spendieren" (nach "Bier für Gast"). Angehakte
   aktive Kollegen (alle aktiven Benutzer ausser einem selbst, nach Name sortiert, mit Suchfeld) bekommen je 1 Bier,
@@ -444,7 +500,8 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
 
 - Tabelle `audit_logs`: Zeit (UTC, Text), Person (`actor_id` mit Fremdschlüssel, dazu `actor_ref`/`actor_name` als
   Schnappschuss), Aktion (z. B. `consume`, `consume.undo`, `round.create`, `deposit.report/confirm/reject/edit/withdraw`,
-  `correction.create`, `payout.*`, `carryover.*`, `guest_sale.*`, `cash_entry.create/delete`, `stock.correct`,
+  `consume.storno`, `round.storno`, `gift.storno`, `correction.create`, `payout.*`, `carryover.*`, `guest_sale.*`,
+  `cash_entry.create/delete`, `stock.correct`, `legal.update`, `consent.accept`, `user.lock/unlock`, `auth.login_locked`,
   `settings.update` (geänderte Schlüssel), `user.role/status/limit/password_reset/totp_reset/admin_only/...`,
   `auth.login`, `auth.login_failed` (nur versuchter Benutzername), `auth.logout`, `registration`,
   `invitation.create/revoke`, `maintenance.*`, `backup.*`, `feedback.delete`, `sso_provider.*`), Objekt (Typ, ID),

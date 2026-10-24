@@ -6,7 +6,7 @@
 @include('partials.backend-nav')
 <h1>{{ __('settings.title') }}</h1>
 
-<form method="post" action="{{ route('backend.settings.update') }}" class="stack" autocomplete="off">
+<form method="post" action="{{ route('backend.settings.update') }}" class="stack" data-no-enter-submit autocomplete="off">
     @csrf
     @method('PUT')
 
@@ -170,7 +170,7 @@
 </form>
 
 {{-- Own form: feature switches (admins only since 1.20.0). --}}
-<form method="post" action="{{ route('backend.settings.features') }}" class="stack" id="funktionen" autocomplete="off">
+<form method="post" action="{{ route('backend.settings.features') }}" class="stack" data-no-enter-submit id="funktionen" autocomplete="off">
     @csrf
     @method('PUT')
     <section class="card stack" data-testid="settings-features">
@@ -195,7 +195,7 @@
 </form>
 
 {{-- Own form: the announcement modes belong to the texts only. --}}
-<form method="post" action="{{ route('backend.settings.legal') }}" class="stack" id="rechtliches" autocomplete="off">
+<form method="post" action="{{ route('backend.settings.legal') }}" class="stack" data-no-enter-submit id="rechtliches" autocomplete="off">
     @csrf
     @method('PUT')
     <section class="card stack">

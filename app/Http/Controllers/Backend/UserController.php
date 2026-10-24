@@ -62,6 +62,27 @@ class UserController extends Controller
         return back()->with('status', __('users.limit_saved'));
     }
 
+    /**
+     * Internal note (kassier and admin, also on admin accounts); never shown in the user frontend.
+     */
+    public function note(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate(['staff_note' => ['nullable', 'string', 'max:100']]);
+        $note = trim((string) ($data['staff_note'] ?? ''));
+        $note = $note === '' ? null : $note;
+        $old = $user->staff_note;
+
+        // Logged by hand: the encrypted cast would put ciphertext into the audit log.
+        if ($note !== $old) {
+            DB::transaction(function () use ($user, $note, $old) {
+                $user->forceFill(['staff_note' => $note])->save();
+                Audit::log('user.note', $user, ['staff_note' => $old], ['staff_note' => $note]);
+            });
+        }
+
+        return back()->with('status', __('users.note_saved'));
+    }
+
     public function password(Request $request, User $user): RedirectResponse
     {
         $this->guardAdminTarget($request, $user);

@@ -250,6 +250,12 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   - Benutzerliste: gesperrte Konten stehen unter "Aktiv" mit Badge "Gesperrt" (Entscheid: kein eigener Filter); in
     "Im Minus" ebenfalls mit Badge. Rangliste/Statistik unverändert (filtern nicht nach Status).
   - Zählt nicht als aktiver Admin (Regel "letzter Admin").
+- Interner Hinweis (Entscheid 2026-10-24): Kassier und Admin tragen in der Benutzer-Detailansicht pro Benutzer einen
+  einzeiligen Hinweis ein (max. 100 Zeichen, z.B. wer hinter einem nichtssagenden Benutzernamen steckt). Verschlüsselt
+  gespeichert (`users.staff_note`), in der Benutzerliste unter dem Namen, Änderungen im Protokoll (`user.note`, alt/neu).
+  Nie im Frontend (Konto, Mails, Gästeseiten), im Model `$hidden`.
+- Admin > Einstellungen: jeder Kasten hat einen eigenen Speichern-Knopf (speichert das ganze Formular, Rücksprung zum
+  Kasten); Enter in einem Eingabefeld speichert dort nicht (`data-no-enter-submit`).
 - Storno durch Kassier/Admin (Entscheid 2026-10-24): in der Benutzer-Detailansicht im Verlauf pro Buchung Typ Bier,
   Runde oder verschenkte Biere (Zeile des Schenkers, bestätigt) "Stornieren" mit Pflicht-Grund, jederzeit (auch nach
   dem Rückgängig-Fenster). Wirkung wie das eigene Rückgängig: die Buchung wird gelöscht (samt `round_items` bzw.

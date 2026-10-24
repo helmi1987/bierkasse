@@ -254,14 +254,15 @@ class Ledger
         }
         if ($tx->type === Transaction::TYPE_GIFT) {
             DB::transaction(function () use ($tx, $user) {
-                // Lock the gift row first: a second (parallel or repeated) undo finds it gone.
-                $tx = self::lockUndoable($tx, $user);
-                // Lock the recipients (as their bookings do) and check again: nothing spent since the gift.
-                $recipients = $tx->giftParts()->pluck('user_id')->all();
+                // Lock order (same as the booking paths, which lock a single users row): recipients (users, by id)
+                // first, then the gift row. The recipient ids come from immutable gift parts, so reading them before
+                // the locks is safe. All checks that matter run AFTER the locks as current reads: under REPEATABLE READ
+                // an earlier non-locking SELECT would pin a snapshot that cannot see a booking committed while we waited.
+                $recipients = Transaction::query()->where('parent_id', $tx->id)->pluck('user_id')->all();
                 User::query()->whereIn('id', $recipients)->orderBy('id')->lockForUpdate()->get();
-                if (Gifts::recipientsBookedSince($tx)) {
-                    throw new LedgerException(__('gift.undo_used'));
-                }
+                // Re-load the gift row with a lock: a second (parallel or repeated) undo finds it gone; the
+                // authoritative "recipient booked since" check inside is a locking read.
+                $tx = self::lockUndoable($tx, $user);
                 $old = self::auditValues($tx) + ['recipients' => $recipients];
                 $tx->giftParts()->delete();
                 $tx->delete();
@@ -285,12 +286,13 @@ class Ledger
 
     /**
      * Re-loads the booking with a row lock inside the DB transaction; throws when it is gone (already undone)
-     * or can no longer be undone, so an undo never writes a second audit entry.
+     * or can no longer be undone, so an undo never writes a second audit entry. The check is a current read
+     * (gifts: locking), so callers must already hold the related user locks.
      */
     private static function lockUndoable(Transaction $tx, User $user): Transaction
     {
         $locked = Transaction::query()->lockForUpdate()->find($tx->id);
-        if ($locked === null || ! $locked->canBeUndoneBy($user)) {
+        if ($locked === null || ! $locked->canBeUndoneBy($user, true)) {
             throw new LedgerException(__('ledger.undo_expired'));
         }
 

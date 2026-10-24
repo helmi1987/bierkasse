@@ -4,11 +4,13 @@ namespace App\Models;
 
 use App\Services\Audit;
 use App\Support\AppSettings;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -78,15 +80,20 @@ class QrCode extends Model
         if (self::query()->where('kind', $kind)->exists()) {
             return;
         }
-        Cache::lock('qr-first-'.$kind, 10)->block(5, function () use ($kind, $creator) {
-            DB::transaction(function () use ($kind, $creator) {
-                if (self::query()->where('kind', $kind)->exists()) {
-                    return;
-                }
-                $code = self::generate($kind, null, $creator);
-                Audit::log('qr_code.create', $code, [], ['kind' => $code->kind, 'label' => $code->label], $creator);
+        try {
+            Cache::lock('qr-first-'.$kind, 10)->block(5, function () use ($kind, $creator) {
+                DB::transaction(function () use ($kind, $creator) {
+                    if (self::query()->where('kind', $kind)->exists()) {
+                        return;
+                    }
+                    $code = self::generate($kind, null, $creator);
+                    Audit::log('qr_code.create', $code, [], ['kind' => $code->kind, 'label' => $code->label], $creator);
+                });
             });
-        });
+        } catch (LockTimeoutException) {
+            // Another request is creating it (or the lock is stuck): skip, the next admin visit retries.
+            Log::warning('QR first code lock timeout', ['kind' => $kind]);
+        }
     }
 
     /** Missing first codes of all kinds in use (flyer only while registration is open); admin paths only. */

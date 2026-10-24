@@ -103,4 +103,15 @@ class QrCodeFirstTest extends TestCase
             ->assertSessionHas('status', __('qr.deactivated'))->assertSessionHas('warning', __('qr.last_deactivated.guest'));
         $this->assertSame(2, AuditLog::query()->where('action', 'qr_code.deactivate')->count());
     }
+
+    public function test_lock_timeout_in_ensure_first_is_skipped_silently(): void
+    {
+        $lock = \Mockery::mock(\Illuminate\Contracts\Cache\Lock::class);
+        $lock->shouldReceive('block')->andThrow(new \Illuminate\Contracts\Cache\LockTimeoutException);
+        \Illuminate\Support\Facades\Cache::shouldReceive('lock')->andReturn($lock);
+
+        QrCode::ensureFirst(QrCode::KIND_GUEST, $this->admin());
+
+        $this->assertSame(0, QrCode::query()->count());
+    }
 }

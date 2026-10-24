@@ -173,14 +173,15 @@ class Transaction extends Model
         return $kind === null ? null : $this->created_at->copy()->addMinutes(AppSettings::undoMinutes($kind));
     }
 
-    public function canBeUndoneBy(User $user): bool
+    /** $lock: authoritative check as a current read (see Gifts::recipientsBookedSince); only inside a DB transaction. */
+    public function canBeUndoneBy(User $user, bool $lock = false): bool
     {
         if ($this->type === self::TYPE_GIFT) {
             // Ends early once a recipient has any outgoing booking after the gift.
             return $this->isGiftGiven()
                 && $this->user_id === $user->id
                 && $this->undoExpiresAt()?->isFuture() === true
-                && ! Gifts::recipientsBookedSince($this);
+                && ! Gifts::recipientsBookedSince($this, $lock);
         }
 
         return in_array($this->type, self::BEER_TYPES, true)

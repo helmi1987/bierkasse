@@ -199,4 +199,19 @@ class GiftTest extends TestCase
             $this->assertSame($message, $e->getMessage());
         }
     }
+
+    public function test_authoritative_undo_check_is_a_locking_read(): void
+    {
+        $anna = $this->user();
+        $tx = Ledger::giveBeers($this->giver, [$anna->id], 1);
+
+        $this->assertNull(\App\Services\Gifts::recipientsBookedQuery($tx)->getQuery()->lock);
+        $this->assertTrue(\App\Services\Gifts::recipientsBookedQuery($tx, true)->getQuery()->lock);
+        $this->assertFalse(\App\Services\Gifts::recipientsBookedSince($tx, true));
+
+        Ledger::bookDeposit($anna, 1000, 'cash', $this->kassier());
+        Ledger::consume($anna, 1);
+        $this->assertTrue(\App\Services\Gifts::recipientsBookedSince($tx, true));
+        $this->assertFalse($tx->fresh()->canBeUndoneBy($this->giver, true));
+    }
 }

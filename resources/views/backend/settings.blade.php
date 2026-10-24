@@ -10,7 +10,7 @@
     @csrf
     @method('PUT')
 
-    <section class="card stack">
+    <section class="card stack" id="settings-general">
         <h2>{{ __('settings.general') }}</h2>
         <div class="grid-2">
             <div class="field">
@@ -34,9 +34,10 @@
                 <div class="hint">{{ __('settings.default_limit_hint') }}</div>
             </div>
         </div>
+        <button type="submit" class="btn primary" name="section" value="general">{{ __('settings.save') }}</button>
     </section>
 
-    <section class="card stack">
+    <section class="card stack" id="settings-undo">
         <h2>{{ __('settings.undo') }}</h2>
         <p class="hint">{{ __('settings.undo_hint', ['max' => \App\Support\AppSettings::UNDO_MAX]) }}</p>
         <div class="grid-2">
@@ -47,9 +48,10 @@
                 </div>
             @endforeach
         </div>
+        <button type="submit" class="btn primary" name="section" value="undo">{{ __('settings.save') }}</button>
     </section>
 
-    <section class="card stack">
+    <section class="card stack" id="settings-twint">
         <h2>{{ __('settings.twint') }}</h2>
         <label class="switch"><input type="checkbox" name="twint_enabled" value="1" @checked(old('twint_enabled', $twintEnabled))> <span>{{ __('settings.twint_enabled') }}</span></label>
         <p class="hint">{{ __('settings.twint_hint') }}</p>
@@ -80,9 +82,10 @@
             <input type="text" id="twint_message" name="twint_message" value="{{ old('twint_message', $twintMessage) }}" maxlength="{{ \App\Support\AppSettings::TWINT_MESSAGE_MAX }}" placeholder="{{ \App\Support\AppSettings::DEFAULT_TWINT_MESSAGE }}" autocomplete="off">
             <div class="hint">{{ __('settings.twint_message_hint', ['default' => \App\Support\AppSettings::DEFAULT_TWINT_MESSAGE]) }}</div>
         </div>
+        <button type="submit" class="btn primary" name="section" value="twint">{{ __('settings.save') }}</button>
     </section>
 
-    <section class="card stack">
+    <section class="card stack" id="settings-registration">
         <h2>{{ __('settings.registration') }}</h2>
         <fieldset class="stack">
             <legend>{{ __('settings.registration_mode') }}</legend>
@@ -96,21 +99,24 @@
             <div class="hint">{{ __('settings.registration_password_hint') }}</div>
         </div>
         <p><a href="{{ route('backend.registration.qr') }}">{{ __('settings.registration_qr') }} →</a></p>
+        <button type="submit" class="btn primary" name="section" value="registration">{{ __('settings.save') }}</button>
     </section>
 
-    <section class="card stack">
+    <section class="card stack" id="settings-login">
         <h2>{{ __('settings.login') }}</h2>
         <label class="switch"><input type="checkbox" name="personal_sso" value="1" @checked(old('personal_sso', $personalSso))> <span>{{ __('settings.personal_sso') }}</span></label>
         <p class="hint">{{ __('settings.personal_sso_hint') }}</p>
+        <button type="submit" class="btn primary" name="section" value="login">{{ __('settings.save') }}</button>
     </section>
 
-    <section class="card stack">
+    <section class="card stack" id="settings-notify">
         <h2>{{ __('settings.notify') }}</h2>
         <label class="switch"><input type="checkbox" name="notify_kassier" value="1" @checked(old('notify_kassier', $notifyKassier))> <span>{{ __('settings.notify_kassier') }}</span></label>
         <p class="hint">{{ __('settings.notify_hint') }}</p>
+        <button type="submit" class="btn primary" name="section" value="notify">{{ __('settings.save') }}</button>
     </section>
 
-    <section class="card stack">
+    <section class="card stack" id="settings-mail">
         <h2>{{ __('settings.mail') }}</h2>
         <div class="grid-2">
             <div class="field">
@@ -158,9 +164,9 @@
                 @endif
             </div>
         </div>
+        <button type="submit" class="btn primary" name="section" value="mail">{{ __('settings.save') }}</button>
     </section>
 
-    <button type="submit" class="btn primary big">{{ __('settings.save') }}</button>
 </form>
 
 {{-- Own form: feature switches (admins only since 1.20.0). --}}

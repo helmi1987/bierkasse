@@ -29,6 +29,9 @@ use Illuminate\View\View;
  */
 class SettingsController extends Controller
 {
+    /** Cards of the main settings form; anchor ids are "settings-<name>". */
+    private const SECTIONS = ['general', 'undo', 'twint', 'registration', 'login', 'notify', 'mail'];
+
     public function edit(): View
     {
         return view('backend.settings', [
@@ -257,7 +260,10 @@ class SettingsController extends Controller
         // Admin saves the registration mode: make sure the first flyer code exists when it is needed.
         QrCode::ensureFirstForAdmin($request->user());
 
-        return back()->with('status', __('settings.saved'));
+        // Jump back to the card whose save button was used (each card has its own button, one form).
+        $section = in_array($request->input('section'), self::SECTIONS, true) ? '#settings-'.$request->input('section') : '';
+
+        return redirect()->to(route('backend.settings').$section)->with('status', __('settings.saved'));
     }
 
     /**

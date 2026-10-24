@@ -48,10 +48,11 @@
         return list;
     }
 
-    // Marks a colleague as pinned/unpinned in all colleague lists and re-sorts them in place
+    // Marks a colleague as pinned/unpinned in one colleague list ("round" or "gift"; each has its own favourites)
+    // and re-sorts only that list in place
     // (favourites first, then the server order data-pos). Moving the <li> keeps the checkbox state.
-    function setPinned(userId, pinned) {
-        document.querySelectorAll('[data-pin="' + userId + '"]').forEach(function (b) {
+    function setPinned(userId, pinned, list) {
+        document.querySelectorAll('[data-pin="' + userId + '"][data-list="' + list + '"]').forEach(function (b) {
             var li = b.closest('li');
             b.setAttribute('aria-pressed', pinned ? 'true' : 'false');
             b.textContent = pinned ? '\u2605' : '\u2606';
@@ -62,7 +63,7 @@
                 li.classList.toggle('is-fav', pinned);
             }
         });
-        document.querySelectorAll('.round-list').forEach(function (list) {
+        document.querySelectorAll('.round-list[data-list="' + list + '"]').forEach(function (list) {
             var items = Array.prototype.slice.call(list.children);
             items.sort(function (a, b) {
                 var fa = a.classList.contains('is-fav') ? 0 : 1;
@@ -199,8 +200,8 @@
             render();
         });
 
-        // Favourites: pin/unpin a colleague (buttons of the "Runde spendieren" and "Bier verschenken" lists).
-        // POST via fetch so the checkbox selection stays; the lists are re-sorted in place (favourites first,
+        // Favourites: pin/unpin a colleague (buttons of the "Runde spendieren" and "Bier verschenken" lists, each with its own favourites).
+        // POST via fetch so the checkbox selection stays; the affected list is re-sorted in place (favourites first,
         // the rest in server order = data-pos). Without JavaScript the button submits #favorites-form normally.
         all(root, '[data-pin]').forEach(function (btn) {
             btn.addEventListener('click', function (e) {
@@ -230,7 +231,7 @@
                     return response.json();
                 }).then(function (data) {
                     if (data) {
-                        setPinned(btn.dataset.pin, !!data.pinned, btn);
+                        setPinned(btn.dataset.pin, !!data.pinned, btn.dataset.list);
                     }
                 }).catch(function () {
                     // Fall back to the normal form post (reloads the page).

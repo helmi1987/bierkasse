@@ -184,7 +184,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Admins zusätzlich "Backend" (Einstellungen, SSO, Registrierungs-QR, Feedback mit Zahl ungelesener, Wartung).
   Die Zahl offener Posten (Einzahlungen, Auszahlungen, Überträge; `Ledger::pendingCount()`) steht zusätzlich als Badge am Reiter
   "Übersicht" (dort werden sie bestätigt); bei 0 ausgeblendet. Mobil scrollt die Seite nie seitlich: Kopfzeile (Logo, Navigation, Benutzer, Abmelden) steht ab Telefonbreite (bis 520 px, Name
-  ausgeblendet, enge Abstände) in einer Zeile und bricht erst unter 360 px um,
+  ausgeblendet, enge Abstände) in einer Zeile (Logo links, alle übrigen Einträge rechtsbündig gruppiert, für alle Rollen) und bricht erst unter 360 px um,
   nur die Reiterleiste scrollt/wischt in ihrem eigenen Container, Tabellen in `.table-wrap`.
   So sieht der Admin unter "Kassier" dieselben Seiten wie ein Kassier (plus Rolle/Nur-Verwaltung in der Benutzer-Detailansicht).
   Reihenfolge der Reiter (`App\Support\BackendNav`): Admin legt den Standard unter Backend → Navigation fest
@@ -325,9 +325,10 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     die Runde zurücknehmen (Zeit siehe Einstellungen). Unter "Offen" zählen Runden-Biere wie eigene Biere (alter Preis).
     Kassenstand unverändert (wie Abstreichen); Lager sinkt um alle Biere der Runde (Lager-Mail wie beim Abstreichen); wie Abstreichen
     nicht durch den Lagerbestand begrenzt. Kollegen-Liste sortiert nach letztem eigenem Bier.
-  - Favoriten (Entscheid 2026-10-24): Jeder Benutzer kann Kollegen mit ☆/★ anheften (Tabelle `user_favorites`, gleiche Favoriten für
-    "Runde spendieren" und "Bier verschenken"); Favoriten stehen oben, der Rest darunter in bisheriger Reihenfolge. Umschalten per
-    `fetch` (`POST /konto/favorit/{id}`, JSON), die Liste sortiert sich in place um, die Auswahl der Häkchen bleibt; ohne JS normales
+  - Favoriten (Entscheid 2026-10-24): Jeder Benutzer kann Kollegen mit ☆/★ anheften (Tabelle `user_favorites`, Spalte `list` =
+    `round`|`gift`; Entscheid 2026-10-24: jede Liste hat eigene Favoriten, bestehende Favoriten wurden in beide Listen kopiert);
+    Favoriten stehen oben, der Rest darunter in bisheriger Reihenfolge. Umschalten per
+    `fetch` (`POST /konto/favorit/{round|gift}/{id}`, JSON, andere Liste = 404), nur die betroffene Liste sortiert sich in place um, die Auswahl der Häkchen bleibt; ohne JS normales
     Formular mit Redirect. Inaktive/gelöschte Kollegen erscheinen nicht und lassen sich nicht anheften (Abheften geht immer).
   - Empfänger sehen 1 Tag lang (`NOTICE_DAYS`, Entscheid 2026-10-24) im Dashboard "🍺 <Spender> hat dir ein Bier spendiert – <Nachricht>" (max. 3), mit ×-Knopf: ausgeblendet wird pro Benutzer serverseitig gespeichert (Tabelle `notice_dismissals`, geräteübergreifend, nie wieder sichtbar; `POST /konto/hinweis/{id}`). Keine Mail an Empfänger (Entscheid 2026-10-22: alle sitzen am selben Tisch).
   - Statistik: Biere zählen beim Trinker. Kollegen-Biere zählen beim Kollegen (eigene Statistik, Rangliste, Totals),

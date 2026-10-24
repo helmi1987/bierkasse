@@ -73,6 +73,15 @@ class AccountController extends Controller
         // Beers left in the cellar (only once the kassier maintains the stock).
         $stock = BeerStock::isTracked() ? BeerStock::current() : null;
 
+        // Same colleagues in both lists, but each list orders them by its own favourites (separate instances: arrange() sets attributes).
+        $colleagues = ['round' => collect(), 'gift' => collect()];
+        if ($rounds || $gifts) {
+            $base = Rounds::colleagues($user);
+            foreach (Favorites::LISTS as $list) {
+                $colleagues[$list] = Favorites::arrange($base->map(fn (User $c) => clone $c), Favorites::ids($user, $list));
+            }
+        }
+
         return view('account.dashboard', [
             'user' => $user,
             'stock' => $stock,
@@ -80,7 +89,8 @@ class AccountController extends Controller
             'guestBooking' => $guestBooking,
             'guestUndoable' => $guestUndoable,
             'rounds' => $rounds,
-            'colleagues' => $rounds || $gifts ? Favorites::arrange(Rounds::colleagues($user), Favorites::ids($user)) : collect(),
+            'colleagues' => $colleagues['round'],
+            'giftColleagues' => $colleagues['gift'],
             'gifts' => $gifts,
             'giftUndoable' => $giftUndoable,
             'giftsReceived' => Gifts::receivedRecently($user),
@@ -116,21 +126,22 @@ class AccountController extends Controller
     }
 
     /**
-     * Pins or unpins a colleague (top of the "Runde spendieren" / "Bier verschenken" lists).
+     * Pins or unpins a colleague in one list (top of "Runde spendieren" = round / "Bier verschenken" = gift).
      * JSON answer for the script (keeps the form selection), redirect without JavaScript.
      * Only active colleagues with a beer account can be pinned; unpinning always works.
      */
-    public function toggleFavorite(Request $request, int $colleague): RedirectResponse|JsonResponse
+    public function toggleFavorite(Request $request, string $list, int $colleague): RedirectResponse|JsonResponse
     {
+        abort_unless(in_array($list, Favorites::LISTS, true), 404);
         $user = $request->user();
         $target = User::query()->find($colleague);
-        $isFavorite = in_array($colleague, Favorites::ids($user), true);
+        $isFavorite = in_array($colleague, Favorites::ids($user, $list), true);
         if (! $isFavorite) {
             abort_unless($target !== null && Rounds::colleagues($user)->contains('id', $colleague), 404);
         }
-        $pinned = $target !== null ? Favorites::toggle($user, $target) : false;
+        $pinned = $target !== null ? Favorites::toggle($user, $list, $target) : false;
         if ($target === null) {
-            DB::table('user_favorites')->where(['user_id' => $user->id, 'favorite_user_id' => $colleague])->delete();
+            DB::table('user_favorites')->where(['user_id' => $user->id, 'list' => $list, 'favorite_user_id' => $colleague])->delete();
         }
 
         return $request->expectsJson() ? response()->json(['pinned' => $pinned]) : back();

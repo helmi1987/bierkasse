@@ -84,8 +84,8 @@
     </section>
 @endif
 
-@if ($colleagues->isNotEmpty() && ($rounds || $gifts) && $pending->where('type', 'payout')->isEmpty())
-    {{-- Shared by the pin buttons of both colleague lists (form="favorites-form", formaction per colleague). --}}
+@if (($colleagues->isNotEmpty() || $giftColleagues->isNotEmpty()) && ($rounds || $gifts) && $pending->where('type', 'payout')->isEmpty())
+    {{-- Shared by the pin buttons of both colleague lists (each list has its own favourites) (form="favorites-form", formaction per colleague). --}}
     <form method="post" action="{{ route('account.dashboard') }}" id="favorites-form" data-favorites>@csrf</form>
 @endif
 
@@ -111,11 +111,11 @@
                     @else
                         <label class="sr-only" for="round-filter">{{ __('round.filter') }}</label>
                         <input type="search" id="round-filter" placeholder="{{ __('round.filter') }}" autocomplete="off" data-round-filter hidden>
-                        <ul class="round-list">
+                        <ul class="round-list" data-list="round">
                             @foreach ($colleagues as $colleague)
                                 <li data-name="{{ mb_strtolower($colleague->displayName().' '.$colleague->username) }}" data-pos="{{ $colleague->sort_pos }}" data-user="{{ $colleague->id }}" @class(['is-fav' => $colleague->is_favorite])>
                                     <label class="check"><input type="checkbox" name="recipients[]" value="{{ $colleague->id }}" @checked(in_array($colleague->id, $roundOld, true))> <span>{{ $colleague->displayName() }}</span></label>
-                                    @include('account.pin-button', ['colleague' => $colleague])
+                                    @include('account.pin-button', ['colleague' => $colleague, 'list' => 'round'])
                                 </li>
                             @endforeach
                         </ul>
@@ -177,16 +177,16 @@
                 {!! \App\Support\FormToken::field('gift') !!}
                 <fieldset class="field">
                     <legend>{{ __('gift.colleagues') }}</legend>
-                    @if ($colleagues->isEmpty())
+                    @if ($giftColleagues->isEmpty())
                         <p class="hint">{{ __('round.no_colleagues') }}</p>
                     @else
                         <label class="sr-only" for="gift-filter">{{ __('gift.filter') }}</label>
                         <input type="search" id="gift-filter" placeholder="{{ __('gift.filter') }}" autocomplete="off" data-round-filter hidden>
-                        <ul class="round-list">
-                            @foreach ($colleagues as $colleague)
+                        <ul class="round-list" data-list="gift">
+                            @foreach ($giftColleagues as $colleague)
                                 <li data-name="{{ mb_strtolower($colleague->displayName().' '.$colleague->username) }}" data-pos="{{ $colleague->sort_pos }}" data-user="{{ $colleague->id }}" @class(['is-fav' => $colleague->is_favorite])>
                                     <label class="check"><input type="checkbox" name="gift_recipients[]" value="{{ $colleague->id }}" @checked(in_array($colleague->id, $giftOld, true))> <span>{{ $colleague->displayName() }}</span></label>
-                                    @include('account.pin-button', ['colleague' => $colleague])
+                                    @include('account.pin-button', ['colleague' => $colleague, 'list' => 'gift'])
                                 </li>
                             @endforeach
                         </ul>

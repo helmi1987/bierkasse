@@ -252,7 +252,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   - Zählt nicht als aktiver Admin (Regel "letzter Admin").
 - Interner Hinweis (Entscheid 2026-10-24): Kassier und Admin tragen in der Benutzer-Detailansicht pro Benutzer einen
   einzeiligen Hinweis ein (max. 100 Zeichen, z.B. wer hinter einem nichtssagenden Benutzernamen steckt). Verschlüsselt
-  gespeichert (`users.staff_note`), in der Benutzerliste unter dem Namen, Änderungen im Protokoll (`user.note`, alt/neu).
+  gespeichert (`users.staff_note`), in der Benutzerliste unter dem Namen und in der Kassier-Übersicht bei offenen TWINT-Einzahlungen, Änderungen im Protokoll (`user.note`, alt/neu).
   Nie im Frontend (Konto, Mails, Gästeseiten), im Model `$hidden`.
 - Admin > Einstellungen: jeder Kasten hat einen eigenen Speichern-Knopf (speichert das ganze Formular, Rücksprung zum
   Kasten); Enter in einem Eingabefeld speichert dort nicht (`data-no-enter-submit`).

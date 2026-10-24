@@ -42,4 +42,18 @@ class StaffNoteTest extends TestCase
         }
         $this->assertArrayNotHasKey('staff_note', $user->toArray());
     }
+
+    public function test_note_shown_for_pending_twint_deposits_only(): void
+    {
+        $twint = $this->user(['username' => 'xy42']);
+        $twint->forceFill(['staff_note' => 'Hans Muster'])->save();
+        $cash = $this->user(['username' => 'ab17']);
+        $cash->forceFill(['staff_note' => 'Fritz Bar'])->save();
+
+        $this->actingAs($twint)->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => '10', 'method' => 'twint']))->assertSessionHasNoErrors();
+        $this->actingAs($cash)->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => '10', 'method' => 'cash']))->assertSessionHasNoErrors();
+
+        $this->actingAs($this->kassier());
+        $this->get('/admin')->assertOk()->assertSee('Hans Muster')->assertDontSee('Fritz Bar');
+    }
 }

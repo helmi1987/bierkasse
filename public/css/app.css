@@ -70,7 +70,11 @@ img { max-width: 100%; height: auto; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .wrap { width: 100%; max-width: 960px; margin: 0 auto; padding: 0 16px; }
-.main { padding-top: 1rem; padding-bottom: 3rem; }
+.main { padding-top: 1rem; padding-bottom: 3rem; min-width: 0; }
+.main > *, .card, .grid-2 > * { min-width: 0; }
+/* Wrapper of the flash messages that the live refresh keeps (public/js/live.js); no box of its own. */
+.live-keep { display: contents; }
+.card pre, .card img, .card svg { max-width: 100%; }
 .main.narrow { max-width: 460px; }
 .muted { color: var(--muted); }
 .hint { color: var(--muted); font-size: .875rem; margin-top: .25rem; }
@@ -86,10 +90,10 @@ img { max-width: 100%; height: auto; }
 
 /* Header */
 .topbar { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; padding-top: env(safe-area-inset-top); }
-.topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-height: 60px; }
+.topbar-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 .5rem; min-height: 60px; }
 .brand { display: flex; align-items: center; gap: .5rem; color: var(--text); text-decoration: none; font-weight: 700; font-size: 1.1rem; min-width: 0; }
 .brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nav { display: flex; align-items: center; gap: .15rem; }
+.nav { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; min-width: 0; max-width: 100%; gap: .15rem; }
 .nav a, .nav .linkish { display: inline-flex; align-items: center; gap: .35rem; min-height: 44px; padding: 0 .6rem; border-radius: var(--radius-sm); color: var(--text); text-decoration: none; font-weight: 500; }
 .nav a.active { background: var(--accent-soft); color: var(--accent-strong); }
 .nav a:hover, .nav .linkish:hover { background: var(--surface-2); }
@@ -97,9 +101,9 @@ img { max-width: 100%; height: auto; }
 @media (min-width: 640px) { .nav-user { display: inline; } }
 .icon { width: 22px; height: 22px; fill: currentColor; }
 .badge { display: inline-flex; min-width: 1.4rem; height: 1.4rem; padding: 0 .35rem; align-items: center; justify-content: center; border-radius: 999px; background: var(--bad); color: #fff; font-size: .75rem; font-weight: 700; }
-@media (max-width: 420px) { .brand span { display: none; } }
+@media (max-width: 420px) { .brand span { display: none; } .nav a, .nav .linkish { padding: 0 .45rem; } }
 
-.subnav, .tabs { display: flex; gap: .35rem; overflow-x: auto; padding: .25rem 0 .75rem; margin-bottom: .5rem; scrollbar-width: none; }
+.subnav, .tabs { display: flex; min-width: 0; max-width: 100%; -webkit-overflow-scrolling: touch; gap: .35rem; overflow-x: auto; padding: .25rem 0 .75rem; margin-bottom: .5rem; scrollbar-width: none; }
 .subnav a, .tabs a { flex: none; padding: .55rem .9rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); color: var(--text); text-decoration: none; font-size: .925rem; min-height: 40px; display: inline-flex; align-items: center; }
 .subnav a.active, .tabs a.active { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
 
@@ -220,16 +224,6 @@ details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: 
 .open-box { margin: .75rem auto 0; background: rgba(255, 255, 255, .18); border-radius: var(--radius-sm); padding: .6rem .9rem; display: inline-block; font-size: 1.1rem; }
 .open-box ul { font-size: .9rem; }
 ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
-/* Reported deposit waiting for the kassier (not part of the balance). The card is always a
-   coloured gradient with white text, so a translucent white pill works in light and dark mode. */
-.pending-pill {
-    display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: .1rem .35rem;
-    margin: .6rem auto 0; padding: .3rem .8rem; max-width: 100%;
-    border-radius: 999px; border: 1px dashed rgba(255, 255, 255, .7); background: rgba(255, 255, 255, .16);
-    font-size: .9rem; line-height: 1.35;
-}
-.pending-pill strong { font-weight: 700; }
-.pending-pill span { opacity: .92; }
 
 /* Beer form */
 .beer-form { display: flex; flex-direction: column; gap: 1rem; align-items: stretch; }

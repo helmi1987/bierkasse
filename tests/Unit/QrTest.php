@@ -19,7 +19,9 @@ class QrTest extends TestCase
         $render = fn (ErrorCorrectionLevel $level) => (new Writer(new ImageRenderer(new RendererStyle(256, 4), new SvgImageBackEnd)))
             ->writeString($text, Encoder::DEFAULT_BYTE_MODE_ENCODING, $level);
 
-        $this->assertSame($render(ErrorCorrectionLevel::H()), Qr::svg($text));
+        // The logo overlay is appended before the closing tag; without it the output equals the plain level-H code.
+        $plain = $render(ErrorCorrectionLevel::H());
+        $this->assertStringStartsWith(substr($plain, 0, -strlen('</svg>')), Qr::svg($text));
         $this->assertNotSame($render(ErrorCorrectionLevel::L()), Qr::svg($text));
     }
 }

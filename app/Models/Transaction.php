@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\Gifts;
 use App\Support\AppSettings;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -53,6 +54,12 @@ class Transaction extends Model
     public const STATUS_REJECTED = 'rejected';
 
     public const METHODS = ['cash', 'twint'];
+
+    /**
+     * Pending types that already count for the user (displayed balance and limit checks) before the
+     * kassier confirms them (decision 2026-10-23). Backend totals still use confirmed rows only.
+     */
+    public const PROVISIONAL_TYPES = [self::TYPE_DEPOSIT, self::TYPE_CARRYOVER];
 
     protected $fillable = [
         'user_id', 'parent_id', 'type', 'status', 'method', 'quantity', 'unit_price', 'amount', 'note',
@@ -119,6 +126,13 @@ class Transaction extends Model
         return $query->where('status', self::STATUS_PENDING);
     }
 
+    /** Rows of the user's available balance: confirmed plus pending deposits and carry-overs. */
+    public function scopeAvailable(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q->where('status', self::STATUS_CONFIRMED)
+            ->orWhere(fn (Builder $q) => $q->where('status', self::STATUS_PENDING)->whereIn('type', self::PROVISIONAL_TYPES)));
+    }
+
     public function isPending(): bool
     {
         return $this->status === self::STATUS_PENDING;
@@ -140,21 +154,38 @@ class Transaction extends Model
         return __('ledger.carryover_chf.'.$key, ['amount' => $amount]);
     }
 
+    /**
+     * End of the undo window of an own beer booking (consumption, round, given gift); null when the type
+     * cannot be undone. Shown on the dashboard so the button disappears exactly then (server stays authoritative).
+     */
+    public function undoExpiresAt(): ?CarbonInterface
+    {
+        if ($this->created_at === null) {
+            return null;
+        }
+        $kind = match (true) {
+            $this->isGiftGiven() => 'gift',
+            $this->type === self::TYPE_ROUND => 'round',
+            $this->type === self::TYPE_CONSUMPTION => 'consume',
+            default => null,
+        };
+
+        return $kind === null ? null : $this->created_at->copy()->addMinutes(AppSettings::undoMinutes($kind));
+    }
+
     public function canBeUndoneBy(User $user): bool
     {
         if ($this->type === self::TYPE_GIFT) {
             // Ends early once a recipient booked a beer (consumption or own round) after the gift.
             return $this->isGiftGiven()
                 && $this->user_id === $user->id
-                && $this->created_at !== null
-                && $this->created_at->gt(now()->subMinutes(AppSettings::undoMinutes('gift')))
+                && $this->undoExpiresAt()?->isFuture() === true
                 && ! Gifts::recipientsBookedSince($this);
         }
 
         return in_array($this->type, self::BEER_TYPES, true)
             && $this->user_id === $user->id
             && $this->created_by === $user->id
-            && $this->created_at !== null
-            && $this->created_at->gt(now()->subMinutes(AppSettings::undoMinutes($this->type === self::TYPE_ROUND ? 'round' : 'consume')));
+            && $this->undoExpiresAt()?->isFuture() === true;
     }
 }

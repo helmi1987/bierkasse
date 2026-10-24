@@ -1,5 +1,5 @@
 {{-- PWA install hint; shown by public/js/app.js only when the app can be installed and is not running installed. --}}
-<aside class="install-hint no-print" data-install-hint hidden>
+<aside class="install-hint no-print" data-install-hint data-live-keep="install" hidden>
     <img src="{{ asset('icon-192.png') }}" alt="" width="44" height="44">
     <div class="install-text">
         <strong>{{ __('site.install.title', ['app' => $appName]) }}</strong>

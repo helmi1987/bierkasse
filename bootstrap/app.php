@@ -34,6 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
         // Maintenance mode for users (backend setting): after the session, so admins are recognized.
         $middleware->appendToGroup('web', MaintenanceMode::class);
+        // Live refresh fingerprint, taken before the page content is built.
+        $middleware->appendToGroup('web', \App\Http\Middleware\CaptureLiveFingerprint::class);
         $middleware->alias([
             'active' => EnsureActiveUser::class,
             'beer' => EnsureBeerAccount::class,
@@ -51,7 +53,8 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Live refresh requests (public/js/live.js) get 401 instead of a redirect to the login page.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson() || $request->hasHeader('X-Live-Refresh'),
         );
     })->create();

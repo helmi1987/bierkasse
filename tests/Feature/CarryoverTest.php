@@ -65,8 +65,10 @@ class CarryoverTest extends TestCase
             && str_contains($m->render(), 'schuldet 12 Biere à CHF 1.50 (CHF 18.00)')
             && str_contains($m->render(), 'Übertrag von der alten Strichliste muss im Backend bestätigt werden'));
 
+        // Counts for the user right away (decision 2026-10-23), shown as one number without "ausstehend".
+        $this->assertSame(-1800, $user->availableBalance());
         $this->actingAs($user)->get('/konto')->assertOk()
-            ->assertSee('Übertrag ausstehend: CHF -18.00 – wartet auf Kassier');
+            ->assertSee('12 Biere offen')->assertSee('CHF -18.00')->assertDontSee('ausstehend');
     }
 
     public function test_credit_in_chf(): void

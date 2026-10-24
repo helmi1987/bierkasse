@@ -19,6 +19,7 @@ use App\Http\Controllers\StatsController;
 use App\Http\Middleware\EnsureInstalled;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 
 // PWA manifest (outside the install check, uses the app name when available).
 Route::get('/manifest.webmanifest', ManifestController::class)->name('manifest');
@@ -50,6 +51,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     // Cashbox QR sticker (no login, secret code selects cash or TWINT).
     Route::get('/kasse/{code}', [CashboxQrController::class, 'show'])->where('code', '[A-Za-z0-9_-]{1,64}')->middleware('throttle:60,1')->name('cashbox');
     Route::post('/kasse/{code}', [CashboxQrController::class, 'store'])->where('code', '[A-Za-z0-9_-]{1,64}')->middleware('throttle:30,1')->name('cashbox.store');
+
+    // Old admin URLs (/backend/..., until 1.19): GET is redirected permanently to /admin/... (query string kept).
+    Route::get('/backend/{path?}', Backend\LegacyBackendRedirectController::class)->where('path', '.*')->name('backend.legacy');
 
     // Privacy policy and terms of use (public, also while the consent is missing).
     Route::get('/datenschutz', [LegalController::class, 'privacy'])->name('legal.privacy');
@@ -123,8 +127,13 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         // Live page refresh (public/js/live.js): cheap change marker, polled every 10 seconds per open tab.
         Route::get('/live', LiveController::class)->middleware('throttle:120,1')->name('live');
 
-        // Backend: kassier and admin
-        Route::prefix('backend')->name('backend.')->middleware('role:kassier')->group(function () {
+        // Admin area (URL prefix /admin, until 1.19 /backend; route names stay "backend.*").
+        // Kassier pages: kassiers and admins; see App\Support\BackendNav for the tab groups.
+        Route::prefix('admin')->name('backend.')->middleware('role:kassier')->group(function () {
+            // Livewire update endpoint with the same middleware as the admin pages (auth, active/consent
+            // gate, role, maintenance mode via "web"); components re-check the role themselves.
+            Livewire::setUpdateRoute(fn ($handle) => Route::post('/livewire/update', $handle));
+
             Route::get('/', [Backend\DashboardController::class, 'index'])->name('dashboard');
             Route::post('/einzahlungen/{transaction}/bestaetigen', [Backend\DashboardController::class, 'confirmDeposit'])->whereNumber('transaction')->name('deposits.confirm');
             Route::post('/einzahlungen/{transaction}/ablehnen', [Backend\DashboardController::class, 'rejectDeposit'])->whereNumber('transaction')->name('deposits.reject');
@@ -134,10 +143,12 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/uebertraege/{transaction}/bestaetigen', [Backend\DashboardController::class, 'confirmCarryover'])->whereNumber('transaction')->name('carryovers.confirm');
             Route::post('/uebertraege/{transaction}/ablehnen', [Backend\DashboardController::class, 'rejectCarryover'])->whereNumber('transaction')->name('carryovers.reject');
 
+            // Cash book; tab "Einzahlungsvorschläge" (?tab=vorschlaege, Livewire component).
             Route::get('/kasse', [Backend\CashController::class, 'index'])->name('cash');
             Route::post('/kasse', [Backend\CashController::class, 'store'])->name('cash.store');
             Route::delete('/kasse/{entry}', [Backend\CashController::class, 'destroy'])->whereNumber('entry')->name('cash.destroy');
 
+            // Users with the tabs "Benutzer" and "Einladungen" (?tab=einladungen, Livewire component).
             Route::get('/benutzer', [Backend\UserController::class, 'index'])->name('users.index');
             Route::get('/benutzer/{user}', [Backend\UserController::class, 'show'])->whereNumber('user')->name('users.show');
             Route::put('/benutzer/{user}/limit', [Backend\UserController::class, 'limit'])->whereNumber('user')->name('users.limit');
@@ -152,53 +163,55 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::put('/benutzer/{user}/rolle', [Backend\UserController::class, 'role'])->whereNumber('user')->middleware('role:admin')->name('users.role');
             Route::put('/benutzer/{user}/nur-verwaltung', [Backend\UserController::class, 'adminOnly'])->whereNumber('user')->middleware('role:admin')->name('users.admin-only');
 
-            Route::get('/statistik', [Backend\DashboardController::class, 'stats'])->name('stats');
-            Route::get('/gaeste', [Backend\GuestController::class, 'index'])->name('guests');
-            Route::put('/gaeste', [Backend\GuestController::class, 'update'])->name('guests.update');
+            // Bookings: tabs "Runden", "Geschenke", "Gäste" (?tab=…, Livewire component incl. guest storno).
+            Route::get('/buchungen', [Backend\BookingController::class, 'index'])->name('bookings');
+
+            Route::get('/lager', [Backend\StockController::class, 'index'])->name('stock');
+            Route::put('/lager/mindestbestand', [Backend\StockController::class, 'minimum'])->name('stock.minimum');
+            Route::post('/lager/korrektur', [Backend\StockController::class, 'correct'])->name('stock.correct');
+
+            // QR codes (view for kassiers, management parts for admins; Livewire component) and the print pages.
+            Route::get('/qr-codes', [Backend\QrCodeController::class, 'index'])->name('qr-codes.index');
+            Route::get('/qr-codes/kassen-qr', [Backend\GuestController::class, 'cashbox'])->name('qr-codes.cashbox');
             Route::get('/gaeste/qr', [Backend\GuestController::class, 'qr'])->name('guests.qr');
             // QR images (kassiers: active codes only). No .svg extension: Plesk/nginx may treat such URLs as static files.
             Route::get('/gaeste/kassen-qr/{qrCode}', [Backend\GuestController::class, 'cashboxSvg'])->whereNumber('qrCode')->name('guests.cashbox');
             Route::get('/gaeste/kassen-qr/{qrCode}/a4', [Backend\GuestController::class, 'cashboxSheet'])->whereNumber('qrCode')->name('guests.cashbox.sheet');
             Route::get('/gaeste/kassen-qr-a4/gemischt', [Backend\GuestController::class, 'cashboxMixedSheet'])->name('guests.cashbox.mixed');
-            Route::get('/qr-codes', [Backend\QrCodeController::class, 'index'])->name('qr-codes.index');
             Route::get('/registrierung-qr', [Backend\SettingsController::class, 'registrationQr'])->name('registration.qr');
             Route::get('/registrierung-qr/flyer-bild', [Backend\SettingsController::class, 'flyerSvg'])->name('registration.flyer-svg');
-            Route::delete('/gaeste/{sale}', [Backend\GuestController::class, 'destroy'])->whereNumber('sale')->name('guests.destroy');
-            Route::get('/runden', [Backend\RoundController::class, 'index'])->name('rounds');
-            Route::put('/runden', [Backend\RoundController::class, 'update'])->name('rounds.update');
-            Route::get('/verschenkt', [Backend\GiftController::class, 'index'])->name('gifts');
-            Route::put('/verschenkt', [Backend\GiftController::class, 'update'])->name('gifts.update');
-            Route::get('/einladungen', [Backend\InvitationController::class, 'index'])->name('invitations');
-            Route::delete('/einladungen/{invitation}', [Backend\InvitationController::class, 'destroy'])->whereNumber('invitation')->name('invitations.destroy');
-            Route::get('/lager', [Backend\StockController::class, 'index'])->name('stock');
-            Route::put('/lager/mindestbestand', [Backend\StockController::class, 'minimum'])->name('stock.minimum');
-            Route::post('/lager/korrektur', [Backend\StockController::class, 'correct'])->name('stock.correct');
-            Route::get('/einzahlungsvorschlaege', [Backend\DepositSuggestionController::class, 'edit'])->name('deposit-suggestions');
-            Route::put('/einzahlungsvorschlaege', [Backend\DepositSuggestionController::class, 'update'])->name('deposit-suggestions.update');
-            // Audit log: read-only (no route changes or deletes entries).
+
+            // Audit log (tab "Fassungen" = legal text revisions, ?tab=fassungen; Livewire component).
+            // Read-only: no route changes or deletes entries.
             Route::get('/protokoll', [Backend\AuditController::class, 'index'])->name('audit');
             Route::get('/protokoll/export', [Backend\AuditController::class, 'export'])->name('audit.export');
             Route::get('/protokoll/{entry}', [Backend\AuditController::class, 'show'])->whereNumber('entry')->name('audit.show');
             Route::post('/protokoll/pruefen', [Backend\AuditController::class, 'verify'])->name('audit.verify');
-            // Legal text revisions (read-only list, kassiers and admins).
-            Route::get('/rechtliches/fassungen', [Backend\LegalRevisionController::class, 'index'])->name('legal-revisions');
 
-            // Admin only ("Backend" in the top bar, see BackendNav)
+            // Pages moved in 1.20.0 (old names kept so links and bookmarks keep working): 301 to the new place.
+            Route::get('/statistik', Backend\MovedPageController::class)->defaults('target', 'stats')->name('stats');
+            Route::get('/runden', Backend\MovedPageController::class)->defaults('target', 'backend.bookings')->defaults('tab', 'runden')->name('rounds');
+            Route::get('/verschenkt', Backend\MovedPageController::class)->defaults('target', 'backend.bookings')->defaults('tab', 'geschenke')->name('gifts');
+            Route::get('/gaeste', Backend\MovedPageController::class)->defaults('target', 'backend.bookings')->defaults('tab', 'gaeste')->name('guests');
+            Route::get('/einladungen', Backend\MovedPageController::class)->defaults('target', 'backend.users.index')->defaults('tab', 'einladungen')->name('invitations');
+            Route::get('/einzahlungsvorschlaege', Backend\MovedPageController::class)->defaults('target', 'backend.cash')->defaults('tab', 'vorschlaege')->name('deposit-suggestions');
+            Route::get('/rechtliches/fassungen', Backend\MovedPageController::class)->defaults('target', 'backend.audit')->defaults('tab', 'fassungen')->name('legal-revisions');
+            Route::get('/verwaltung/qr-codes', Backend\MovedPageController::class)->defaults('target', 'backend.qr-codes.index')->name('qr-admin');
+            Route::get('/verwaltung/protokoll', Backend\MovedPageController::class)->defaults('target', 'backend.audit')->name('audit-admin');
+            Route::get('/verwaltung/protokoll/{entry}', Backend\MovedPageController::class)->whereNumber('entry')->defaults('target', 'backend.audit.show')->name('audit-admin.show');
+
+            // Admin only ("Admin" in the top bar, see BackendNav)
             Route::middleware('role:admin')->group(function () {
                 Route::get('/einstellungen', [Backend\SettingsController::class, 'edit'])->name('settings');
                 Route::put('/einstellungen', [Backend\SettingsController::class, 'update'])->name('settings.update');
                 Route::put('/einstellungen/rechtliches', [Backend\SettingsController::class, 'legal'])->name('settings.legal');
+                // Feature switches (rounds, gifts, guests incl. QR switches and guest password); admins only since 1.20.0.
+                Route::put('/einstellungen/funktionen', [Backend\SettingsController::class, 'features'])->name('settings.features');
                 Route::get('/navigation', [Backend\NavController::class, 'edit'])->name('nav');
                 Route::put('/navigation', [Backend\NavController::class, 'update'])->name('nav.update');
                 Route::delete('/navigation', [Backend\NavController::class, 'reset'])->name('nav.reset');
                 Route::post('/registrierung-qr/codes', [Backend\RegistrationCodeController::class, 'store'])->name('registration.codes.store');
                 Route::put('/registrierung-qr/codes/{registrationCode}/sperre', [Backend\RegistrationCodeController::class, 'lock'])->whereNumber('registrationCode')->name('registration.codes.lock');
-                // QR codes with history (cashbox, flyer, guest page): management view.
-                Route::get('/verwaltung/qr-codes', [Backend\QrCodeController::class, 'manage'])->name('qr-admin');
-                Route::put('/verwaltung/qr-codes/einstellungen', [Backend\QrCodeController::class, 'settings'])->name('qr-admin.settings');
-                // Audit log in the admin bar (same page as for kassiers).
-                Route::get('/verwaltung/protokoll', [Backend\AuditController::class, 'index'])->name('audit-admin');
-                Route::get('/verwaltung/protokoll/{entry}', [Backend\AuditController::class, 'show'])->whereNumber('entry')->name('audit-admin.show');
                 Route::post('/qr-codes', [Backend\QrCodeController::class, 'store'])->name('qr-codes.store');
                 Route::put('/qr-codes/{qrCode}/aktiv', [Backend\QrCodeController::class, 'active'])->whereNumber('qrCode')->name('qr-codes.active');
                 Route::put('/qr-codes/{qrCode}/name', [Backend\QrCodeController::class, 'label'])->whereNumber('qrCode')->name('qr-codes.label');

@@ -5,7 +5,9 @@
     $authUser = auth()->user();
     // Live refresh (public/js/live.js) only for logged-in GET pages without one-time content: after a
     // POST render, validation errors/old input or flashed secrets the page must stay as rendered.
-    $live = $authUser && request()->isMethod('GET') && ! $__env->hasSection('live_off')
+    // Pages with Livewire components (@section('livewire')) refresh their data parts with wire:poll instead.
+    $livewirePage = $__env->hasSection('livewire');
+    $live = $authUser && ! $livewirePage && request()->isMethod('GET') && ! $__env->hasSection('live_off')
         && ! (isset($errors) && $errors->any()) && ! session()->hasOldInput()
         && ! session()->has('totp.recovery_codes') && ! session()->has('maintenance_output');
 @endphp
@@ -30,8 +32,12 @@
     <meta name="server-now" content="{{ now()->getTimestampMs() }}">
     <script src="{{ asset('js/live.js') }}?v={{ @filemtime(public_path('js/live.js')) }}" nonce="{{ $nonce }}" defer></script>
     <script src="{{ asset('js/app.js') }}?v={{ @filemtime(public_path('js/app.js')) }}" nonce="{{ $nonce }}" defer></script>
+    @if ($livewirePage)
+        {{-- Livewire CSP build; style and script tags carry the CSP nonce (FrontendAssets uses Vite::cspNonce()). --}}
+        @livewireStyles(['nonce' => $nonce])
+    @endif
 </head>
-<body class="@yield('body_class')" @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ app()->bound(\App\Http\Middleware\CaptureLiveFingerprint::KEY) ? app(\App\Http\Middleware\CaptureLiveFingerprint::KEY) : \App\Support\LiveFingerprint::current() }}" @endif>
+<body class="@yield('body_class')" @if ($livewirePage) data-livewire-page @endif @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ app()->bound(\App\Http\Middleware\CaptureLiveFingerprint::KEY) ? app(\App\Http\Middleware\CaptureLiveFingerprint::KEY) : \App\Support\LiveFingerprint::current() }}" @endif>
 <a class="skip-link" href="#main">{{ __('site.skip_to_content') }}</a>
 @if ($authUser)
     <header class="topbar">
@@ -111,5 +117,8 @@
 <footer class="wrap site-footer">
     <span>{{ $appName }}@if ($footerVersion) v{{ $footerVersion }}@endif</span>@if ($footerCopyright !== '')<span aria-hidden="true"> · </span><span>{{ $footerCopyright }}</span>@endif<span aria-hidden="true"> · </span><a href="{{ route('legal.privacy') }}">{{ __('legal.link.privacy') }}</a><span aria-hidden="true"> · </span><a href="{{ route('legal.terms') }}">{{ __('legal.link.terms') }}</a>
 </footer>
+@if ($livewirePage)
+    @livewireScripts(['nonce' => $nonce])
+@endif
 </body>
 </html>

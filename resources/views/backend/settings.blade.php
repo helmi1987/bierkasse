@@ -158,6 +158,31 @@
     <button type="submit" class="btn primary big">{{ __('settings.save') }}</button>
 </form>
 
+{{-- Own form: feature switches (admins only since 1.20.0). --}}
+<form method="post" action="{{ route('backend.settings.features') }}" class="stack" id="funktionen" autocomplete="off">
+    @csrf
+    @method('PUT')
+    <section class="card stack" data-testid="settings-features">
+        <h2>{{ __('settings.features') }}</h2>
+        <p class="hint">{{ __('settings.features_hint') }}</p>
+        <label class="switch"><input type="checkbox" name="rounds_enabled" value="1" @checked(old('rounds_enabled', $features['rounds_enabled']))> <span>{{ __('round.allowed') }}</span></label>
+        <div class="hint">{{ __('round.allowed_hint') }}</div>
+        <label class="switch"><input type="checkbox" name="gifts_enabled" value="1" @checked(old('gifts_enabled', $features['gifts_enabled']))> <span>{{ __('gift.allowed') }}</span></label>
+        <div class="hint">{{ __('gift.allowed_hint') }}</div>
+        <label class="switch"><input type="checkbox" name="guest_user_booking" value="1" @checked(old('guest_user_booking', $features['guest_user_booking']))> <span>{{ __('guest.user_booking') }}</span></label>
+        <div class="hint">{{ __('guest.user_booking_hint') }}</div>
+        <label class="switch"><input type="checkbox" name="guest_enabled" value="1" @checked(old('guest_enabled', $features['guest_enabled']))> <span>{{ __('guest.enabled') }}</span></label>
+        <div class="field">
+            <label for="guest_password">{{ __('guest.password') }}</label>
+            <input type="text" id="guest_password" name="guest_password" value="{{ old('guest_password', $features['guest_password']) }}" maxlength="100" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <div class="hint">{{ __('guest.password_hint') }}</div>
+        </div>
+        <label class="switch"><input type="checkbox" name="cashbox_qr_enabled" value="1" @checked(old('cashbox_qr_enabled', $features['cashbox_qr_enabled']))> <span>{{ __('guest.cashbox_enabled') }}</span></label>
+        <p class="hint"><a href="{{ route('backend.qr-codes.index') }}">{{ __('settings.features_qr') }} →</a></p>
+        <button type="submit" class="btn primary">{{ __('settings.features_save') }}</button>
+    </section>
+</form>
+
 {{-- Own form: the announcement modes belong to the texts only. --}}
 <form method="post" action="{{ route('backend.settings.legal') }}" class="stack" id="rechtliches" autocomplete="off">
     @csrf
@@ -194,7 +219,7 @@
             </div>
         @endforeach
         <p class="hint">{{ __('legal.mode_hint') }}</p>
-        <p class="hint"><a href="{{ route('backend.legal-revisions') }}">{{ __('legal.all_revisions') }} →</a></p>
+        <p class="hint"><a href="{{ route('backend.audit', ['tab' => 'fassungen']) }}">{{ __('legal.all_revisions') }} →</a></p>
         <button type="submit" class="btn primary">{{ __('legal.save') }}</button>
     </section>
 </form>

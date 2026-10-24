@@ -1,42 +1,47 @@
 <?php
 
-namespace App\Http\Controllers\Backend;
+namespace App\Livewire\Backend;
 
-use App\Http\Controllers\Controller;
+use App\Livewire\Concerns\AuthorizesAdminArea;
 use App\Models\Setting;
 use App\Support\AppSettings;
 use App\Support\DepositSuggestions;
 use App\Support\Money;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Livewire\Component;
 
 /**
- * Deposit proposals shown to users (kassier and admin): fixed CHF amounts or automatic.
+ * Deposit proposals shown to users (tab "Einzahlungsvorschläge" of "Kasse", kassier and admin):
+ * fixed CHF amounts or automatic, plus the preselected amount.
  */
-class DepositSuggestionController extends Controller
+class DepositSuggestionsForm extends Component
 {
-    public function edit(): View
+    use AuthorizesAdminArea;
+
+    public string $mode = 'auto';
+
+    public string $amounts = '';
+
+    public string $default = '';
+
+    public array $notice = [];
+
+    public function mount(): void
     {
         $price = AppSettings::beerPrice();
         $configured = AppSettings::depositSuggestions();
-
-        return view('backend.deposit-suggestions', [
-            'price' => $price,
-            'automatic' => $configured === null,
-            'input' => implode(', ', array_map([Money::class, 'plain'], $configured ?? DepositSuggestions::defaults($price))),
-            'default' => ($default = AppSettings::depositDefault()) ? Money::plain($default) : '',
-            'defaultBeers' => $default ? DepositSuggestions::beers($default, $price) : null,
-            'preview' => array_map(fn (int $a) => ['beers' => DepositSuggestions::beers($a, $price), 'amount' => $a],
-                DepositSuggestions::amounts($price, $configured)),
-        ]);
+        $this->mode = $configured === null ? 'auto' : 'manual';
+        $this->amounts = implode(', ', array_map([Money::class, 'plain'], $configured ?? DepositSuggestions::defaults($price)));
+        $default = AppSettings::depositDefault();
+        $this->default = $default ? Money::plain($default) : '';
     }
 
-    public function update(Request $request): RedirectResponse
+    public function save(): void
     {
-        $data = $request->validate([
+        $this->notice = [];
+        $data = $this->validate([
             'mode' => ['required', Rule::in(['auto', 'manual'])],
             'amounts' => ['nullable', 'required_if:mode,manual', 'string', 'max:200'],
             'default' => ['nullable', 'string', 'max:20'],
@@ -49,7 +54,21 @@ class DepositSuggestionController extends Controller
         Setting::put(AppSettings::DEPOSIT_SUGGESTIONS, $amounts);
         Setting::put(AppSettings::DEPOSIT_DEFAULT, $default);
 
-        return back()->with('status', __('settings.saved'));
+        $this->notice = ['type' => 'ok', 'text' => __('settings.saved')];
+    }
+
+    public function render(): View
+    {
+        $price = AppSettings::beerPrice();
+        $configured = AppSettings::depositSuggestions();
+        $default = AppSettings::depositDefault();
+
+        return view('livewire.backend.deposit-suggestions-form', [
+            'price' => $price,
+            'defaultBeers' => $default ? DepositSuggestions::beers($default, $price) : null,
+            'preview' => array_map(fn (int $a) => ['beers' => DepositSuggestions::beers($a, $price), 'amount' => $a],
+                DepositSuggestions::amounts($price, $configured)),
+        ]);
     }
 
     /** Preselected amount: empty = first proposal (0), else one of the proposals. */

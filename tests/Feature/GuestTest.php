@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Backend\Bookings;
 use App\Mail\KassierNotice;
 use App\Models\CashEntry;
 use App\Models\GuestSale;
@@ -16,6 +17,7 @@ use App\Support\Qr;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class GuestTest extends TestCase
@@ -111,30 +113,38 @@ class GuestTest extends TestCase
         $this->assertSame(0, GuestSale::query()->count());
     }
 
-    public function test_admin_manages_guest_settings_kassier_only_booking_and_storno(): void
+    public function test_admin_manages_guest_settings_kassier_only_storno(): void
     {
-        $this->actingAs($this->user())->get('/backend/gaeste')->assertForbidden();
-        $this->put('/backend/gaeste', ['guest_enabled' => '1', 'guest_password' => 'hack'])->assertForbidden();
-        $this->get('/backend/gaeste/qr')->assertForbidden();
+        $this->actingAs($this->user())->get('/admin/buchungen?tab=gaeste')->assertForbidden();
+        $this->put('/admin/einstellungen/funktionen', $this->featureForm(['guest_enabled' => '1', 'guest_password' => 'hack']))->assertForbidden();
+        $this->get('/admin/gaeste/qr')->assertForbidden();
 
         $sale = GuestSale::query()->create(['beers' => 2, 'unit_price' => 150, 'amount' => 300, 'method' => 'cash']);
-        $this->delete("/backend/gaeste/{$sale->id}")->assertForbidden();
 
-        // Kassier: only the booking by users; switches and password stay.
-        $this->actingAs($this->kassier())->put('/backend/gaeste', ['guest_enabled' => '0', 'guest_password' => 'kassier-pw', 'cashbox_qr_enabled' => '1'])->assertSessionHas('status');
+        // Kassier: no switches (admin-only since 1.20.0), but the list with storno.
+        $this->actingAs($this->kassier())->put('/admin/einstellungen/funktionen', $this->featureForm(['guest_user_booking' => '0', 'guest_password' => 'kassier-pw', 'cashbox_qr_enabled' => '1']))->assertForbidden();
         $this->assertSame('gast-1234', AppSettings::guestPassword());
         $this->assertTrue(AppSettings::guestOpen());
-        $this->assertFalse(AppSettings::guestUserBooking());
+        $this->assertTrue(AppSettings::guestUserBooking());
         $this->assertFalse((bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED, false));
-        $this->get('/backend/gaeste')->assertOk()->assertSee('Gast')->assertSee('CHF 3.00')->assertSee('öffentlich')
-            ->assertDontSee('gast-1234')->assertDontSee(route('backend.qr-admin'));
+        $this->get('/admin/gaeste')->assertRedirect(route('backend.bookings', ['tab' => 'gaeste']));
+        $this->get('/admin/buchungen?tab=gaeste')->assertOk()->assertSee('Gast')->assertSee('CHF 3.00')->assertSee('öffentlich')
+            ->assertDontSee('gast-1234')->assertDontSee(route('backend.settings'));
 
-        $this->actingAs($this->admin())->put('/backend/verwaltung/qr-codes/einstellungen', ['guest_enabled' => '1', 'guest_password' => 'neues-pw'])->assertSessionHas('status');
+        $this->actingAs($this->admin())->put('/admin/einstellungen/funktionen', $this->featureForm(['guest_enabled' => '1', 'guest_password' => 'neues-pw', 'guest_user_booking' => '0']))
+            ->assertRedirect(route('backend.settings').'#funktionen')->assertSessionHas('status');
         $this->assertSame('neues-pw', AppSettings::guestPassword());
+        $this->assertFalse(AppSettings::guestUserBooking());
         $this->assertStringNotContainsString('neues-pw', (string) Setting::query()->find(AppSettings::GUEST_PASSWORD)->getRawOriginal('value'));
         $this->assertNotSame(AppSettings::registrationPassword(), AppSettings::guestPassword());
+        $this->get('/admin/einstellungen')->assertOk()->assertSee('value="neues-pw"', false);
 
-        $this->actingAs($this->kassier())->delete("/backend/gaeste/{$sale->id}")->assertSessionHas('status');
+        // Storno through the Livewire component (Buchungen > Gäste).
+        $this->actingAs($this->kassier());
+        Livewire::withQueryParams(['tab' => 'gaeste'])->test(Bookings::class)
+            ->assertSee('CHF 3.00')
+            ->call('cancelGuestSale', $sale->id)
+            ->assertSee(__('guest.cancelled'));
         $this->assertSame(0, GuestSale::query()->count());
         $this->assertSame(0, CashBook::balance()['total']);
     }
@@ -143,10 +153,10 @@ class GuestTest extends TestCase
     {
         $kassier = $this->kassier();
         QrCode::ensureFirst(QrCode::KIND_GUEST, $this->admin());
-        $page = $this->actingAs($kassier)->get('/backend/gaeste/qr')->assertOk()->assertDontSee('gast-1234')->assertDontSee('Neuer Code');
+        $page = $this->actingAs($kassier)->get('/admin/gaeste/qr')->assertOk()->assertDontSee('gast-1234')->assertDontSee('Neuer Code');
         $code = QrCode::query()->where('kind', QrCode::KIND_GUEST)->sole();
         $page->assertSee(Qr::dataUri($code->url(), 480), false);
-        $this->get('/backend/gaeste/qr?qr=0')->assertOk()->assertSee(Qr::dataUri(route('guest'), 480), false);
+        $this->get('/admin/gaeste/qr?qr=0')->assertOk()->assertSee(Qr::dataUri(route('guest'), 480), false);
 
         // QR code: no password field, booking works without the password.
         $this->post('/abmelden');
@@ -159,20 +169,21 @@ class GuestTest extends TestCase
         $this->post('/abmelden');
         $this->post('/gast', $this->sale(['code' => '', 'zugang' => $code->code]))->assertSessionHasErrors(['code' => __('guest.access_invalid')]);
         $this->get('/gast?zugang='.$code->code)->assertOk()->assertSee('name="code"', false);
-        $this->actingAs($admin)->get('/backend/gaeste/qr')->assertOk()->assertDontSee(__('qr.activate'));
-        $this->get('/backend/verwaltung/qr-codes')->assertOk()->assertSee(__('qr.activate'));
-        $this->actingAs($kassier)->get('/backend/gaeste/qr')->assertOk()->assertDontSee(__('qr.activate'));
+        $this->actingAs($admin)->get('/admin/gaeste/qr')->assertOk()->assertDontSee(__('qr.activate'));
+        $this->get('/admin/verwaltung/qr-codes')->assertRedirect(route('backend.qr-codes.index'));
+        $this->get('/admin/qr-codes')->assertOk()->assertSee(__('qr.activate'));
+        $this->actingAs($kassier)->get('/admin/gaeste/qr')->assertOk()->assertDontSee(__('qr.activate'));
     }
 
     public function test_enabling_guests_requires_password(): void
     {
         Setting::putMany([AppSettings::GUEST_ENABLED => false, AppSettings::GUEST_PASSWORD => '']);
-        $this->actingAs($this->admin())->put('/backend/verwaltung/qr-codes/einstellungen', ['guest_enabled' => '1', 'guest_password' => ''])
+        $this->actingAs($this->admin())->put('/admin/einstellungen/funktionen', $this->featureForm(['guest_enabled' => '1', 'guest_password' => '']))
             ->assertSessionHasErrors(['guest_password' => __('guest.password_required')]);
         $this->assertFalse(AppSettings::guestOpen());
 
         // Switching off without a password is fine.
-        $this->put('/backend/verwaltung/qr-codes/einstellungen', ['guest_password' => ''])->assertSessionHas('status');
+        $this->put('/admin/einstellungen/funktionen', $this->featureForm(['guest_password' => '']))->assertSessionHas('status');
     }
 
     public function test_used_token_cannot_be_claimed_twice(): void

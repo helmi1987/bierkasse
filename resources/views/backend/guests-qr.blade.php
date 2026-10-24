@@ -13,7 +13,7 @@
     <section class="card stack">
         <p class="hint">{{ __('guest.qr_codes_intro') }}</p>
         @if ($admin)
-            <p><a class="btn small" href="{{ route('backend.qr-admin') }}">{{ __('qr.manage_link') }} →</a></p>
+            <p><a class="btn small" href="{{ route('backend.qr-codes.index').'#verwaltung' }}">{{ __('qr.manage_link') }} →</a></p>
         @endif
         @if ($active->isEmpty())
             <p class="muted">{{ $admin ? __('qr.none_active') : __('qr.none_kassier') }}</p>

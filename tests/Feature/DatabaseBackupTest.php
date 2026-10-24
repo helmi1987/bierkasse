@@ -193,7 +193,7 @@ class DatabaseBackupTest extends TestCase
         Carbon::setTestNow('2026-10-21 14:05:09');
         $this->actingAs($this->admin(['username' => 'chef']));
 
-        $response = $this->post('/backend/wartung/backup')->assertOk();
+        $response = $this->post('/admin/wartung/backup')->assertOk();
         $response->assertHeader('Content-Type', 'application/gzip');
         $this->assertStringContainsString('bierkasse-2026-10-21-140509.sql.gz', (string) $response->headers->get('Content-Disposition'));
         $sql = gzdecode($response->streamedContent());
@@ -211,19 +211,19 @@ class DatabaseBackupTest extends TestCase
         Log::spy();
         $this->actingAs($this->admin(['username' => 'chef']));
 
-        $this->get('/backend/wartung')->assertOk()
+        $this->get('/admin/wartung')->assertOk()
             ->assertSee('Datenbank-Backup')
             ->assertSee('Backup herunterladen')
             ->assertSee(self::NAME.'.sql.gz')
             ->assertSee(route('backend.maintenance.backup.file', self::NAME));
 
-        $response = $this->get('/backend/wartung/backup/'.self::NAME)->assertOk();
+        $response = $this->get('/admin/wartung/backup/'.self::NAME)->assertOk();
         $response->assertDownload(self::NAME.'.sql.gz');
         $this->assertSame("-- stored dump\n", gzdecode((string) file_get_contents($response->baseResponse->getFile()->getPathname())));
 
-        $this->delete('/backend/wartung/backup/'.self::NAME)->assertSessionHas('status');
+        $this->delete('/admin/wartung/backup/'.self::NAME)->assertSessionHas('status');
         $this->assertFileDoesNotExist($path);
-        $this->delete('/backend/wartung/backup/'.self::NAME)->assertNotFound();
+        $this->delete('/admin/wartung/backup/'.self::NAME)->assertNotFound();
         Log::shouldHaveReceived('info')->withArgs(fn ($msg, $ctx = []) => $msg === 'Maintenance: stored backup downloaded' && $ctx['admin'] === 'chef');
         Log::shouldHaveReceived('info')->withArgs(fn ($msg, $ctx = []) => $msg === 'Maintenance: stored backup deleted' && $ctx['file'] === self::NAME.'.sql.gz');
     }
@@ -235,12 +235,12 @@ class DatabaseBackupTest extends TestCase
         $this->actingAs($this->admin());
 
         foreach ([
-            '/backend/wartung/backup/..%2Fsecret.txt',
-            '/backend/wartung/backup/..%2F..%2F.env',
-            '/backend/wartung/backup/%2E%2E',
-            '/backend/wartung/backup/'.self::NAME.'.sql.gz',
-            '/backend/wartung/backup/'.self::NAME.'%2F..%2F..%2Fsecret',
-            '/backend/wartung/backup/bierkasse-2026-01-01-000000',
+            '/admin/wartung/backup/..%2Fsecret.txt',
+            '/admin/wartung/backup/..%2F..%2F.env',
+            '/admin/wartung/backup/%2E%2E',
+            '/admin/wartung/backup/'.self::NAME.'.sql.gz',
+            '/admin/wartung/backup/'.self::NAME.'%2F..%2F..%2Fsecret',
+            '/admin/wartung/backup/bierkasse-2026-01-01-000000',
         ] as $url) {
             $this->get($url)->assertNotFound();
             $this->delete($url)->assertNotFound();
@@ -255,14 +255,14 @@ class DatabaseBackupTest extends TestCase
 
         foreach ([$this->user(), $this->kassier()] as $who) {
             $this->actingAs($who);
-            $this->post('/backend/wartung/backup')->assertForbidden();
-            $this->get('/backend/wartung/backup/'.self::NAME)->assertForbidden();
-            $this->delete('/backend/wartung/backup/'.self::NAME)->assertForbidden();
+            $this->post('/admin/wartung/backup')->assertForbidden();
+            $this->get('/admin/wartung/backup/'.self::NAME)->assertForbidden();
+            $this->delete('/admin/wartung/backup/'.self::NAME)->assertForbidden();
         }
         $this->assertFileExists($path);
 
         auth()->logout();
-        $this->post('/backend/wartung/backup')->assertRedirect();
-        $this->get('/backend/wartung/backup/'.self::NAME)->assertRedirect();
+        $this->post('/admin/wartung/backup')->assertRedirect();
+        $this->get('/admin/wartung/backup/'.self::NAME)->assertRedirect();
     }
 }

@@ -39,8 +39,8 @@ class MailLayoutTest extends TestCase
         $mail = new KassierNotice(
             'Neue Einzahlung von Hans',
             ['Hans meldet eine Einzahlung.'],
-            'https://bier.example/backend',
-            'Im Backend bestätigen',
+            'https://bier.example/admin',
+            'Im Admin-Bereich bestätigen',
             ['Benutzer' => 'Hans <b>', 'Betrag' => chf(1050), 'Bemerkung' => ''],
             'Neue Einzahlung gemeldet',
             ['Danke.'],
@@ -53,8 +53,8 @@ class MailLayoutTest extends TestCase
         $this->assertMatchesRegularExpression('#>Benutzer</td>\s*<td[^>]*>Hans &lt;b&gt;</td>#', $html);
         $this->assertMatchesRegularExpression('#>Betrag</td>\s*<td[^>]*>CHF 10.50</td>#', $html);
         $this->assertStringNotContainsString('>Bemerkung<', $html, 'empty rows are skipped');
-        $this->assertStringContainsString('href="https://bier.example/backend"', $html);
-        $this->assertStringContainsString('>Im Backend bestätigen</a>', $html);
+        $this->assertStringContainsString('href="https://bier.example/admin"', $html);
+        $this->assertStringContainsString('>Im Admin-Bereich bestätigen</a>', $html);
         $this->assertStringContainsString('Diese Mail wurde automatisch von Testkasse gesendet.', $html);
         $this->assertStringContainsString('alt="Testkasse Logo"', $html);
         $this->assertSame('[Testkasse] Neue Einzahlung von Hans', $mail->envelope()->subject);
@@ -64,7 +64,7 @@ class MailLayoutTest extends TestCase
         $this->assertStringContainsString('Testkasse', $text);
         $this->assertStringContainsString('Benutzer: Hans <b>', $text);
         $this->assertStringContainsString('Betrag: CHF 10.50', $text);
-        $this->assertStringContainsString("Im Backend bestätigen:\nhttps://bier.example/backend", $text);
+        $this->assertStringContainsString("Im Admin-Bereich bestätigen:\nhttps://bier.example/admin", $text);
         $this->assertStringNotContainsString('<td', $text);
         $this->assertStringContainsString('src="cid:', (string) $email->getHtmlBody());
         $this->assertCount(1, $email->getAttachments(), 'logo embedded inline');
@@ -76,7 +76,7 @@ class MailLayoutTest extends TestCase
         $html = $mail->render();
 
         $this->assertStringContainsString('href="'.route('backend.dashboard').'"', $html);
-        $this->assertStringContainsString('>Im Backend öffnen</a>', $html);
+        $this->assertStringContainsString('>Im Admin-Bereich öffnen</a>', $html);
         $this->assertMatchesRegularExpression('#<h1[^>]*>Etwas Neues</h1>#', $html);
     }
 
@@ -111,7 +111,7 @@ class MailLayoutTest extends TestCase
                 && $m->rows['Bemerkung'] === 'Mai'
                 && isset($m->rows['Zeit'])
                 && str_contains($html, 'CHF 20.00')
-                && str_contains($html, 'Im Backend bestätigen')
+                && str_contains($html, 'Im Admin-Bereich bestätigen')
                 && str_contains($html, 'href="'.route('backend.dashboard').'"');
         });
 
@@ -138,7 +138,7 @@ class MailLayoutTest extends TestCase
             $html = $m->render();
 
             return $m->url === route('backend.users.show', $user)
-                && str_contains($html, '>Benutzer im Backend ansehen</a>')
+                && str_contains($html, '>Benutzer im Admin-Bereich ansehen</a>')
                 && str_contains($html, 'Neue Registrierung')
                 && ! isset($m->rows['Eingeladen von'], $m->rows['Übertrag'], $m->rows['E-Mail']);
         });

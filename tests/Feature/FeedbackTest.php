@@ -83,7 +83,7 @@ class FeedbackTest extends TestCase
                 && $m->rows['E-Mail'] === 'hans@example.org'
                 && $m->rows['Antwort erwünscht'] === 'Nein'
                 && str_contains($html, 'Mehr Bier bitte.<br>')
-                && str_contains($html, 'Im Backend ansehen')
+                && str_contains($html, 'Im Admin-Bereich ansehen')
                 && str_contains($html, route('backend.feedback'));
         });
     }
@@ -208,17 +208,17 @@ class FeedbackTest extends TestCase
         $new = Feedback::query()->create(['user_id' => $user->id, 'type' => 'idea', 'message' => 'Neu <b>fett</b>']);
         $this->actingAs($admin);
 
-        $this->get('/backend/feedback')->assertOk()
+        $this->get('/admin/feedback')->assertOk()
             ->assertSeeInOrder(['Neu &lt;b&gt;fett&lt;/b&gt;', "Alt\nzweite Zeile"], false)
             ->assertSee('Von hans')
             ->assertSee('2 ungelesen');
 
-        $this->post('/backend/feedback/'.$old->id.'/gelesen', ['read' => 1])->assertRedirect();
+        $this->post('/admin/feedback/'.$old->id.'/gelesen', ['read' => 1])->assertRedirect();
         $this->assertNotNull($old->refresh()->read_at);
-        $this->post('/backend/feedback/'.$old->id.'/gelesen', ['read' => 0])->assertRedirect();
+        $this->post('/admin/feedback/'.$old->id.'/gelesen', ['read' => 0])->assertRedirect();
         $this->assertNull($old->refresh()->read_at);
 
-        $this->delete('/backend/feedback/'.$new->id)->assertRedirect();
+        $this->delete('/admin/feedback/'.$new->id)->assertRedirect();
         $this->assertModelMissing($new);
     }
 
@@ -228,10 +228,10 @@ class FeedbackTest extends TestCase
 
         foreach ([$this->kassier(), $this->user()] as $who) {
             $this->actingAs($who);
-            $this->get('/backend/feedback')->assertForbidden();
-            $this->post('/backend/feedback/'.$feedback->id.'/gelesen', ['read' => 1])->assertForbidden();
-            $this->delete('/backend/feedback/'.$feedback->id)->assertForbidden();
-            $this->put('/backend/feedback/empfaenger', ['recipient_mode' => 'fixed', 'recipients' => 'x@example.org'])->assertForbidden();
+            $this->get('/admin/feedback')->assertForbidden();
+            $this->post('/admin/feedback/'.$feedback->id.'/gelesen', ['read' => 1])->assertForbidden();
+            $this->delete('/admin/feedback/'.$feedback->id)->assertForbidden();
+            $this->put('/admin/feedback/empfaenger', ['recipient_mode' => 'fixed', 'recipients' => 'x@example.org'])->assertForbidden();
         }
 
         $this->assertNull($feedback->refresh()->read_at);
@@ -245,13 +245,13 @@ class FeedbackTest extends TestCase
         Feedback::query()->create(['type' => 'bug', 'message' => 'Drei', 'read_at' => now()]);
 
         $this->actingAs($this->admin());
-        $this->get('/backend')->assertOk()
+        $this->get('/admin')->assertOk()
             ->assertSee(route('backend.settings'))
             ->assertSee('<span class="badge" title="2 ungelesen">2</span>', false);
-        $this->get('/backend/einstellungen')->assertOk()->assertSee(route('backend.feedback'));
+        $this->get('/admin/einstellungen')->assertOk()->assertSee(route('backend.feedback'));
 
         $this->actingAs($this->kassier());
-        $this->get('/backend')->assertOk()->assertDontSee(route('backend.feedback'))->assertDontSee('2 ungelesen');
+        $this->get('/admin')->assertOk()->assertDontSee(route('backend.feedback'))->assertDontSee('2 ungelesen');
     }
 
     // --- Recipients --------------------------------------------------------------------
@@ -261,14 +261,14 @@ class FeedbackTest extends TestCase
         $this->assertSame(AppSettings::FEEDBACK_TO_ADMINS, AppSettings::feedbackRecipientMode());
         $this->actingAs($this->admin(['email' => 'boss@example.org']));
 
-        $this->get('/backend/feedback')->assertOk()->assertSee('Aktuelle Empfänger: boss@example.org');
+        $this->get('/admin/feedback')->assertOk()->assertSee('Aktuelle Empfänger: boss@example.org');
     }
 
     public function test_recipients_saved_from_list(): void
     {
         $this->actingAs($this->admin());
 
-        $this->put('/backend/feedback/empfaenger', [
+        $this->put('/admin/feedback/empfaenger', [
             'recipient_mode' => 'fixed',
             'recipients' => " x@example.org\ny@example.org, z@example.org;X@example.org\n\n",
         ])->assertRedirect(route('backend.feedback'))->assertSessionHasNoErrors();
@@ -282,11 +282,11 @@ class FeedbackTest extends TestCase
     {
         $this->actingAs($this->admin());
 
-        $this->put('/backend/feedback/empfaenger', ['recipient_mode' => 'fixed', 'recipients' => ''])
+        $this->put('/admin/feedback/empfaenger', ['recipient_mode' => 'fixed', 'recipients' => ''])
             ->assertSessionHasErrors('recipients');
-        $this->put('/backend/feedback/empfaenger', ['recipient_mode' => 'fixed', 'recipients' => "ok@example.org\nkeine-adresse"])
+        $this->put('/admin/feedback/empfaenger', ['recipient_mode' => 'fixed', 'recipients' => "ok@example.org\nkeine-adresse"])
             ->assertSessionHasErrors(['recipients' => 'Ungültige E-Mail-Adresse: keine-adresse']);
-        $this->put('/backend/feedback/empfaenger', ['recipient_mode' => 'egal', 'recipients' => 'ok@example.org'])
+        $this->put('/admin/feedback/empfaenger', ['recipient_mode' => 'egal', 'recipients' => 'ok@example.org'])
             ->assertSessionHasErrors('recipient_mode');
 
         Setting::flushCache();
@@ -294,7 +294,7 @@ class FeedbackTest extends TestCase
         $this->assertSame([], AppSettings::feedbackRecipients());
 
         // Mode "admins" needs no addresses.
-        $this->put('/backend/feedback/empfaenger', ['recipient_mode' => 'admins', 'recipients' => ''])
+        $this->put('/admin/feedback/empfaenger', ['recipient_mode' => 'admins', 'recipients' => ''])
             ->assertSessionHasNoErrors();
     }
 
@@ -311,7 +311,7 @@ class FeedbackTest extends TestCase
         Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => $m->rows['App-Version'] === $version);
 
         $this->actingAs($admin);
-        $this->get('/backend/feedback')->assertOk()->assertSee('Seite: /konto')->assertSee('Version: '.$version);
+        $this->get('/admin/feedback')->assertOk()->assertSee('Seite: /konto')->assertSee('Version: '.$version);
     }
 
     public function test_feedback_without_version_shows_no_version(): void
@@ -320,6 +320,6 @@ class FeedbackTest extends TestCase
         Feedback::query()->create(['user_id' => $admin->id, 'type' => 'idea', 'message' => 'Alte Meldung ohne Version']);
 
         $this->actingAs($admin);
-        $this->get('/backend/feedback')->assertOk()->assertSee('Alte Meldung ohne Version')->assertDontSee('Version: ');
+        $this->get('/admin/feedback')->assertOk()->assertSee('Alte Meldung ohne Version')->assertDontSee('Version: ');
     }
 }

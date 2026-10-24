@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\SsoProvider;
+use App\Models\User;
 use App\Models\UserIdentity;
 use App\Services\Sso;
+use App\Support\AppSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
@@ -106,14 +108,14 @@ class SsoTest extends TestCase
 
     public function test_sso_login_of_locked_user_is_refused_with_contact(): void
     {
-        $user = $this->user(['status' => \App\Models\User::STATUS_LOCKED]);
+        $user = $this->user(['status' => User::STATUS_LOCKED]);
         UserIdentity::query()->create(['user_id' => $user->id, 'sso_provider_id' => $this->provider->id, 'subject' => 'sub-123']);
         $query = $this->startFlow('/login/sso/firma');
         $this->fakeTokenEndpoint($this->claims(['nonce' => $query['nonce']]));
 
         $this->get('/login/sso/firma/callback?code=abc&state='.$query['state'])
             ->assertRedirect(route('login'))
-            ->assertSessionHasErrors(['username' => __('auth.locked', ['email' => \App\Support\AppSettings::legalEmail()])]);
+            ->assertSessionHasErrors(['username' => __('auth.locked', ['email' => AppSettings::legalEmail()])]);
         $this->assertGuest();
     }
 
@@ -233,10 +235,10 @@ class SsoTest extends TestCase
 
     public function test_admin_creates_facebook_provider_with_preset(): void
     {
-        $this->actingAs($this->admin())->get('/backend/sso/create?type=facebook')->assertOk()
+        $this->actingAs($this->admin())->get('/admin/sso/create?type=facebook')->assertOk()
             ->assertSee('developers.facebook.com')->assertSee('/login/sso/', false);
 
-        $this->post('/backend/sso', [
+        $this->post('/admin/sso', [
             'type' => 'facebook', 'name' => 'Facebook', 'client_id' => 'fb-app', 'client_secret' => 'fb-secret',
             'enabled' => '1', 'use_pkce' => '1', 'scopes' => 'x', 'token_auth' => 'post',
             'subject_claim' => 'sub', 'email_claim' => 'email', 'label_claim' => 'email',
@@ -258,7 +260,7 @@ class SsoTest extends TestCase
             ->assertDontSee('Noch kein Anbieter aktiv.');
 
         $this->actingAs($this->admin())->get('/konto/einstellungen')->assertOk()
-            ->assertSee('Noch kein Anbieter aktiv. Google, Microsoft, GitHub oder Facebook im Backend unter SSO einrichten.')
+            ->assertSee('Noch kein Anbieter aktiv. Google, Microsoft, GitHub oder Facebook unter Admin > SSO einrichten.')
             ->assertSee(route('backend.sso.index'));
     }
 
@@ -310,7 +312,7 @@ class SsoTest extends TestCase
             ]),
         ]);
 
-        $this->actingAs($this->admin())->post('/backend/sso', [
+        $this->actingAs($this->admin())->post('/admin/sso', [
             'type' => 'google', 'name' => 'Google', 'client_id' => 'g-id', 'client_secret' => 'g-secret',
             'enabled' => '1', 'use_pkce' => '1', 'scopes' => 'x', 'token_auth' => 'post',
             'subject_claim' => 'sub', 'email_claim' => 'email', 'label_claim' => 'email',

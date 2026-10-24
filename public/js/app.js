@@ -455,6 +455,21 @@
     initUi(document);
     window.BierkasseUi = { init: initUi };
 
+    // Livewire pages: elements added by a component update get the same widgets (existing ones keep theirs).
+    var hookLivewire = function () {
+        if (!window.Livewire || typeof window.Livewire.hook !== 'function' || hookLivewire.done) {
+            return;
+        }
+        hookLivewire.done = true;
+        window.Livewire.hook('morph.added', function (ctx) {
+            if (ctx && ctx.el && ctx.el.nodeType === 1) {
+                initUi(ctx.el);
+            }
+        });
+    };
+    hookLivewire();
+    document.addEventListener('livewire:init', hookLivewire);
+
     // PWA install hint: native prompt where the browser offers one (Chrome/Edge/Samsung on Android and
     // desktop), instructions for iOS Safari. Hidden when running installed or dismissed (30 days).
     (function () {

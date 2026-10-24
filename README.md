@@ -28,6 +28,9 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
    `php artisan migrate --force` kommt erst nach dem Setup dazu (Schritt 6).
    `composer` ist auf Plesk nicht im PATH; `--no-scripts` ist nötig, weil Composer `artisan` sonst ohne
    `-d open_basedir=` startet. `storage:link` wird nicht gebraucht.
+   Ab 1.20.0 braucht die App das Paket `livewire/livewire`: `composer install` muss bei jedem Deploy laufen (erste Zeile
+   oben; ohne sie fehlt Livewire und die Admin-Seiten Buchungen, Benutzer, QR-Codes, Protokoll liefern Fehler 500).
+   `package:discover` danach ist nötig, damit Laravel den Livewire-Provider findet.
 5. Geplante Aufgabe (optional): Mails werden synchron beim Request verschickt (keine Queue), daher braucht
    die App keinen Cron. Wer trotzdem den Laravel-Scheduler laufen lassen will (z. B. für spätere Erweiterungen):
    Plesk "Geplante Aufgaben", jede Minute `php -d open_basedir= artisan schedule:run` im Projektordner.
@@ -55,7 +58,7 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      localhost-Socket nicht, sonst scheitert `migrate` in den Deploy-Aktionen mit `SQLSTATE[HY000] [2002]`.
    - Dann `php -d open_basedir= artisan migrate --force` als letzte Deploy-Aktion ergänzen (Updates mit neuen
      Migrationen).
-7. Nach dem Setup im Backend (`/backend/einstellungen`):
+7. Nach dem Setup im Admin-Bereich (`/admin/einstellungen`; bis 1.19 `/backend/...`, alte Adressen leiten weiter):
    - Bierpreis (Standard CHF 1.50), Standard-Limit (Standard 0 = kein Minus), TWINT (Schalter, Empfänger: Name aus Kassier/Admin oder frei, Nummer optional).
    - Rückgängig (Entscheid 2026-10-22): Minuten pro Buchungsart, 0–60 (0 = nie): Bier abstreichen 10, Runde spendieren 10,
      Bier für Gast 10, Bier verschenken 5 (Setting `undo_minutes`; der Wert `gift_undo_minutes` aus 1.7.0 gilt weiter,
@@ -72,8 +75,8 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Änderung gilt sofort, kein Cron.
      Rate-Limit pro IP: 10 Fehlversuche (falsches Passwort, ungültiger Einladungslink oder Flyer-Code oder
      Formularfehler) in 15 Minuten, max. 60 Anfragen in 10 Minuten (ein Büro teilt meist eine IP).
-     QR-Code zum Aushängen unter `/backend/registrierung-qr` (Kassier und Admin, siehe "QR-Codes" unten), dort auch als druckfertiger A4-Flyer
-     (Reiter "Flyer"). Der Flyer ist ein SVG-Bild in exakt A4 (`/backend/registrierung-qr/flyer-bild`, gleicher
+     QR-Code zum Aushängen unter `/admin/registrierung-qr` (Kassier und Admin, siehe "QR-Codes" unten), dort auch als druckfertiger A4-Flyer
+     (Reiter "Flyer"). Der Flyer ist ein SVG-Bild in exakt A4 (`/admin/registrierung-qr/flyer-bild`, gleicher
      Parameter `qr`, `?download=1` zum Herunterladen; `app/Support/FlyerSvg.php`), damit jeder Browser gleich
      druckt. Auf der Seite: "Flyer drucken" (nur das Bild, zentriert, max. 92 % Breite bzw. 235 mm Höhe),
      "Als PNG herunterladen" (im Browser gerendert, 2480 x 3508 px = A4 300 dpi) und "Als SVG herunterladen".
@@ -93,16 +96,19 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Mail an Kassier/Admin wie jede Selbst-Registrierung (folgt dem Schalter), mit Zeile "Registrierungscode".
      Die QR-Seite zeigt nur Mögliches: Registrierungscodes und im Modus "Offen mit Registrierungspasswort"
      zusätzlich die Flyer-Codes; einen QR-Code ohne Code gibt es nicht. Gedruckt wird die vollständige URL mit Code.
-   - QR-Codes (Entscheid 2026-10-23, gilt für Kassen-QR, Flyer-Codes, Gäste-QR und Registrierungscodes): Ansicht und
-     Verwaltung getrennt. Ansicht (Kassier-Leiste, Reiter "QR-Codes", für Kassier und Admin gleich): nur aktive Codes
-     anzeigen, drucken, herunterladen; Admins sehen dort nur einen Link "QR-Codes verwalten". Verwaltung (Backend-Leiste,
-     Reiter "QR-Codes", `/backend/verwaltung/qr-codes`, nur Admin): Schalter "Kassen-QR aktiv", "Öffentliche
-     Gäste-Seite", Gäste-Passwort; pro Art neuer Code (Name freiwillig), umbenennen, deaktivieren, Historie mit
-     Reaktivieren; Registrierungscodes erstellen, deaktivieren, reaktivieren. Mehrere
+   - QR-Codes (Entscheid 2026-10-23, gilt für Kassen-QR, Flyer-Codes, Gäste-QR und Registrierungscodes; zusammengelegt
+     Entscheid 2026-10-24, v1.20.0): eine Seite "QR-Codes" in der Kassier-Leiste (`/admin/qr-codes`, Livewire). Kassier und
+     Admin sehen die Übersicht (alle Arten mit Anzahl aktiver Codes, Link zur Druckseite: Kassen-QR `/admin/qr-codes/kassen-qr`,
+     Gäste-QR `/admin/gaeste/qr`, Registrierung/Flyer `/admin/registrierung-qr`; nur aktive Codes anzeigen, drucken,
+     herunterladen). Nur Admins sehen darunter "QR-Codes verwalten": pro Art neuer Code (Name freiwillig), umbenennen,
+     deaktivieren, Historie mit Reaktivieren; Registrierungscodes erstellen, deaktivieren, reaktivieren (Formulare auf die
+     bisherigen Routen mit `role:admin`, Rechte unverändert). Die Schalter "Kassen-QR aktiv", "Öffentliche Gäste-Seite" und
+     das Gäste-Passwort stehen unter Admin > Einstellungen > Funktionen. Die frühere Seite "QR-Codes (Verwaltung)"
+     (`/admin/verwaltung/qr-codes`) leitet auf `/admin/qr-codes` um. Mehrere
      Codes pro Art können aktiv sein; nichts wird gelöscht, deaktivierte bleiben als Historie (nur Admin sichtbar).
      Erste Codes (Entscheid 1.15.2): Kassier-Seiten (GET) legen nie Codes an und zeigen "Noch kein Code. Ein Admin muss
      einen anlegen." Fehlende erste Codes (Kasse Bar/TWINT, Gäste, Flyer nur im Modus "Offen mit Registrierungspasswort")
-     erzeugt nur ein Admin: beim Öffnen der QR-Verwaltung, beim Speichern der QR-Schalter bzw. der Einstellungen
+     erzeugt nur ein Admin: beim Öffnen der Seite QR-Codes, beim Speichern der Funktionen bzw. der Einstellungen
      (`created_by` = Admin, Audit `qr_code.create`; Sperre + erneute Prüfung gegen doppeltes Anlegen). Ohne Flyer-Code
      fällt der Einladungs-/Flyer-Link auf den normalen Registrierungslink zurück. Aktiv/Inaktiv-Schalter: `active` ist
      Pflicht (boolean); unveränderter Zustand schreibt keinen Audit-Eintrag. Wird der letzte aktive Code einer Art
@@ -110,17 +116,20 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Tabelle `qr_codes` (Art `cashbox_cash`/`cashbox_twint`/`flyer`/`guest`, Name freiwillig, Code verschlüsselt +
      SHA-256 für die Suche, `deactivated_at`); die früheren Einzel-Codes aus den Settings werden beim Migrieren
      übernommen (gedruckte Aufkleber/Flyer bleiben gültig). Audit: `qr_code.create/label/deactivate/activate`.
-     Übersicht in der Kassier-Leiste (`/backend/qr-codes`): alle Arten mit Anzahl aktiver Codes und Link zur Seite.
    - Alle QR-Codes (`App\Support\Qr`, SVG serverseitig, Fehlerkorrektur H) zeigen in der Mitte das Bierkrug-Logo (`public/logo.svg`,
      weisse Fläche mit Rand, ca. 21 % der Code-Breite) auf Bildschirm, Download und A4-Druck; wird beim Erzeugen eingebettet,
      bestehende Codes bleiben gültig und lesbar (Inhalt unverändert).
-   - Reiter-Reihenfolge Standard (Entscheid 2026-10-23): Kassier: Übersicht, Kasse, Lager, Runden, Gäste, Einladungen,
-     Verschenkt, Statistik, Benutzer, QR-Codes, Vorschläge, Protokoll. Backend: Einstellungen, Feedback, SSO, Navigation,
-     QR-Codes (Verwaltung), Protokoll (gleiche Seite wie beim Kassier, `/backend/verwaltung/protokoll`), Wartung.
+   - Reiter-Reihenfolge Standard (Entscheid 2026-10-24, v1.20.0; ersetzt 2026-10-23): Kassier: Übersicht, Kasse, Lager,
+     Benutzer, Buchungen, QR-Codes, Protokoll. Admin: Einstellungen, Feedback, SSO, Navigation, Wartung.
+     Zusammengelegt bzw. verschoben: "Statistik" (doppelt zu `/statistik` in der Hauptleiste) entfällt, `/admin/statistik`
+     leitet auf `/statistik`; "Runden", "Gäste", "Verschenkt" → "Buchungen" (Reiter Runden | Geschenke | Gäste);
+     "Einladungen" → Reiter in "Benutzer"; "Vorschläge" → Reiter "Einzahlungsvorschläge" in "Kasse"; "QR-Codes
+     (Verwaltung)" und das Admin-"Protokoll" → je ein Menüpunkt in der Kassier-Leiste. Alte Adressen leiten mit 301 auf den
+     neuen Reiter um (`App\Http\Controllers\Backend\MovedPageController`, Query-String bleibt).
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.
      Alle Mails (auch Passwort-Reset) nutzen ein gemeinsames HTML-Layout (`resources/views/mail/layout.blade.php`, Inline-CSS, Logo `public/icon-192.png` als CID eingebettet, fehlt es, entfällt das Logo) plus Textversion; Fakten als Tabelle, Link als Button.
-   - SSO (`/backend/sso`): Google, Microsoft (Tenant, Standard `common`), GitHub, Facebook oder generisches OIDC
+   - SSO (`/admin/sso`): Google, Microsoft (Tenant, Standard `common`), GitHub, Facebook oder generisches OIDC
      (Discovery-URL). Redirect-URI beim Anbieter: `https://<domain>/login/sso/{kuerzel}/callback`.
      Anmelden per SSO kann nur, wer den Anbieter vorher unter Konto > Einstellungen verknüpft hat.
      Einrichtung pro Anbieter: siehe "SSO-Anbieter einrichten".
@@ -139,8 +148,9 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Benutzer laden in jedem Modus nur per Einladungslink ein (Entscheid 2026-10-21: kein Registrierungs-QR-Code
      mit Passwort auf dieser Seite).
      Im Modus "Geschlossen" 404 und Link ausgeblendet.
-     Backend `/backend/einladungen` (Kassier und Admin): alle Einladungen mit Ersteller, Status
-     (offen / benutzt von X / abgelaufen), unbenutzte zurückziehen.
+     Admin-Bereich: Benutzer > Reiter "Einladungen" (`/admin/benutzer?tab=einladungen`, Kassier und Admin, Livewire; alte
+     Adresse `/admin/einladungen` leitet um): alle Einladungen mit Ersteller, Status (offen / benutzt von X / abgelaufen),
+     unbenutzte zurückziehen.
   - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
   - Datenschutz und Nutzungsbestimmungen (eigenes Formular unten auf der Seite, siehe "Datenschutz und
     Nutzungsbestimmungen" unter Funktionen): verantwortliche Person, Kontakt-E-Mail (Pflicht, öffentlich), Server-Standort, beide Texte.
@@ -163,7 +173,7 @@ Break-glass via SSH: `php artisan user:password <username>` (optional `--generat
 
 ## SSO-Anbieter einrichten
 
-Im Backend unter SSO "Neu: <Anbieter>" wählen; das Formular zeigt die Redirect-URI
+Unter Admin > SSO "Neu: <Anbieter>" wählen; das Formular zeigt die Redirect-URI
 `https://<domain>/login/sso/{kuerzel}/callback` (Kürzel = Standard der Name, z. B. `google`). Diese URI exakt beim
 Anbieter eintragen, Client-ID und Client-Secret ins Formular kopieren, "Aktiv" anhaken. Endpunkte und Scopes sind
 vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter Konto > Einstellungen
@@ -199,16 +209,18 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 
 - Rollen: `admin`, `kassier`, `user`. Admin hat alle Kassier-Rechte; mehrere Kassiers möglich.
   Kopfzeile: Kassier und Admin sehen "Kassier" (Kassier-Seiten inkl. Protokoll, mit der Zahl offener Posten),
-  Admins zusätzlich "Backend" (Einstellungen, SSO, Registrierungs-QR, Feedback mit Zahl ungelesener, Wartung).
+  Admins zusätzlich "Admin" (Einstellungen, Feedback mit Zahl ungelesener, SSO, Navigation, Wartung; bis 1.19 "Backend").
   Die Zahl offener Posten (Einzahlungen, Auszahlungen, Überträge; `Ledger::pendingCount()`) steht zusätzlich als Badge am Reiter
   "Übersicht" (dort werden sie bestätigt); bei 0 ausgeblendet. Mobil scrollt die Seite nie seitlich: Kopfzeile (Logo, Navigation, Benutzer, Abmelden) steht ab Telefonbreite (bis 520 px, Name
   ausgeblendet, enge Abstände) in einer Zeile (Logo links, alle übrigen Einträge rechtsbündig gruppiert, für alle Rollen) und bricht erst unter 360 px um,
   nur die Reiterleiste scrollt/wischt in ihrem eigenen Container, Tabellen in `.table-wrap`.
   So sieht der Admin unter "Kassier" dieselben Seiten wie ein Kassier (plus Rolle/Nur-Verwaltung in der Benutzer-Detailansicht).
-  Reihenfolge der Reiter (`App\Support\BackendNav`): Admin legt den Standard unter Backend → Navigation fest
+  Reihenfolge der Reiter (`App\Support\BackendNav`): Admin legt den Standard unter Admin → Navigation fest
   (Setting `nav_order`), jeder Kassier/Admin kann sie in den Konto-Einstellungen für sich ändern (`users.nav_order`,
   Kassier nur die Gruppe "Kassier"); "Standard wiederherstellen" auf beiden Seiten. Ziehen oder ↑/↓-Knöpfe.
-  Neue Reiter erscheinen hinten an, unbekannte werden ignoriert.
+  Neue Reiter erscheinen hinten an, unbekannte werden ignoriert. Gespeicherte Reihenfolgen von vor 1.20.0: "Runden",
+  "Gäste" und "Verschenkt" werden zu "Buchungen" (an der Stelle des ersten davon), andere entfernte Reiter fallen weg,
+  übrige Wünsche bleiben (`BackendNav::MERGED`, `normalize()`). Der interne Gruppenschlüssel der Admin-Leiste bleibt `backend`.
   Kassier und Admin brauchen eine E-Mail: Pflicht im Setup, im eigenen Profil nicht leerbar, Rolle kassier/admin
   nur vergebbar mit E-Mail; bestehende Konten ohne E-Mail sehen einen Hinweis (Zugriff bleibt).
 - Anmeldung `/`: Benutzername oder E-Mail (nur wenn eindeutig) + Passwort, optional TOTP (im Konto einrichten, Wiederherstellungscodes).
@@ -252,14 +264,14 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 - "Nur Verwaltung" (Entscheid 2026-10-22, `users.admin_only`): Admin- oder Kassier-Konto ohne Bierkonto, z. B. ein
   reines Admin-Konto neben dem eigenen Benutzerkonto. Jeder Admin/Kassier schaltet es selbst unter Konto >
   Einstellungen (Karte "Nur Verwaltung", bleibt immer erreichbar, so geht es auch wieder aus); Admins zusätzlich in
-  der Benutzer-Detailansicht im Backend (auch für sich selbst). Umschalten (ein und aus) nur mit Saldo 0 und ohne offene Posten, sonst Schalter gesperrt mit Saldo-Hinweis
+  der Benutzer-Detailansicht im Admin-Bereich (auch für sich selbst). Umschalten (ein und aus) nur mit Saldo 0 und ohne offene Posten, sonst Schalter gesperrt mit Saldo-Hinweis
   ("bitte zuerst den Saldo ausgleichen"); Rolle auf `user` setzt es zurück; Registrierung/Einladung/Setup setzen es
   nie (nicht fillable).
-  Wirkung: `/konto` leitet ins Backend, Anmeldung und Logo führen ins Backend, Link "Konto" ausgeblendet. Alle
-  Geld-/Bier-Aktionen sind serverseitig gesperrt (Middleware `beer`: Seiten → Backend mit Hinweis, Aktionen 403;
+  Wirkung: `/konto` leitet in den Admin-Bereich, Anmeldung und Logo führen in den Admin-Bereich, Link "Konto" ausgeblendet. Alle
+  Geld-/Bier-Aktionen sind serverseitig gesperrt (Middleware `beer`: Seiten → Admin-Bereich mit Hinweis, Aktionen 403;
   zusätzlich im `Ledger`): Abstreichen, Rückgängig, Bier für Gast, Runde, Einzahlung melden/ändern/zurückziehen,
-  Verlauf, Haus verlassen. Im Backend keine Einzahlung/Korrektur/Limit auf das Konto. Bleibt: Einstellungen
-  (Passwort, TOTP, SSO, E-Mail), Feedback, Einladen, Statistik-Seite, Backend; Kassier-/Feedback-Mails; zählt als
+  Verlauf, Haus verlassen. Im Admin-Bereich keine Einzahlung/Korrektur/Limit auf das Konto. Bleibt: Einstellungen
+  (Passwort, TOTP, SSO, E-Mail), Feedback, Einladen, Statistik-Seite, Admin-Bereich; Kassier-/Feedback-Mails; zählt als
   Admin (Regel "letzter Admin"). Nicht in der Kollegen-Liste "Runde spendieren", nicht in der Rangliste, nicht in
   "Im Minus"; in der Benutzerliste mit Badge "Nur Verwaltung" ohne Saldo/Limit. Karten "Statistik" und
   "Haus verlassen" in den Einstellungen ausgeblendet.
@@ -273,7 +285,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Der Authorize-Endpunkt muss zum Issuer gehören (gleicher Host, Subdomain oder gleiche übergeordnete Domain;
   **Annahme:** ohne Public-Suffix-Liste, übergeordnet = Issuer-Host ohne erstes Label bei mind. 3 Labels).
   Der Anbieter gehört nur seinem Besitzer (`sso_providers.owner_user_id`): nicht auf der Login-Seite, nicht für
-  andere, nicht in `/backend/sso` (in der Benutzer-Detailansicht nur Name/Host/Status). Eine Identität eines
+  andere, nicht in `/admin/sso` (in der Benutzer-Detailansicht nur Name/Host/Status). Eine Identität eines
   eigenen Anbieters meldet nur dessen Besitzer an. Änderung von Issuer/Endpunkten/Client-ID trennt die Verknüpfung.
   Schutz gegen SSRF (`app/Support/OutboundUrl.php`): nur https, Host muss auf öffentliche Adressen auflösen
   (private, Loopback, Link-Local inkl. 169.254.169.254, CGNAT, ULA usw. abgelehnt), Hostnamen werden als ASCII
@@ -290,7 +302,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   "Offen" und alle Limit-Prüfungen (Abstreichen, Runde, Verschenken). So kann getrunken werden, wenn der Kassier
   fehlt. Lehnt der Kassier ab oder zieht der Benutzer zurück, geht der Benutzer einfach ins Minus, auch über das
   Limit hinaus (wird persönlich geklärt, keine automatische Sperre). Offene Auszahlungen zählen nicht (sperren das
-  Buchen wie bisher). Backend (Kassenstand, Guthaben aller Benutzer, Überschuss, Saldo in der Benutzerverwaltung,
+  Buchen wie bisher). Admin-Bereich (Kassenstand, Guthaben aller Benutzer, Überschuss, Saldo in der Benutzerverwaltung,
   "Im Minus") zählt nur bestätigtes Geld.
   - Doppeltes Abschicken (Doppeltipp) wird verhindert: Einmal-Token pro Formular (Bier, Bier für Gast, Einzahlung melden)
     und Sperre des Knopfs nach dem Absenden.
@@ -314,17 +326,29 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   - Übertrag von der alten Strichliste (Entscheid 2026-10-21): bei der Registrierung optional "Ich schulde noch" /
     "Ich habe noch Guthaben", in Bieren (1–500, umgerechnet zum aktuellen Bierpreis, Anzahl und Preis werden
     gespeichert) oder CHF (max. 500.00). Wird als offene Buchung Typ `carryover` gespeichert (Schuld negativ,
-    Guthaben positiv); zählt für den Benutzer sofort (verfügbarer Saldo, siehe oben), im Backend erst nach
+    Guthaben positiv); zählt für den Benutzer sofort (verfügbarer Saldo, siehe oben), im Admin-Bereich erst nach
     Bestätigung. Kassier/Admin bestätigen (Betrag anpassbar; dann
-    wird die Bier-Anzahl verworfen und der gemeldete Wert in der Bemerkung festgehalten) oder lehnen ab im
-    Backend-Dashboard; zählt bei den offenen Posten (Badge). Erwähnt in der Registrierungs-Mail. Der Benutzer sieht
+    wird die Bier-Anzahl verworfen und der gemeldete Wert in der Bemerkung festgehalten) oder lehnen ab in der
+    Kassier-Übersicht (`/admin`); zählt bei den offenen Posten (Badge). Erwähnt in der Registrierungs-Mail. Der Benutzer sieht
     ihn in der Liste "Wartet auf Bestätigung" und kann ihn nicht ändern; solange offen, ist "Haus verlassen" gesperrt.
     Übertrag-Biere ändern weder Lager noch Statistik (vor der App getrunken); bestätigte Übertrag-Schulden in
     Bieren erscheinen unter "Offen" als Biere. **Annahme:** der Übertrag ändert den Kassenstand nicht, aber das
     Guthaben aller Benutzer und damit den Überschuss.
-- Kasse (`/backend/kasse`): Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen ±
+- Kasse (`/admin/kasse`): Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen ±
   Korrekturen, getrennt nach Bar und TWINT. Überschuss = Kassenstand − Guthaben aller Benutzer.
-- Gäste (`/backend/gaeste`, Kassier und Admin; QR-Schalter und Gäste-Passwort nur Admin): Schalter, Liste aller Gäste-Verkäufe ("gebucht von <Benutzer>"
+  Reiter "Kassenbuch" | "Einzahlungsvorschläge" (`?tab=vorschlaege`, Livewire, siehe unten).
+- Buchungen (Entscheid 2026-10-24, v1.20.0, `/admin/buchungen`, Kassier und Admin, Livewire): Reiter "Runden" |
+  "Geschenke" | "Gäste" (`?tab=runden|geschenke|gaeste`) mit den Listen der Runden, der verschenkten Biere und aller
+  Gäste-Verkäufe (Storno der Gäste-Verkäufe hier), je 30 pro Seite, mit dem Zustand der zugehörigen Schalter.
+  Alte Adressen `/admin/runden`, `/admin/verschenkt`, `/admin/gaeste` leiten auf den passenden Reiter um.
+- Funktionen (Entscheid 2026-10-24, v1.20.0): Admin > Einstellungen, Karte "Funktionen" (eigenes Formular,
+  `PUT /admin/einstellungen/funktionen`, **nur Admin**, vorher durften Kassiers Runden, Verschenken und "Gäste durch
+  Benutzer buchen" schalten): "Runde spendieren erlauben", "Bier verschenken erlauben", "Gäste durch Benutzer buchen",
+  "Öffentliche Gäste-Seite (QR + Gäste-Passwort)" mit Gäste-Passwort und "Kassen-QR aktiv". **Annahme:** "Kassen-QR
+  aktiv" zählt zu den Gäste-Schaltern und ist mitgewandert (stand im selben Formular wie Gäste-Seite und Passwort).
+  Speichern legt fehlende erste QR-Codes an (Admin-Pfad, wie bisher beim Speichern der QR-Schalter).
+- Gäste (Liste unter Buchungen > Gäste, Kassier und Admin; alle Schalter und das Gäste-Passwort nur Admin unter
+  Einstellungen > Funktionen): Liste aller Gäste-Verkäufe ("gebucht von <Benutzer>"
   bzw. "öffentlich") mit Storno. Alle Gäste-Verkäufe werden sofort gebucht (Tabelle `guest_sales`, Preis zum
   Zeitpunkt): zählen als Einnahme in der Kasse (Bar/TWINT), reduzieren das Lager (können die Lager-Mail auslösen)
   und erscheinen in der Statistik als "Gäste" (nie als Benutzer).
@@ -335,7 +359,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     erfasst – bitte CHF 4.50 bar in die Kasse legen". Eigene Gäste-Buchungen rückgängig machbar (Zeit siehe Einstellungen),
     Einmal-Token gegen Doppelbuchung.
   - "Öffentliche Gäste-Seite (QR + Gäste-Passwort)" (Standard aus): eigenes Gäste-Passwort (verschlüsselt, nicht das
-    Registrierungspasswort; zum Einschalten Pflicht). Druckbarer Gäste-QR-Code (`/backend/gaeste/qr`): enthält nie das
+    Registrierungspasswort; zum Einschalten Pflicht). Druckbarer Gäste-QR-Code (`/admin/gaeste/qr`, erreichbar über QR-Codes): enthält nie das
     Passwort, sondern einen Gäste-Code (`/gast?zugang=<code>`, Tabelle `qr_codes`, Art `guest`, mehrere aktiv
     möglich) – damit entfällt das Passwortfeld; deaktivierter Code → Passwortfeld mit Hinweis. Variante "Ohne Code":
     nur die Adresse, Passwort von Hand.
@@ -349,10 +373,10 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     und öffnet nur `/kasse/<code>`. Seite: Anzahl 1–10 wählen und bestätigen ("Abbrechen" führt zu `/`: Login bzw. eigenes Konto), sofort als Gäste-Verkauf gebucht
     (`guest_sales.source = cashbox`, Liste "Kassen-QR"). Die Bar-Seite zeigt nie TWINT-Daten; die TWINT-Seite zeigt die
     Empfänger wie hinterlegt (Kopier-Knopf nur mit Nummer) und funktioniert nur, solange TWINT aktiv ist. Ungültiger
-    Code = 404 (10 Fehlversuche/Minute pro IP). Im Backend pro aktivem Code Vorschau, PNG (945 x 1299 px = 300 dpi, im Browser
-    gerendert) und SVG (80 x 110 mm, `app/Support/CashboxQrSvg.php`, `/backend/gaeste/kassen-qr/<id>`) sowie A4-Bogen
+    Code = 404 (10 Fehlversuche/Minute pro IP). Unter QR-Codes > Kassen-QR (`/admin/qr-codes/kassen-qr`) pro aktivem Code Vorschau, PNG (945 x 1299 px = 300 dpi, im Browser
+    gerendert) und SVG (80 x 110 mm, `app/Support/CashboxQrSvg.php`, `/admin/gaeste/kassen-qr/<id>`) sowie A4-Bogen
     mit 4 Aufklebern dieses Codes (`…/<id>/a4`); dazu "2 × Bar + 2 × TWINT" mit dem jeweils neuesten Code
-    (`/backend/gaeste/kassen-qr-a4/gemischt`). A4: 2 x 2, 10 mm Abstand, gestrichelte Schnittlinien (Rand 20 mm
+    (`/admin/gaeste/kassen-qr-a4/gemischt`). A4: 2 x 2, 10 mm Abstand, gestrichelte Schnittlinien (Rand 20 mm
     seitlich, 33.5 mm oben/unten; **Annahme** 2026-10-22), je Öffnen/Drucken, PNG (A4 300 dpi) und SVG. Drucken mit 100 %.
 - Dashboard-Karten (Entscheid 2026-10-24): "Einzahlen" (Einzahlung melden + TWINT-Empfänger/Nummer, TWINT nur wenn aktiv; "Wartet auf
   Bestätigung" darunter) und "Meine Buchungen & Statistik" (Kennzahlen, Diagramm, letzte Buchungen) sind je eine Karte.
@@ -362,8 +386,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Nicht im Druck.
 - Datenschutz und Nutzungsbestimmungen (Entscheid 2026-10-24): zwei getrennte Texte, öffentlich unter `/datenschutz` und
   `/nutzungsbestimmungen` (abgemeldet und angemeldet, auch im Wartungsmodus und ohne Zustimmung), oben "Stand: <Datum>".
-  - Bearbeiten: Backend > Einstellungen, Karte "Datenschutz und Nutzungsbestimmungen" (nur Admin, eigenes Formular,
-    `PUT /backend/einstellungen/rechtliches`, Audit `legal.update` mit altem/neuem Text). Settings `legal_name`
+  - Bearbeiten: Admin > Einstellungen, Karte "Datenschutz und Nutzungsbestimmungen" (nur Admin, eigenes Formular,
+    `PUT /admin/einstellungen/rechtliches`, Audit `legal.update` mit altem/neuem Text). Settings `legal_name`
     (Standard "Stefan Diethelm"), `legal_email` (Pflicht, Standard "bier@helminet.ch", öffentlich sichtbar, auch in der
     Meldung bei gesperrtem Konto), `legal_location` (Standard "Schweiz"), `privacy_text`/`terms_text` (leer bzw.
     unverändert = Standardtext aus `resources/legal/privacy.txt` bzw. `terms.txt`).
@@ -404,7 +428,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     `X-Live-Refresh`) werden wie beim Passwortwechsel umgeleitet (`live.js` lädt bei Umleitung neu).
     Bestehende Konten haben nach dem Update noch keine Zustimmung und sehen die Seite bei der nächsten Anfrage.
   - **Annahme:** Der Admin aus dem Setup-Wizard gilt als zugestimmt (er betreibt die Installation und veröffentlicht die Texte).
-  - Benutzer-Detailansicht im Backend: "Zustimmung: <Datum>: Datenschutzerklärung (Fassung vom …, Stand X),
+  - Benutzer-Detailansicht im Admin-Bereich: "Zustimmung: <Datum>: Datenschutzerklärung (Fassung vom …, Stand X),
     Nutzungsbestimmungen (Fassung vom …, Stand Y)" mit Links auf die akzeptierten Fassungen (Zustimmungen vor 1.19.0
     ohne Fassung: nur Stand) bzw. "noch offen"; Link "Alle Fassungen".
   - Fassungen-Archiv (Entscheid 2026-10-24, v1.19.0): Tabelle `legal_revisions` (Art, Stand, Text, sha256, Anlass,
@@ -412,7 +436,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     demselben sicheren Renderer, ohne erneutes Einsetzen von Platzhaltern. Unveränderlich: keine Route ändert oder
     löscht, das Modell verweigert Update/Delete.
     - Neue Fassung, sobald Text-Hash oder Stand einer Art von der neuesten Fassung abweicht (gleicher Text mit
-      "Erneut zustimmen" = neue Fassung mit neuem Stand). Anlass: `reaccept`/`update`/`silent` (Speichern im Backend,
+      "Erneut zustimmen" = neue Fassung mit neuem Stand). Anlass: `reaccept`/`update`/`silent` (Speichern in den Einstellungen,
       gewählter Modus, auch Name/E-Mail/Standort), `settings` (Bierpreis/Limit/Rückgängig-Minuten), `auto` (verzögert
       erkannt beim Anzeigen von `/datenschutz`, `/nutzungsbestimmungen`, `/zustimmung`, `/registrieren`, der
       Fassungen-Liste, bei Zustimmung und Registrierung, z. B. neuer Standardtext per Deploy oder Platzhalter anderswo
@@ -435,7 +459,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
       weiterhin nur über den Stand). Tests: `Tests\TestCase::post()` ergänzt beim Registrieren fehlende Fassungs-IDs.
     - Ansehen: `/rechtliches/fassung/{id}` für alle angemeldeten Benutzer (die Texte waren öffentlich), Kopf
       "Fassung vom <Datum> (Stand <Datum>)"; Gäste werden zur Anmeldung geleitet. Liste
-      `/backend/rechtliches/fassungen` (Kassier und Admin, nur lesen, 25 pro Seite, Filter nach Text; Link in der
+      Protokoll > Reiter "Fassungen" (`/admin/protokoll?tab=fassungen`, seit 1.20.0; `/admin/rechtliches/fassungen` leitet
+      um; Kassier und Admin, nur lesen, 25 pro Seite, Filter nach Text; Link in der
       Karte "Datenschutz und Nutzungsbestimmungen" und in der Benutzer-Detailansicht). Konto > Einstellungen:
       "Akzeptiert am <Datum>: …" mit Links auf die eigenen akzeptierten Fassungen.
     - Test-Factory: Benutzer haben die aktuellen Stände akzeptiert, aber keine Fassungs-IDs (die Sperre hängt nur am Stand).
@@ -466,10 +491,11 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     Biere ohne Namen als eigene Zeile "Gäste (eingeladen)" in der Rangliste. Monate/Wochentage nach Zeitpunkt der
     Runde. Total = Abstreichen + Gäste-Verkäufe + Runden-Biere (die Runde selbst zählt nicht zusätzlich).
     "In Statistik anzeigen" aus gilt auch hier (nur im Total). Der Spender sieht "Spendiert: N" in der eigenen
-    Statistik (auch in der Benutzer-Detailansicht im Backend); "Total ausgegeben" enthält die bezahlten Runden.
+    Statistik (auch in der Benutzer-Detailansicht im Admin-Bereich); "Total ausgegeben" enthält die bezahlten Runden.
     **Annahme:** erhaltene Biere erhöhen "Total ausgegeben" des Empfängers nicht (er hat nichts bezahlt).
-  - Backend `/backend/runden` (Kassier und Admin, wie die Gäste-Schalter): Schalter "Runde spendieren erlauben"
-    (Standard an; aus: Karte ausgeblendet, `/konto/runde` 404, bestehende Runden bleiben) und Liste der Runden.
+  - Admin-Bereich: Liste der Runden unter Buchungen > Runden (Kassier und Admin); Schalter "Runde spendieren erlauben"
+    unter Einstellungen > Funktionen (nur Admin, seit 1.20.0; Standard an; aus: Karte ausgeblendet, `/konto/runde` 404,
+    bestehende Runden bleiben).
     Der Schalter ist eine eigene Einstellung (`rounds_enabled`) und soll mit der Mandantenfähigkeit in die
     Mandanten-Einstellungen wandern.
     **Annahme:** Wird ein Empfänger gelöscht (nicht deaktiviert), zählt sein Bier danach als "Gäste (eingeladen)".
@@ -491,23 +517,24 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   - Statistik: "Verschenkt: N" (Schenker) und "Geschenkt bekommen: N" (Empfänger), auch in der Benutzer-Detailansicht;
     zählen nicht als getrunkene Biere. **Annahme:** "Total ausgegeben" des Schenkers enthält die verschenkten Beträge.
     Unter "Offen" zählt ein ungedecktes Geschenk wie eigene Biere (alter Preis).
-  - Backend `/backend/verschenkt` (Kassier und Admin, Reiter "Verschenkt"): Schalter "Bier verschenken erlauben"
-    (Standard an, `gifts_enabled`; aus: Karte ausgeblendet, `/konto/verschenken` 404), und Liste der
-    Geschenke.
-- Lager (`/backend/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
+  - Admin-Bereich: Liste der Geschenke unter Buchungen > Geschenke (Kassier und Admin); Schalter "Bier verschenken
+    erlauben" unter Einstellungen > Funktionen (nur Admin, seit 1.20.0; Standard an, `gifts_enabled`; aus: Karte
+    ausgeblendet, `/konto/verschenken` 404).
+- Lager (`/admin/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
   Pflicht; alte Einträge ohne Anzahl zählen 0) + Inventur-Korrekturen (gezählter Bestand, gespeichert als Differenz
   mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere inkl. spendierter Runden (Rückgängig erhöht den
   Bestand wieder).
-  Bestand im Backend-Dashboard und im Kassenbuch. Mindestbestand (Standard 20, 0 = aus): fällt der Bestand durch
+  Bestand in der Kassier-Übersicht (`/admin`) und im Kassenbuch. Mindestbestand (Standard 20, 0 = aus): fällt der Bestand durch
   Abstreichen darunter, geht einmal eine Mail an Kassiers/Admins (Benachrichtigungs-Schalter gilt); erneut erst,
-  nachdem der Bestand wieder ≥ Mindestbestand war. Warnung im Backend, solange er darunter ist.
+  nachdem der Bestand wieder ≥ Mindestbestand war. Warnung im Admin-Bereich, solange er darunter ist.
   Abstreichen durch Benutzer wird bei Bestand 0 nicht blockiert; negativer Bestand wird so angezeigt.
   Gäste-Verkäufe (alle Wege) ebenfalls nie blockiert (Entscheid 2026-10-22).
 - Statistik `/statistik`: Biere total, pro Monat, pro Wochentag, Rangliste (Diagramme als SVG vom Server).
   **Annahme:** Wer "In Statistik anzeigen" ausschaltet, wird für andere nirgends namentlich gezeigt
-  (auch nicht in der Rangliste im Backend); die Biere zählen nur in den anonymen Totals.
+  (auch nicht in der Rangliste im Admin-Bereich); die Biere zählen nur in den anonymen Totals.
   Kassiers sehen in der Benutzerverwaltung trotzdem Saldo und Buchungen aller Konten.
-- Einzahlungsvorschläge (`/backend/einzahlungsvorschlaege`, Kassier und Admin): eigene CHF-Beträge
+- Einzahlungsvorschläge (Kasse > Reiter "Einzahlungsvorschläge", `/admin/kasse?tab=vorschlaege`, Kassier und Admin,
+  Livewire; `/admin/einzahlungsvorschlaege` leitet um): eigene CHF-Beträge
   (z. B. "30, 60, 90", max. 6, aufsteigend, je durch den Bierpreis teilbar) oder automatisch: kleinstes
   Vielfaches des Bierpreises, das durch CHF 10 teilbar ist, dann 2×, 3×, 5× (bei CHF 1.50: 30/60/90/150).
   Passt ein gespeicherter Betrag nach einer Preisänderung nicht mehr, wird er auf ganze Biere aufgerundet.
@@ -517,7 +544,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   5–5000 Zeichen, optional "Antwort per Mail erwünscht" (nur mit hinterlegter E-Mail; die Mail hat dann
   Reply-To = E-Mail des Benutzers). Einmal-Token, max. 5 Feedbacks pro Stunde und Benutzer. Gespeichert in
   `feedback` (mit Herkunftsseite aus dem Referer, User-Agent und App-Version `app_version` aus `VERSION`; in der
-  Liste neben der Seite und in der Mail, nur wenn gesetzt). `/backend/feedback` (nur Admins, Menüpunkt mit
+  Liste neben der Seite und in der Mail, nur wenn gesetzt). `/admin/feedback` (nur Admins, Menüpunkt mit
   Zahl ungelesener): Liste (neueste zuerst), gelesen/ungelesen, löschen; dort auch die Empfänger der Mail:
   "Alle Admins" (Standard, aktive Admins mit E-Mail) oder "Feste E-Mail-Adressen" (1–20, eine pro Zeile oder
   mit Komma getrennt). Die Feedback-Mail geht immer raus, unabhängig vom Schalter "Kassier-Benachrichtigung".
@@ -525,7 +552,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 - TWINT: Satz "Bitte z.B. CHF x per TWINT an A, B oder C senden." (Betrag = Einzahlungs-Vorschlag inkl. Minus),
   Nummern nicht angezeigt, nur Knöpfe "Nummer kopieren"; es gibt keinen öffentlichen TWINT-Deep-Link für
   Zahlungen an Privatpersonen.
-- Live-Aktualisierung (Entscheid 2026-10-23): alle Seiten für angemeldete Benutzer (Konto, Kassier, Backend,
+- Live-Aktualisierung (Entscheid 2026-10-23): alle Seiten für angemeldete Benutzer (Konto, Kassier, Admin,
   Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Keine Websockets:
   `public/js/live.js` fragt alle 10 Sekunden `/live` ab (JSON `fp`, `App\Support\LiveFingerprint`: eine Abfrage mit
   MAX(id)/COUNT/MAX(updated_at) der relevanten Tabellen, global für alle). Nur wenn sich `fp` geändert hat (oder alle
@@ -542,6 +569,29 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Aktivität = echtes pointerdown, keydown, touchstart, wheel, scroll, input). Danach läuft die Session normal ab
   (`SESSION_LIFETIME`). Bei der nächsten Aktivität wird sofort wieder abgefragt; liefert der Server 401, wird neu
   geladen (Login). Der Ablauf der Rückgängig-Knöpfe läuft unabhängig davon weiter.
+  Seiten mit Livewire-Komponenten (seit 1.20.0, `<body data-livewire-page>`) lädt `live.js` nicht neu; die Komponenten
+  aktualisieren ihre Daten selbst mit `wire:poll.10s.visible` (siehe "Livewire"). Die 30-Minuten-Regel gilt dort auch:
+  `live.js` bricht danach die Poll-Aktionen ab (`Livewire.interceptAction`), bis wieder Aktivität kommt.
+  Kopfzeilen-Badges werden auf Livewire-Seiten erst beim nächsten Seitenaufruf aktualisiert.
+- Livewire (Entscheid 2026-10-24, v1.20.0: für neue bzw. umgebaute Seiten, die übrigen später): `livewire/livewire` ^4.4,
+  ohne JS-Build (das Paket liefert sein Skript selbst über eine eigene Route aus, nichts zu veröffentlichen).
+  Komponenten in `app/Livewire/Backend` (Ansichten `resources/views/livewire/backend`): Buchungen, Benutzer
+  (Reiter Benutzer | Einladungen; Detailansicht bleibt klassisch), Kasse > Einzahlungsvorschläge, QR-Codes, Protokoll
+  (Reiter Protokoll | Fassungen). Die Seiten selbst sind normale Routen (gleiche Middleware wie bisher), die Komponente
+  steckt im Inhalt; Reiter stehen in der URL (`?tab=…`, `#[Url]`), Links funktionieren auch ohne JS.
+  - Strikte CSP bleibt unverändert (`script-src 'self' 'nonce-…'`, kein `unsafe-eval`, kein `unsafe-inline`):
+    `config/livewire.php` `csp_safe = true` (CSP-Build mit Alpine-CSP-Auswerter, nur einfache Ausdrücke wie
+    `showTab('gaeste')`), `inject_assets = false`; das Layout setzt `@livewireStyles`/`@livewireScripts` nur auf Seiten
+    mit `@section('livewire')`, beide mit dem Nonce der Anfrage. Kein Fortschrittsbalken (`navigate.show_progress_bar`).
+  - Update-Endpunkt `POST /admin/livewire/update` (Route `backend.livewire.update`, in `routes/web.php` per
+    `Livewire::setUpdateRoute`): Middleware `web` (Session, CSRF, Wartungsmodus), `auth`, `AuthenticateSession`, `active`
+    (Zustimmungs-/Passwort-Sperre), `role:kassier`; der Standard-Endpunkt von Livewire antwortet dann mit 404.
+    Zusätzlich als persistente Middleware `EnsureActiveUser` und `RequireRole` (AppServiceProvider).
+  - Livewire-Aktionen sind öffentliche Endpunkte: jede Komponente prüft bei jeder Anfrage die Rolle
+    (`App\Livewire\Concerns\AuthorizesAdminArea`, Boot-Hook) und Admin-Aktionen zusätzlich `authorizeAdmin()`. Die
+    Admin-Formulare auf der QR-Seite senden an die bisherigen `role:admin`-Routen.
+  - Ergebnis einer Aktion (z. B. Storno) erscheint in der Komponente; neue Elemente nach einem Update bekommen die
+    UI-Helfer von `app.js` (`Livewire.hook('morph.added')`).
 - Sicherheit: CSRF, CSP mit Nonce (keine Inline-Styles/-Handler), Rollen-Middleware, verschlüsselte
   Geheimnisse (Registrierungspasswort, SMTP-Passwort, SSO-Client-Secrets, TOTP), Rate-Limits auf Login,
   TOTP, Registrierung und Passwort-Reset.
@@ -573,7 +623,8 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
   Datenbankzugriff hat, kann Zeilen trotzdem ändern oder löschen; die Prüfung zeigt das an.
   **Annahme:** `actor_id` ist nicht Teil des Hashs (der Fremdschlüssel setzt ihn beim Löschen eines Benutzers auf
   null), `actor_ref` schon.
-- Backend `/backend/protokoll` (Kassier und Admin, nur lesen): neueste zuerst, Filter Person, Aktion (Präfix, z. B.
+- Admin-Bereich `/admin/protokoll` (Kassier und Admin, nur lesen; ein Menüpunkt in der Kassier-Leiste, Livewire, Reiter
+  "Protokoll" | "Fassungen"; die frühere Admin-Kopie `/admin/verwaltung/protokoll` leitet um): neueste zuerst, Filter Person, Aktion (Präfix, z. B.
   `deposit`), Datum von/bis, Freitext; Detailansicht mit alten/neuen Werten und Hashes; "Integrität prüfen"
   prüft die ganze Kette und nennt den ersten fehlerhaften Eintrag; CSV-Export (mit Filtern).
 - Anzeige (nur Darstellung, gespeicherte Daten/Hash/CSV unverändert; `App\Support\AuditPresenter`): Aktion als
@@ -590,7 +641,7 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
 
 ## Wartung (Admin)
 
-`/backend/wartung` (nur Admins, Menüpunkt "Wartung" im Backend). Jede Aktion fragt nach und wird mit dem
+`/admin/wartung` (nur Admins, Menüpunkt "Wartung" im Admin-Bereich). Jede Aktion fragt nach und wird mit dem
 Benutzernamen des Admins protokolliert (`Log::info`, `storage/logs`).
 
 - System: App-Version aus der Datei `VERSION` (Semver, wird mit jeder Änderung erhöht: Minor = Funktion,
@@ -644,7 +695,7 @@ php artisan db:restore datei.sql.gz   # fragt nach; --force ohne Nachfrage (z. B
   SQLite `CAST(X'…' AS TEXT)`), ungültiges UTF-8 als Hex. TIMESTAMP-Werte in UTC (`TIME_ZONE='+00:00'`).
   Bei MySQL nur Basistabellen (keine Views/Trigger/Routinen).
 - Regelmässig per Plesk-Cronjob, z. B. täglich `php artisan db:backup --keep=14`.
-- **Entscheid 2026-10-21:** vorerst Backup der ganzen Datenbank. Mit Mandantenfähigkeit wird das Backup im Backend
+- **Entscheid 2026-10-21:** vorerst Backup der ganzen Datenbank. Mit Mandantenfähigkeit wird das Backup im Admin-Bereich
   pro Mandant erstellt.
 
 ## Tests
@@ -652,5 +703,8 @@ php artisan db:restore datei.sql.gz   # fragt nach; --force ohne Nachfrage (z. B
 ```
 php artisan test
 ```
+
+Livewire-Komponenten werden mit `Livewire::test()` getestet (`tests/Feature/AdminAreaTest.php`: Rechte, Reiter,
+Weiterleitungen, CSP/Nonce, Update-Route).
 
 Die Tests laufen mit SQLite im Speicher (`phpunit.xml`).

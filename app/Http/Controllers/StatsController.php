@@ -13,7 +13,7 @@ class StatsController extends Controller
 {
     public function index(): View
     {
-        return view('stats.index', self::data() + ['backend' => false]);
+        return view('stats.index', self::data());
     }
 
     /**

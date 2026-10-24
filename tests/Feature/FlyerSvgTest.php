@@ -17,7 +17,7 @@ class FlyerSvgTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const URL = '/backend/registrierung-qr/flyer-bild';
+    private const URL = '/admin/registrierung-qr/flyer-bild';
 
     private function open(): void
     {

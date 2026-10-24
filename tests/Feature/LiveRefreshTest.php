@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\GuestSale;
 use App\Models\Transaction;
 use App\Services\Ledger;
+use App\Support\FormToken;
 use App\Support\LiveFingerprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 /**
@@ -36,8 +38,8 @@ class LiveRefreshTest extends TestCase
         $this->get('/konto')->assertOk();
         $this->get('/statistik')->assertOk();
         $this->get('/konto/einstellungen')->assertOk();
-        $this->actingAs($kassier)->get('/backend')->assertOk();
-        $this->get('/backend/kasse')->assertOk();
+        $this->actingAs($kassier)->get('/admin')->assertOk();
+        $this->get('/admin/kasse')->assertOk();
         $this->assertSame($fp, LiveFingerprint::current());
 
         Ledger::consume($user, 1);
@@ -69,7 +71,7 @@ class LiveRefreshTest extends TestCase
         $kassier = $this->kassier();
         Ledger::reportDeposit($user, 500, 'cash');
         // Header badge and sub-tab badge (pending items) are part of the live render.
-        $this->actingAs($kassier)->get('/backend', ['X-Live-Refresh' => '1'])->assertOk()
+        $this->actingAs($kassier)->get('/admin', ['X-Live-Refresh' => '1'])->assertOk()
             ->assertSee('data-live="', false)
             ->assertSee('<span class="badge" title="1 offene Posten">1</span>', false);
     }
@@ -77,7 +79,7 @@ class LiveRefreshTest extends TestCase
     public function test_live_request_when_logged_out_gets_401_instead_of_redirect(): void
     {
         $this->get('/konto', ['X-Live-Refresh' => '1'])->assertUnauthorized();
-        $this->get('/backend', ['X-Live-Refresh' => '1'])->assertUnauthorized();
+        $this->get('/admin', ['X-Live-Refresh' => '1'])->assertUnauthorized();
         $this->get('/konto')->assertRedirect('/');
     }
 
@@ -142,7 +144,7 @@ class LiveRefreshTest extends TestCase
 
     public function test_live_refresh_is_off_on_sso_provider_form(): void
     {
-        $this->actingAs($this->admin())->get('/backend/sso/create')->assertOk()
+        $this->actingAs($this->admin())->get('/admin/sso/create')->assertOk()
             ->assertDontSee('data-live="', false);
     }
 
@@ -153,7 +155,7 @@ class LiveRefreshTest extends TestCase
         $start = LiveFingerprint::current();
 
         // A change while the page is being built must not be hidden by the rendered fingerprint.
-        \Illuminate\Support\Facades\View::composer('account.dashboard', function () use ($user) {
+        View::composer('account.dashboard', function () use ($user) {
             Ledger::reportDeposit($user, 500, 'cash');
         });
         $html = $this->get('/konto')->getContent();
@@ -164,13 +166,13 @@ class LiveRefreshTest extends TestCase
 
     public function test_form_token_keeps_many_tokens_per_form(): void
     {
-        $first = \App\Support\FormToken::issue('x');
+        $first = FormToken::issue('x');
         for ($i = 0; $i < 40; $i++) {
-            \App\Support\FormToken::issue('x');
+            FormToken::issue('x');
         }
         $this->assertContains($first, session('form_tokens.x'));
         for ($i = 0; $i < 20; $i++) {
-            \App\Support\FormToken::issue('x');
+            FormToken::issue('x');
         }
         $this->assertCount(50, session('form_tokens.x'));
         $this->assertNotContains($first, session('form_tokens.x'));

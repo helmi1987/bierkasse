@@ -41,19 +41,19 @@ class FooterTest extends TestCase
         $this->actingAs($admin);
         $base = ['beer_price' => '1.50', 'default_limit' => '0', 'registration_mode' => 'invite', 'mail_transport' => 'sendmail'];
 
-        $this->get('/backend/einstellungen')->assertOk()->assertSee('name="copyright" value="'.e(AppSettings::DEFAULT_COPYRIGHT).'"', false);
+        $this->get('/admin/einstellungen')->assertOk()->assertSee('name="copyright" value="'.e(AppSettings::DEFAULT_COPYRIGHT).'"', false);
 
-        $this->put('/backend/einstellungen', $base + ['copyright' => '  © 2027 <b>Verein</b>  '])->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen', $base + ['copyright' => '  © 2027 <b>Verein</b>  '])->assertSessionHasNoErrors();
         $this->assertSame('© 2027 <b>Verein</b>', AppSettings::copyright());
         $this->get('/konto/einstellungen')->assertOk()
             ->assertSee('© 2027 &lt;b&gt;Verein&lt;/b&gt;', false)->assertDontSee('<b>Verein</b>', false);
 
-        $this->put('/backend/einstellungen', $base + ['copyright' => ''])->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen', $base + ['copyright' => ''])->assertSessionHasNoErrors();
         $this->assertSame('', AppSettings::copyright());
         $this->get('/konto/einstellungen')->assertOk()
             ->assertDontSee(AppSettings::DEFAULT_COPYRIGHT)->assertDontSee('<span aria-hidden="true"> · </span><span>', false);
 
-        $this->put('/backend/einstellungen', $base + ['copyright' => str_repeat('x', AppSettings::COPYRIGHT_MAX + 1)])
+        $this->put('/admin/einstellungen', $base + ['copyright' => str_repeat('x', AppSettings::COPYRIGHT_MAX + 1)])
             ->assertSessionHasErrors('copyright');
     }
 }

@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Default order of the tabs under "Kassier" and "Backend" (admins). Every kassier/admin can
+ * Default order of the tabs under "Kassier" and "Admin" (admins). Every kassier/admin can
  * change the order for the own account in the account settings.
  */
 class NavController extends Controller

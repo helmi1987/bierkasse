@@ -19,11 +19,16 @@ use Illuminate\View\View;
 
 /**
  * Cash book "Kasse": expenses, other income and adjustments; balance split cash / TWINT.
+ * Tab "Einzahlungsvorschläge" (?tab=vorschlaege): Livewire component App\Livewire\Backend\DepositSuggestionsForm.
  */
 class CashController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        if ($request->query('tab') === 'vorschlaege') {
+            return view('backend.cash-suggestions');
+        }
+
         return view('backend.cash', [
             'overview' => CashBook::overview(),
             'entries' => CashEntry::query()->with('creator')->orderByDesc('date')->orderByDesc('id')->paginate(30),

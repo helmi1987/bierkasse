@@ -1,5 +1,5 @@
 {{-- Admin: deactivated QR codes ($history) with reactivation; $kindLabel(fn) optional. --}}
-<details>
+<details wire:ignore.self>
     <summary>{{ __('qr.history') }} ({{ $history->count() }})</summary>
     @if ($history->isEmpty())
         <p class="muted">{{ __('qr.history_none') }}</p>

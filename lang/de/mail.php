@@ -5,8 +5,8 @@ return [
     // Layout
     'automatic' => 'Diese Mail wurde automatisch von :app gesendet.',
     'button_fallback' => 'Falls der Button nicht funktioniert, diesen Link im Browser öffnen:',
-    'button_backend' => 'Im Backend öffnen',
-    'button_confirm' => 'Im Backend bestätigen',
+    'button_backend' => 'Im Admin-Bereich öffnen',
+    'button_confirm' => 'Im Admin-Bereich bestätigen',
 
     // Table labels
     'row_user' => 'Benutzer',
@@ -33,6 +33,6 @@ return [
     'register_code' => 'Registrierungscode',
     'register_time' => 'Registriert am',
     'register_carryover' => 'Übertrag',
-    'register_carryover_hint' => 'Der Übertrag von der alten Strichliste muss im Backend bestätigt werden.',
-    'register_button' => 'Benutzer im Backend ansehen',
+    'register_carryover_hint' => 'Der Übertrag von der alten Strichliste muss im Admin-Bereich bestätigt werden.',
+    'register_button' => 'Benutzer im Admin-Bereich ansehen',
 ];

@@ -7,7 +7,7 @@ return [
         'invite' => 'Einladen',
         'stats' => 'Statistik',
         'kassier' => 'Kassier',
-        'backend' => 'Backend',
+        'backend' => 'Admin',
         'settings' => 'Einstellungen',
         'logout' => 'Abmelden',
     ],

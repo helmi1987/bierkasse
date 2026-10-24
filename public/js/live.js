@@ -15,6 +15,11 @@
  *    scroll position are kept. Flash messages (data-live-keep) stay as they are.
  *    After IDLE_LIMIT (30 minutes) without user activity (trusted pointerdown, keydown, touchstart,
  *    wheel, scroll, input) polling stops, so the session can expire; the next activity polls at once.
+ *
+ * 3. Livewire pages (<body data-livewire-page>, since 1.20.0): no live refresh by this script; the
+ *    components refresh their data themselves (wire:poll.10s.visible). Only the idle rule is applied:
+ *    after IDLE_LIMIT without activity Livewire's poll actions are cancelled (Livewire.interceptAction),
+ *    so the session can expire; the next poll after an activity runs again.
  */
 (function () {
     'use strict';
@@ -76,6 +81,39 @@
 
     readServerTime(document);
     watchExpiry();
+
+    // ---- 3. Livewire pages: idle stop of wire:poll -------------------------------------------------
+
+    if (body.hasAttribute('data-livewire-page')) {
+        var lwLastActivity = Date.now();
+
+        // Poll actions (wire:poll) are cancelled after IDLE_LIMIT without activity; user actions still run.
+        var lwRegister = function () {
+            if (!window.Livewire || typeof window.Livewire.interceptAction !== 'function' || lwRegister.done) {
+                return;
+            }
+            lwRegister.done = true;
+            window.Livewire.interceptAction(function (ctx) {
+                var action = ctx.action;
+                if (action && action.metadata && action.metadata.type === 'poll' && Date.now() - lwLastActivity > IDLE_LIMIT) {
+                    action.cancel();
+                }
+            });
+        };
+        lwRegister();
+        document.addEventListener('livewire:init', lwRegister);
+
+        ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll', 'input'].forEach(function (name) {
+            document.addEventListener(name, function (e) {
+                if (e.isTrusted) {
+                    lwLastActivity = Date.now();
+                }
+            }, { capture: true, passive: true });
+        });
+
+        // No full-page live refresh on Livewire pages.
+        return;
+    }
 
     // ---- 2. Live refresh ------------------------------------------------------------------------
 

@@ -3,8 +3,7 @@
 @section('title', __('audit.entry', ['id' => $entry->id]))
 
 @section('content')
-{{-- Kassier bar or admin bar (same page). --}}
-@php($auditBase = request()->routeIs('backend.audit-admin*') ? 'backend.audit-admin' : 'backend.audit')
+@php($auditBase = 'backend.audit')
 @include('partials.backend-nav')
 <h1>{{ __('audit.entry', ['id' => $entry->id]) }}: {{ \App\Support\AuditPresenter::actionLabel($entry->action) }} <small class="muted"><code>{{ $entry->action }}</code></small></h1>
 <p class="muted">{{ local_time($entry->at(), 'd.m.Y H:i:s') }} · {{ $entry->actor_name ?? __('audit.system') }}@if ($entry->subject_type) · {{ $presenter->subjectLabel($entry) }} <small><code>{{ $entry->subject_type }} #{{ $entry->subject_id }}</code></small>@endif</p>

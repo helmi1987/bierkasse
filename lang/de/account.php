@@ -87,7 +87,7 @@ return [
 
     'admin_only' => 'Nur Verwaltung',
     'admin_only_switch' => 'Nur Verwaltung (kein Bierkonto)',
-    'admin_only_hint' => 'Für ein reines Admin- bzw. Kassier-Konto: kein Guthaben, kein Abstreichen, keine Einzahlungen und Runden. Nach der Anmeldung geht es direkt ins Backend. Einladen, Feedback und Einstellungen bleiben. Umschalten nur mit Saldo 0 und ohne offene Posten.',
+    'admin_only_hint' => 'Für ein reines Admin- bzw. Kassier-Konto: kein Guthaben, kein Abstreichen, keine Einzahlungen und Runden. Nach der Anmeldung geht es direkt in den Admin-Bereich. Einladen, Feedback und Einstellungen bleiben. Umschalten nur mit Saldo 0 und ohne offene Posten.',
     'admin_only_locked' => 'Gesperrt: Saldo :amount bzw. offene Posten. Erst bei Saldo 0 ohne offene Posten umschaltbar (Kassier gleicht aus).',
     'admin_only_on' => 'Nur Verwaltung eingeschaltet: dieses Konto hat kein Bierkonto mehr.',
     'admin_only_off' => 'Nur Verwaltung ausgeschaltet: das Bierkonto ist wieder verfügbar.',
@@ -156,7 +156,7 @@ return [
 
     'identities_heading' => 'Verknüpfte Anmeldungen (SSO)',
     'identities_none' => 'Keine Verknüpfung.',
-    'identities_admin_hint' => 'Noch kein Anbieter aktiv. Google, Microsoft, GitHub oder Facebook im Backend unter SSO einrichten.',
+    'identities_admin_hint' => 'Noch kein Anbieter aktiv. Google, Microsoft, GitHub oder Facebook unter Admin > SSO einrichten.',
     'identities_admin_link' => 'SSO-Anbieter einrichten',
     'identities_user_hint' => 'Der Admin kann Anmeldung mit Google, GitHub usw. aktivieren.',
     'identity_link' => 'Mit :provider verknüpfen',

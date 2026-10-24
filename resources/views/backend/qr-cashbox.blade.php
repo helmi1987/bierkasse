@@ -1,27 +1,13 @@
 @extends('layouts.app')
 
-@section('title', __('guest.backend_title'))
+@section('title', __('guest.cashbox_heading'))
 
 @section('content')
 @include('partials.backend-nav')
-<h1>{{ __('guest.backend_title') }}</h1>
-<p class="muted">{{ __('guest.backend_intro') }}</p>
-
-<form method="post" action="{{ route('backend.guests.update') }}" class="card stack" autocomplete="off">
-    @csrf
-    @method('PUT')
-    <label class="switch"><input type="checkbox" name="guest_user_booking" value="1" @checked(old('guest_user_booking', $userBooking))> <span>{{ __('guest.user_booking') }}</span></label>
-    <div class="hint">{{ __('guest.user_booking_hint') }}</div>
-    {{-- QR switches and guest password: QR management page (admins); here only the state. --}}
-    <p class="hint">{{ __('guest.cashbox_enabled') }}: <strong>{{ $cashboxEnabled ? __('qr.on') : __('qr.off') }}</strong> · {{ __('guest.enabled') }}: <strong>{{ $open ? __('qr.on') : __('qr.off') }}</strong></p>
-    <div class="row-buttons">
-        <button type="submit" class="btn primary">{{ __('guest.save') }}</button>
-        <a class="btn" href="{{ route('backend.guests.qr') }}">{{ __('guest.qr') }} →</a>
-    </div>
-</form>
+<h1>{{ __('guest.cashbox_heading') }}</h1>
+<p><a href="{{ route('backend.qr-codes.index') }}">← {{ __('qr.title') }}</a></p>
 
 <section class="card stack" id="kassen-qr">
-    <h2>{{ __('guest.cashbox_heading') }}</h2>
     <p class="muted">{{ __('guest.cashbox_intro_backend') }}</p>
     @unless ($cashboxEnabled)
         <p class="hint">{{ __('guest.cashbox_off') }}</p>
@@ -30,7 +16,7 @@
         <p class="hint">{{ __('guest.cashbox_twint_off') }}</p>
     @endunless
     @if ($admin)
-        <p><a class="btn small" href="{{ route('backend.qr-admin') }}">{{ __('qr.manage_link') }} →</a></p>
+        <p><a class="btn small" href="{{ route('backend.qr-codes.index').'#verwaltung' }}">{{ __('qr.manage_link') }} →</a></p>
     @endif
     @if ($cashboxActive->isEmpty())
         <p class="muted">{{ $admin ? __('qr.none_active') : __('qr.none_kassier') }}</p>
@@ -64,32 +50,5 @@
         </div>
     @endif
     <p class="alert bad" id="cashbox-png-error" role="alert" hidden>{{ __('settings.flyer_png_error') }}</p>
-</section>
-
-<section class="card">
-    <h2>{{ __('guest.sales') }}</h2>
-    <p class="muted">{{ __('guest.sales_total', ['beers' => $total['beers'], 'amount' => chf($total['amount'])]) }}</p>
-    @if ($sales->isEmpty())
-        <p class="muted">{{ __('guest.sales_none') }}</p>
-    @else
-        <ul class="list">
-            @foreach ($sales as $sale)
-                <li class="wrap-row">
-                    <span>
-                        <span class="tx-date">{{ local_time($sale->created_at) }} · {{ __('ledger.method.'.$sale->method) }}</span><br>
-                        {{ $sale->name ?? __('guest.anonymous') }} · {{ trans_choice('stock.beers', $sale->beers, ['count' => $sale->beers]) }}<br>
-                        <small class="muted">{{ $sale->source === \App\Models\GuestSale::SOURCE_CASHBOX ? __('guest.via_cashbox') : ($sale->booked_by === null ? __('guest.public') : __('guest.booked_by', ['user' => $sale->bookedBy?->username ?? '?'])) }}</small>
-                    </span>
-                    <strong class="amount pos">{{ chf($sale->amount) }}</strong>
-                    <form method="post" action="{{ route('backend.guests.destroy', $sale) }}" class="inline" data-confirm="{{ __('guest.cancel_confirm') }}">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn small ghost">{{ __('guest.cancel') }}</button>
-                    </form>
-                </li>
-            @endforeach
-        </ul>
-        {{ $sales->links('partials.pagination') }}
-    @endif
 </section>
 @endsection

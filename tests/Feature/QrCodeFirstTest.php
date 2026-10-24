@@ -7,7 +7,10 @@ use App\Models\QrCode;
 use App\Models\Setting;
 use App\Support\AppSettings;
 use App\Support\RegistrationLink;
+use Illuminate\Contracts\Cache\Lock;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 /**
@@ -27,10 +30,10 @@ class QrCodeFirstTest extends TestCase
     {
         $this->openRegistration();
         $kassier = $this->kassier();
-        $this->actingAs($kassier)->get('/backend/gaeste')->assertOk()->assertSee(__('qr.none_kassier'));
-        $this->get('/backend/gaeste/qr')->assertOk()->assertSee(__('qr.none_kassier'));
-        $this->get('/backend/registrierung-qr')->assertOk()->assertSee(__('qr.none_kassier'));
-        $this->get('/backend/qr-codes')->assertOk();
+        $this->actingAs($kassier)->get('/admin/qr-codes/kassen-qr')->assertOk()->assertSee(__('qr.none_kassier'));
+        $this->get('/admin/gaeste/qr')->assertOk()->assertSee(__('qr.none_kassier'));
+        $this->get('/admin/registrierung-qr')->assertOk()->assertSee(__('qr.none_kassier'));
+        $this->get('/admin/qr-codes')->assertOk();
         $this->get('/konto/einladen')->assertOk();
         $this->assertSame(0, QrCode::query()->count());
         $this->assertSame(0, AuditLog::query()->where('action', 'qr_code.create')->count());
@@ -50,14 +53,14 @@ class QrCodeFirstTest extends TestCase
     {
         $this->openRegistration();
         $admin = $this->admin();
-        $this->actingAs($admin)->get('/backend/verwaltung/qr-codes')->assertOk();
+        $this->actingAs($admin)->get('/admin/qr-codes')->assertOk();
         $this->assertSame(4, QrCode::query()->count());
         $this->assertSame(4, QrCode::query()->where('created_by', $admin->id)->count());
         $entries = AuditLog::query()->where('action', 'qr_code.create')->get();
         $this->assertCount(4, $entries);
         $this->assertSame([$admin->id], $entries->pluck('actor_id')->unique()->values()->all());
 
-        $this->get('/backend/verwaltung/qr-codes')->assertOk();
+        $this->get('/admin/qr-codes')->assertOk();
         $this->assertSame(4, QrCode::query()->count());
         $this->assertSame(4, AuditLog::query()->where('action', 'qr_code.create')->count());
     }
@@ -106,9 +109,9 @@ class QrCodeFirstTest extends TestCase
 
     public function test_lock_timeout_in_ensure_first_is_skipped_silently(): void
     {
-        $lock = \Mockery::mock(\Illuminate\Contracts\Cache\Lock::class);
-        $lock->shouldReceive('block')->andThrow(new \Illuminate\Contracts\Cache\LockTimeoutException);
-        \Illuminate\Support\Facades\Cache::shouldReceive('lock')->andReturn($lock);
+        $lock = \Mockery::mock(Lock::class);
+        $lock->shouldReceive('block')->andThrow(new LockTimeoutException);
+        Cache::shouldReceive('lock')->andReturn($lock);
 
         QrCode::ensureFirst(QrCode::KIND_GUEST, $this->admin());
 

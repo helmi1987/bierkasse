@@ -26,7 +26,7 @@ class SetupTest extends TestCase
 
         $this->get('/')->assertRedirect('/setup');
         $this->get('/konto')->assertRedirect('/setup');
-        $this->get('/backend')->assertRedirect('/setup');
+        $this->get('/admin')->assertRedirect('/setup');
     }
 
     public function test_setup_page_is_shown_when_not_installed(): void
@@ -93,7 +93,7 @@ class SetupTest extends TestCase
         $this->assertTrue($admin->isActive());
         $this->assertAuthenticatedAs($admin);
 
-        $this->get('/backend')->assertOk();
+        $this->get('/admin')->assertOk();
     }
 
     public function test_setup_post_is_throttled(): void

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\StatsController;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\BeerStock;
@@ -80,11 +79,6 @@ class DashboardController extends Controller
     public function rejectCarryover(Request $request, Transaction $transaction): RedirectResponse
     {
         return $this->run(fn () => Ledger::rejectCarryover($transaction, $request->user()), __('ledger.carryover_rejected'));
-    }
-
-    public function stats(): View
-    {
-        return view('stats.index', StatsController::data() + ['backend' => true]);
     }
 
     private function run(callable $action, string $message): RedirectResponse

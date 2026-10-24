@@ -33,11 +33,11 @@ class CashBookTest extends TestCase
         Ledger::confirmPayout(Ledger::requestPayout($d), $kassier, 'cash'); // cash -19
 
         $this->actingAs($kassier);
-        $this->post('/backend/kasse', ['type' => 'expense_beer', 'date' => '2026-10-01', 'amount' => '24.00', 'beers' => '24', 'method' => 'cash', 'note' => 'Harass'])->assertSessionHas('status');
-        $this->post('/backend/kasse', ['type' => 'income', 'date' => '2026-10-02', 'amount' => '10', 'method' => 'twint', 'note' => 'Apéro'])->assertSessionHas('status');
-        $this->post('/backend/kasse', ['type' => 'adjustment', 'date' => '2026-10-03', 'amount' => '-1.50', 'method' => 'cash', 'note' => 'Zählung'])->assertSessionHas('status');
-        $this->post('/backend/kasse', ['type' => 'expense_other', 'date' => '2026-10-03', 'amount' => '-5', 'method' => 'cash', 'note' => 'x'])->assertSessionHasErrors('amount');
-        $this->post('/backend/kasse', ['type' => 'income', 'date' => '2026-10-03', 'amount' => '5', 'method' => 'cash', 'note' => ''])->assertSessionHasErrors('note');
+        $this->post('/admin/kasse', ['type' => 'expense_beer', 'date' => '2026-10-01', 'amount' => '24.00', 'beers' => '24', 'method' => 'cash', 'note' => 'Harass'])->assertSessionHas('status');
+        $this->post('/admin/kasse', ['type' => 'income', 'date' => '2026-10-02', 'amount' => '10', 'method' => 'twint', 'note' => 'Apéro'])->assertSessionHas('status');
+        $this->post('/admin/kasse', ['type' => 'adjustment', 'date' => '2026-10-03', 'amount' => '-1.50', 'method' => 'cash', 'note' => 'Zählung'])->assertSessionHas('status');
+        $this->post('/admin/kasse', ['type' => 'expense_other', 'date' => '2026-10-03', 'amount' => '-5', 'method' => 'cash', 'note' => 'x'])->assertSessionHasErrors('amount');
+        $this->post('/admin/kasse', ['type' => 'income', 'date' => '2026-10-03', 'amount' => '5', 'method' => 'cash', 'note' => ''])->assertSessionHasErrors('note');
 
         $this->assertSame([-2400, 1000, -150], CashEntry::query()->orderBy('id')->pluck('amount')->all());
 
@@ -52,8 +52,8 @@ class CashBookTest extends TestCase
         $this->assertSame(6900, $overview['credit']);
         $this->assertSame(-450, $overview['surplus']);
 
-        $this->get('/backend/kasse')->assertOk()->assertSee('CHF 64.50')->assertSee('Harass');
-        $this->get('/backend')->assertOk()->assertSee('CHF 69.00')->assertSee('CHF -4.50');
+        $this->get('/admin/kasse')->assertOk()->assertSee('CHF 64.50')->assertSee('Harass');
+        $this->get('/admin')->assertOk()->assertSee('CHF 69.00')->assertSee('CHF -4.50');
     }
 
     public function test_donation_increases_surplus(): void
@@ -76,7 +76,7 @@ class CashBookTest extends TestCase
         $kassier = $this->kassier();
         $entry = CashEntry::query()->create(['type' => 'income', 'date' => now(), 'amount' => 500, 'method' => 'cash', 'note' => 'x', 'created_by' => $kassier->id]);
 
-        $this->actingAs($kassier)->delete("/backend/kasse/{$entry->id}")->assertSessionHas('status');
+        $this->actingAs($kassier)->delete("/admin/kasse/{$entry->id}")->assertSessionHas('status');
         $this->assertSame(0, CashEntry::query()->count());
     }
 }

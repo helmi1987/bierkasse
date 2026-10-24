@@ -56,4 +56,40 @@ class StaffNoteTest extends TestCase
         $this->actingAs($this->kassier());
         $this->get('/admin')->assertOk()->assertSee('Hans Muster')->assertDontSee('Fritz Bar');
     }
+
+    public function test_note_follows_name_unless_set_by_hand(): void
+    {
+        $user = $this->user(['first_name' => 'Hans', 'last_name' => null]);
+        $this->assertSame('Hans', $user->staff_note);
+
+        // Name extended: note follows.
+        $this->actingAs($user)->put('/konto/profil', ['first_name' => 'Hans', 'last_name' => 'Muster', 'email' => $user->email])->assertSessionHasNoErrors();
+        $this->assertSame('Hans Muster', $user->fresh()->staff_note);
+
+        // Completely new name or emptied name: note stays.
+        $this->put('/konto/profil', ['first_name' => 'Bierkönig', 'last_name' => '', 'email' => $user->email])->assertSessionHasNoErrors();
+        $this->assertSame('Hans Muster', $user->fresh()->staff_note);
+        $this->put('/konto/profil', ['first_name' => '', 'last_name' => '', 'email' => $user->email])->assertSessionHasNoErrors();
+        $this->assertSame('Hans Muster', $user->fresh()->staff_note);
+
+        // Set by hand: never overwritten.
+        $hand = $this->user(['first_name' => 'Fritz', 'last_name' => null]);
+        $hand->forceFill(['staff_note' => 'Fritz vom Stammtisch'])->save();
+        $this->actingAs($hand)->put('/konto/profil', ['first_name' => 'Fritz', 'last_name' => 'Meier', 'email' => $hand->email])->assertSessionHasNoErrors();
+        $this->assertSame('Fritz vom Stammtisch', $hand->fresh()->staff_note);
+
+        // Registered without a name, name set later: note filled.
+        $anon = $this->user(['first_name' => null, 'last_name' => null]);
+        $this->assertNull($anon->staff_note);
+        $this->actingAs($anon)->put('/konto/profil', ['first_name' => 'Anna', 'last_name' => 'Keller', 'email' => $anon->email])->assertSessionHasNoErrors();
+        $this->assertSame('Anna Keller', $anon->fresh()->staff_note);
+    }
+
+    public function test_note_equal_to_name_is_not_shown_twice_in_list(): void
+    {
+        $this->user(['username' => 'xy42', 'first_name' => 'Hans', 'last_name' => 'Muster']);
+
+        $this->actingAs($this->kassier());
+        $this->get(route('backend.users.index'))->assertOk()->assertDontSee('data-testid="staff-note"', false);
+    }
 }

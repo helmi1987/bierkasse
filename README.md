@@ -253,7 +253,11 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 - Interner Hinweis (Entscheid 2026-10-24): Kassier und Admin tragen in der Benutzer-Detailansicht pro Benutzer einen
   einzeiligen Hinweis ein (max. 100 Zeichen, z.B. wer hinter einem nichtssagenden Benutzernamen steckt). Verschlüsselt
   gespeichert (`users.staff_note`), in der Benutzerliste unter dem Namen und in der Kassier-Übersicht bei offenen TWINT-Einzahlungen, Änderungen im Protokoll (`user.note`, alt/neu).
-  Nie im Frontend (Konto, Mails, Gästeseiten), im Model `$hidden`.
+  Nie im Frontend (Konto, Mails, Gästeseiten), im Model `$hidden`. Automatisch (beim Anlegen und bei jeder Namensänderung,
+  `User::applyNameToStaffNote()`; bestehende Konten per Migration): leerer Hinweis → "Vorname Name"; beginnt der neue
+  Name mit dem Hinweis (z.B. "Hans" → "Hans Muster"), wird ergänzt. Von Hand geänderte Hinweise, ein komplett neuer
+  Name oder ein gelöschter Name lassen den Hinweis stehen. In Listen ausgeblendet, wenn gleich wie der angezeigte Name.
+  Bleibt nach dem Austritt erhalten (Entscheid 2026-10-24).
 - Admin > Einstellungen: jeder Kasten hat einen eigenen Speichern-Knopf (speichert das ganze Formular, Rücksprung zum
   Kasten); Enter in einem Eingabefeld speichert dort nicht (`data-no-enter-submit`).
 - Storno durch Kassier/Admin (Entscheid 2026-10-24): in der Benutzer-Detailansicht im Verlauf pro Buchung Typ Bier,

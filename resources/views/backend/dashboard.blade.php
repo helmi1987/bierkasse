@@ -33,7 +33,7 @@
                         <a href="{{ route('backend.users.show', $tx->user) }}"><strong>{{ $tx->user->displayName() }}</strong></a>
                         <span class="muted">· {{ local_time($tx->created_at) }} · {{ __('ledger.method.'.$tx->method) }}</span>
                         {{-- Internal staff note helps to match the TWINT payer to a meaningless username. --}}
-                        @if ($tx->method === 'twint' && $tx->user->staff_note)<br><small class="muted" data-testid="staff-note">{{ $tx->user->staff_note }}</small>@endif
+                        @if ($tx->method === 'twint' && $tx->user->staffNoteForList())<br><small class="muted" data-testid="staff-note">{{ $tx->user->staffNoteForList() }}</small>@endif
                         @if ($tx->edited_at)<span class="pill warn">{{ __('backend.deposit_edited', ['time' => local_time($tx->edited_at, 'd.m. H:i')]) }}</span>@endif
                         @if ($tx->note)<br><span class="tx-note">{{ $tx->note }}</span>@endif
                     </span>

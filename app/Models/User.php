@@ -179,6 +179,41 @@ class User extends Authenticatable
         return $name !== '' ? $name : (string) $this->username;
     }
 
+    protected static function booted(): void
+    {
+        // New account or changed name: keep the staff note in sync where it was not set by hand.
+        static::saving(function (User $user) {
+            if (! $user->exists || $user->isDirty(['first_name', 'last_name'])) {
+                $user->applyNameToStaffNote();
+            }
+        });
+    }
+
+    /**
+     * Sets the staff note to "first last" when the note is empty or the new name extends it
+     * (e.g. "Hans" -> "Hans Muster"). A note changed by hand, a completely new name or an
+     * emptied name leave the note as it is. Does not save.
+     */
+    public function applyNameToStaffNote(): void
+    {
+        $name = mb_substr(trim(trim((string) $this->first_name).' '.trim((string) $this->last_name)), 0, 100);
+        if ($name === '') {
+            return;
+        }
+        $note = trim((string) $this->staff_note);
+        if ($note === '' || ($note !== $name && str_starts_with(mb_strtolower($name), mb_strtolower($note)))) {
+            $this->staff_note = $name;
+        }
+    }
+
+    /** Staff note for lists, null when empty or equal to the shown name (not shown twice). */
+    public function staffNoteForList(): ?string
+    {
+        $note = trim((string) $this->staff_note);
+
+        return $note === '' || mb_strtolower($note) === mb_strtolower(trim($this->displayName())) ? null : $note;
+    }
+
     /** Effective overdraft limit in Rappen (individual or default). */
     public function effectiveLimit(): int
     {

@@ -336,7 +336,7 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .beer-amount strong { font-size: 1.15rem; }
 .beer-amount small { color: var(--muted); font-size: .8rem; }
 .twint .beer-amount { align-items: flex-start; }
-.twint-message { margin-top: .75rem; }
+.twint-message { margin: .75rem 0 1rem; }
 .twint-message-text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; overflow-wrap: anywhere; white-space: pre-wrap; user-select: all; -webkit-user-select: all; cursor: text; background: var(--surface-2); border-radius: var(--radius-sm); padding: .6rem .75rem; margin: .25rem 0 .5rem; }
 .twint-message .row-buttons { margin-bottom: 0; }
 .install-hint { display: flex; gap: .75rem; align-items: center; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: var(--radius-sm); padding: .75rem .9rem; margin-bottom: 1rem; }

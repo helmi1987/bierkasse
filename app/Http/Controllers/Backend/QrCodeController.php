@@ -44,14 +44,10 @@ class QrCodeController extends Controller
     }
 
     /** Management (admins): settings and all codes per kind, deactivated ones as history. */
-    public function manage(): View
+    public function manage(Request $request): View
     {
-        foreach ([QrCode::KIND_CASH, QrCode::KIND_TWINT, QrCode::KIND_GUEST] as $kind) {
-            QrCode::ensureFirst($kind);
-        }
-        if (AppSettings::registrationOpen()) {
-            QrCode::ensureFirst(QrCode::KIND_FLYER);
-        }
+        // Admin path: the only place where missing first codes are created on a GET.
+        QrCode::ensureFirstForAdmin($request->user());
         $codes = QrCode::query()->with('creator')->orderBy('id')->get()->groupBy('kind');
 
         return view('backend.qr-admin', [
@@ -80,6 +76,7 @@ class QrCodeController extends Controller
             AppSettings::GUEST_ENABLED => $request->boolean('guest_enabled'),
             AppSettings::GUEST_PASSWORD => (string) ($data['guest_password'] ?? ''),
         ]);
+        QrCode::ensureFirstForAdmin($request->user());
 
         return back()->with('status', __('settings.saved'));
     }
@@ -101,14 +98,27 @@ class QrCodeController extends Controller
 
     public function active(Request $request, QrCode $qrCode): RedirectResponse
     {
-        $active = $request->boolean('active');
-        DB::transaction(function () use ($qrCode, $active) {
-            $old = ['active' => $qrCode->isActive()];
-            $qrCode->forceFill(['deactivated_at' => $active ? null : now()])->save();
-            Audit::log($active ? 'qr_code.activate' : 'qr_code.deactivate', $qrCode, $old, ['active' => $active, 'kind' => $qrCode->kind]);
+        $active = (bool) $request->validate(['active' => ['required', 'boolean']])['active'];
+        $changed = false;
+        $lastActive = false;
+        DB::transaction(function () use ($qrCode, $active, &$changed, &$lastActive) {
+            // Re-load with a row lock so two parallel requests cannot both audit the same change.
+            $locked = QrCode::query()->lockForUpdate()->findOrFail($qrCode->id);
+            if ($locked->isActive() === $active) {
+                return;
+            }
+            $changed = true;
+            $locked->forceFill(['deactivated_at' => $active ? null : now()])->save();
+            Audit::log($active ? 'qr_code.activate' : 'qr_code.deactivate', $locked, ['active' => ! $active], ['active' => $active, 'kind' => $locked->kind]);
+            $lastActive = ! $active && ! QrCode::query()->active()->where('kind', $locked->kind)->exists();
         });
+        if (! $changed) {
+            return back();
+        }
 
-        return back()->with('status', $active ? __('qr.activated') : __('qr.deactivated'));
+        $redirect = back()->with('status', $active ? __('qr.activated') : __('qr.deactivated'));
+
+        return $lastActive ? $redirect->with('warning', __('qr.last_deactivated.'.$qrCode->kind)) : $redirect;
     }
 
     public function label(Request $request, QrCode $qrCode): RedirectResponse

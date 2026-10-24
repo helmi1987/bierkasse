@@ -33,6 +33,7 @@ class RegistrationTest extends TestCase
     {
         Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
         Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
+        QrCode::ensureFirst(QrCode::KIND_FLYER);
     }
 
     public function test_default_mode_is_invitation_only(): void

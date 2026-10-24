@@ -12,6 +12,13 @@ return [
     'created' => 'Neuer Code erstellt.',
     'activated' => 'Code reaktiviert.',
     'deactivated' => 'Code deaktiviert.',
+    'last_deactivated' => [
+        'cashbox_cash' => 'Achtung: Das war der letzte aktive Bar-Kassen-Code. Gedruckte Kassen-Aufkleber «Bar» funktionieren nicht mehr, bis ein Code aktiv ist.',
+        'cashbox_twint' => 'Achtung: Das war der letzte aktive TWINT-Kassen-Code. Gedruckte Kassen-Aufkleber «TWINT» funktionieren nicht mehr, bis ein Code aktiv ist.',
+        'flyer' => 'Achtung: Das war der letzte aktive Flyer-Code. Flyer-QR-Codes und der Einladungs-QR fallen auf den normalen Registrierungslink zurück; gedruckte Flyer-Codes ohne Registrierungspasswort funktionieren nicht mehr.',
+        'guest' => 'Achtung: Das war der letzte aktive Gäste-Code. Gedruckte Gäste-QR-Codes funktionieren nicht mehr; Gäste müssen die Gäste-Seite mit Passwort öffnen.',
+    ],
+    'none_kassier' => 'Noch kein Code. Ein Admin muss einen anlegen.',
     'history' => 'Deaktivierte Codes (Historie)',
     'history_none' => 'Keine deaktivierten Codes.',
     'none_active' => 'Kein aktiver Code.',

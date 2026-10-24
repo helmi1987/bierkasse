@@ -53,6 +53,11 @@ class GuestSales
             throw new LedgerException(__('ledger.undo_expired'));
         }
         DB::transaction(function () use ($sale, $user) {
+            // Re-load with a row lock: a second undo finds the sale gone and writes no second audit entry.
+            $sale = GuestSale::query()->lockForUpdate()->find($sale->id);
+            if ($sale === null || ! $sale->canBeUndoneBy($user)) {
+                throw new LedgerException(__('ledger.undo_expired'));
+            }
             $sale->delete();
             Audit::log('guest_sale.undo', $sale, self::auditValues($sale), [], $user);
         });

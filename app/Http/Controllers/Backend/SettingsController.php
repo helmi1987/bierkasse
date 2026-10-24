@@ -116,6 +116,8 @@ class SettingsController extends Controller
                 'smtp_encryption' => (string) ($data['smtp_encryption'] ?? ''),
             ],
         ]);
+        // Admin saves the registration mode: make sure the first flyer code exists when it is needed.
+        QrCode::ensureFirstForAdmin($request->user());
 
         return back()->with('status', __('settings.saved'));
     }
@@ -171,7 +173,6 @@ class SettingsController extends Controller
             ->map(fn (RegistrationCode $c) => ['key' => (string) $c->id, 'label' => $c->label, 'url' => $c->url(), 'printed_url' => $c->url(), 'flyer' => false])
             ->all();
         if (AppSettings::registrationOpen()) {
-            QrCode::ensureFirst(QrCode::KIND_FLYER);
             // The URL with the flyer code is not printed (only the plain registration URL).
             foreach (QrCode::query()->active()->where('kind', QrCode::KIND_FLYER)->orderBy('id')->get() as $code) {
                 $targets[] = ['key' => 'flyer-'.$code->id, 'label' => __('settings.flyer_code_label').' · '.$code->displayName(),

@@ -254,7 +254,9 @@ class Ledger
         }
         if ($tx->type === Transaction::TYPE_GIFT) {
             DB::transaction(function () use ($tx, $user) {
-                // Lock the recipients (as their bookings do) and check again: no beer booked since the gift.
+                // Lock the gift row first: a second (parallel or repeated) undo finds it gone.
+                $tx = self::lockUndoable($tx, $user);
+                // Lock the recipients (as their bookings do) and check again: nothing spent since the gift.
                 $recipients = $tx->giftParts()->pluck('user_id')->all();
                 User::query()->whereIn('id', $recipients)->orderBy('id')->lockForUpdate()->get();
                 if (Gifts::recipientsBookedSince($tx)) {
@@ -269,6 +271,7 @@ class Ledger
             return;
         }
         DB::transaction(function () use ($tx, $user) {
+            $tx = self::lockUndoable($tx, $user);
             $old = self::auditValues($tx);
             if ($tx->type === Transaction::TYPE_ROUND) {
                 $old['recipients'] = $tx->roundItems()->pluck('user_id')->all();
@@ -278,6 +281,20 @@ class Ledger
             Audit::log($tx->type === Transaction::TYPE_ROUND ? 'round.undo' : 'consume.undo', $tx, $old, [], $user);
         });
         BeerStock::rearm();
+    }
+
+    /**
+     * Re-loads the booking with a row lock inside the DB transaction; throws when it is gone (already undone)
+     * or can no longer be undone, so an undo never writes a second audit entry.
+     */
+    private static function lockUndoable(Transaction $tx, User $user): Transaction
+    {
+        $locked = Transaction::query()->lockForUpdate()->find($tx->id);
+        if ($locked === null || ! $locked->canBeUndoneBy($user)) {
+            throw new LedgerException(__('ledger.undo_expired'));
+        }
+
+        return $locked;
     }
 
     /** User reports a deposit; counts once a kassier confirms it. */

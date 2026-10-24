@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Services\Audit;
+use App\Support\AppSettings;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -65,11 +69,34 @@ class QrCode extends Model
         ]);
     }
 
-    /** First code of a kind, created automatically only when the kind never had one. */
-    public static function ensureFirst(string $kind): void
+    /**
+     * First code of a kind, created only when the kind never had one. Admin paths only (never on a GET of a
+     * kassier): audited like a normal create, race-safe via a lock and a re-check inside the transaction.
+     */
+    public static function ensureFirst(string $kind, ?User $creator = null): void
     {
-        if (! self::query()->where('kind', $kind)->exists()) {
-            self::generate($kind);
+        if (self::query()->where('kind', $kind)->exists()) {
+            return;
+        }
+        Cache::lock('qr-first-'.$kind, 10)->block(5, function () use ($kind, $creator) {
+            DB::transaction(function () use ($kind, $creator) {
+                if (self::query()->where('kind', $kind)->exists()) {
+                    return;
+                }
+                $code = self::generate($kind, null, $creator);
+                Audit::log('qr_code.create', $code, [], ['kind' => $code->kind, 'label' => $code->label], $creator);
+            });
+        });
+    }
+
+    /** Missing first codes of all kinds in use (flyer only while registration is open); admin paths only. */
+    public static function ensureFirstForAdmin(User $admin): void
+    {
+        foreach ([self::KIND_CASH, self::KIND_TWINT, self::KIND_GUEST] as $kind) {
+            self::ensureFirst($kind, $admin);
+        }
+        if (AppSettings::registrationOpen()) {
+            self::ensureFirst(self::KIND_FLYER, $admin);
         }
     }
 

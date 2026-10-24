@@ -52,11 +52,15 @@ class Gifts
             ->where('type', Transaction::TYPE_GIFT)->whereNotNull('parent_id')->sum('quantity');
     }
 
-    /** A recipient booked a beer (own consumption or a round he paid) after the gift (giver's row). */
+    /**
+     * A recipient has any outgoing booking (negative amount, confirmed or pending: beer, round, gift given,
+     * payout, donation, correction, carryover ...) after the gift (giver's row). The gifted credit may have
+     * been used by it, so the gift can no longer be undone. Incoming credits (deposit, gift received) do not count.
+     */
     public static function recipientsBookedSince(Transaction $gift): bool
     {
         return Transaction::query()->whereIn('user_id', $gift->giftParts()->select('user_id'))
-            ->whereIn('type', Transaction::BEER_TYPES)->where('id', '>', $gift->id)->exists();
+            ->where('amount', '<', 0)->where('id', '>', $gift->id)->exists();
     }
 
     /** Recipients of a gift (giver's row), e.g. "Anna, Beat". */

@@ -14,7 +14,7 @@ return [
     'booked' => '{1} :count Bier verschenkt (:amount).|[2,*] :count Biere verschenkt (:amount).',
     'undone' => 'Geschenk zurückgenommen.',
     'undo_hint' => 'Eigene Geschenke kannst du :minutes Minuten lang zurücknehmen.',
-    'undo_used' => 'Nicht mehr rückgängig: ein Empfänger hat seit dem Geschenk schon Bier gebucht.',
+    'undo_used' => 'Nicht mehr rückgängig: ein Empfänger hat seit dem Geschenk schon Guthaben ausgegeben (Bier, Verschenken, Auszahlung o. Ä.).',
     'none_selected' => 'Bitte mindestens einen Kollegen wählen.',
     'tx_given' => '{1} Bier verschenkt (:count Bier)|[2,*] Bier verschenkt (:count Biere)',
     'tx_to' => 'an :names',

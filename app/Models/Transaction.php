@@ -176,7 +176,7 @@ class Transaction extends Model
     public function canBeUndoneBy(User $user): bool
     {
         if ($this->type === self::TYPE_GIFT) {
-            // Ends early once a recipient booked a beer (consumption or own round) after the gift.
+            // Ends early once a recipient has any outgoing booking after the gift.
             return $this->isGiftGiven()
                 && $this->user_id === $user->id
                 && $this->undoExpiresAt()?->isFuture() === true

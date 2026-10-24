@@ -24,9 +24,6 @@ class GuestController extends Controller
 {
     public function index(Request $request): View
     {
-        QrCode::ensureFirst(QrCode::KIND_CASH);
-        QrCode::ensureFirst(QrCode::KIND_TWINT);
-
         return view('backend.guests', [
             'admin' => $request->user()->isAdmin(),
             'userBooking' => AppSettings::guestUserBooking(),
@@ -60,7 +57,6 @@ class GuestController extends Controller
      */
     public function qr(Request $request): View
     {
-        QrCode::ensureFirst(QrCode::KIND_GUEST);
         $active = QrCode::query()->with('creator')->active()->where('kind', QrCode::KIND_GUEST)->orderBy('id')->get();
         $selected = $request->query('qr') === '0' ? null : ($active->firstWhere('id', (int) $request->query('qr')) ?? $active->first());
         $url = $selected?->url() ?? route('guest');

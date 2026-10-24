@@ -44,7 +44,7 @@
             <h2>{{ __('settings.flyer_codes_heading') }}</h2>
             <p class="hint">{{ __('settings.flyer_codes_intro') }} {{ __('settings.qr_warning') }}</p>
             @if ($flyerCodes->isEmpty())
-                <p class="muted">{{ __('qr.none_active') }}</p>
+                <p class="muted">{{ $admin ? __('qr.none_active') : __('qr.none_kassier') }}</p>
             @endif
             <ul class="list">
                 @foreach ($flyerCodes as $code)

@@ -5,6 +5,7 @@ namespace Tests;
 use App\Models\QrCode;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\LegalArchive;
 use App\Support\AppSettings;
 use App\Support\FormToken;
 use App\Support\OutboundUrl;
@@ -49,6 +50,23 @@ abstract class TestCase extends BaseTestCase
         $this->flushSession();
 
         return parent::actingAs($user, $guard);
+    }
+
+    /**
+     * The registration form sends the revisions of the linked legal texts as hidden fields; tests that
+     * post it without them get the current ones (as if the form had just been shown). Tests of the
+     * check itself pass the fields explicitly.
+     */
+    public function post($uri, array $data = [], array $headers = [])
+    {
+        $path = '/'.ltrim((string) parse_url($uri, PHP_URL_PATH), '/');
+        if ($path === '/registrieren') {
+            foreach (LegalArchive::currentAll() as $kind => $revision) {
+                $data += [$kind.'_revision' => $revision->id];
+            }
+        }
+
+        return parent::post($uri, $data, $headers);
     }
 
     /**

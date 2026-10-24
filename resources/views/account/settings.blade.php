@@ -353,6 +353,13 @@
     @endif
 </section>
 
+@if ($user->consent_accepted_at)
+    <section class="card">
+        <h2>{{ __('legal.account_consent_heading') }}</h2>
+        <p class="muted" data-testid="account-consent">{{ __('legal.account_consent', ['date' => local_time($user->consent_accepted_at)]) }}: @include('legal.accepted')</p>
+    </section>
+@endif
+
 <section class="card">
     <h2>{{ __('feedback.title') }}</h2>
     <p class="muted">{{ __('feedback.settings_hint') }}</p>

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LegalRevision;
 use App\Services\Audit;
+use App\Services\LegalArchive;
 use App\Support\LegalTexts;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,11 +34,14 @@ class LegalController extends Controller
             return redirect()->to($user->homeUrl());
         }
 
+        $revisions = LegalArchive::currentAll();
+
         return view('legal.consent', [
-            'texts' => array_map(fn (string $kind) => $this->text($kind), array_combine(LegalTexts::KINDS, LegalTexts::KINDS)),
+            'texts' => array_map(fn (LegalRevision $revision) => $this->text($revision), $revisions),
             // Someone who accepted before sees that the texts changed.
             'renewal' => $user->consent_accepted_at !== null,
-            'versions' => array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalTexts::version($kind), LegalTexts::KINDS)),
+            // Revisions shown on the page (hidden fields): only these can be accepted.
+            'revisions' => array_map(fn (LegalRevision $revision) => $revision->id, $revisions),
         ]);
     }
 
@@ -44,19 +49,22 @@ class LegalController extends Controller
     {
         $request->validate([
             'consent' => ['accepted'],
-            'privacy_version' => ['nullable', 'string', 'max:32'],
-            'terms_version' => ['nullable', 'string', 'max:32'],
+            'privacy_revision' => ['nullable', 'integer'],
+            'terms_revision' => ['nullable', 'integer'],
         ], ['consent.accepted' => __('legal.consent_required')]);
         $user = $request->user();
 
-        // Only the versions the user has seen are accepted: changed meanwhile = read again.
-        if ($request->input('privacy_version') !== LegalTexts::version(LegalTexts::PRIVACY)
-            || $request->input('terms_version') !== LegalTexts::version(LegalTexts::TERMS)) {
-            return redirect()->route('consent.show')->with('warning', __('legal.consent_changed'));
+        // Only the revisions the user has seen are accepted (strict: any new revision, even one
+        // without a new "Stand" such as a changed beer price, means read again).
+        $revisions = LegalArchive::currentAll();
+        foreach ($revisions as $kind => $revision) {
+            if ((int) $request->input($kind.'_revision') !== $revision->id) {
+                return redirect()->route('consent.show')->with('warning', __('legal.consent_changed'));
+            }
         }
 
         if ($user->needsConsent()) {
-            Audit::save('consent.accept', $user->forceFill(LegalTexts::consentAttributes()));
+            Audit::save('consent.accept', $user->forceFill(LegalTexts::consentAttributes($revisions)));
         }
 
         return redirect()->intended($user->homeUrl())->with('status', __('legal.consent_saved'));
@@ -71,22 +79,39 @@ class LegalController extends Controller
         return back();
     }
 
+    /**
+     * One archived revision (any logged-in user: the texts were public when they were in effect).
+     */
+    public function revision(LegalRevision $revision): View
+    {
+        $rendered = $revision->rendered();
+
+        return view('legal.revision', [
+            'revision' => $revision,
+            'title' => $rendered['title'] ?? __('legal.title.'.$revision->kind),
+            'html' => $rendered['html'],
+        ]);
+    }
+
     private function page(string $kind): View
     {
-        return view('legal.page', ['kind' => $kind] + $this->text($kind));
+        return view('legal.page', ['kind' => $kind] + $this->text(LegalArchive::forDisplay($kind)));
     }
 
     /**
+     * Text of a revision (the current one: exactly the archived text is shown).
+     *
      * @return array{title: string, html: HtmlString, date: string, changed: ?string, url: string}
      */
-    private function text(string $kind): array
+    private function text(LegalRevision $revision): array
     {
-        $rendered = LegalTexts::render($kind);
+        $kind = $revision->kind;
+        $rendered = $revision->rendered();
 
         return [
             'title' => $rendered['title'] ?? __('legal.title.'.$kind),
             'html' => $rendered['html'],
-            'date' => LegalTexts::versionDate(LegalTexts::version($kind)),
+            'date' => LegalTexts::versionDate($revision->version),
             'changed' => $this->changedDate($kind),
             'url' => route($kind === LegalTexts::PRIVACY ? 'legal.privacy' : 'legal.terms'),
         ];

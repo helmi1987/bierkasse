@@ -194,6 +194,7 @@
             </div>
         @endforeach
         <p class="hint">{{ __('legal.mode_hint') }}</p>
+        <p class="hint"><a href="{{ route('backend.legal-revisions') }}">{{ __('legal.all_revisions') }} →</a></p>
         <button type="submit" class="btn primary">{{ __('legal.save') }}</button>
     </section>
 </form>

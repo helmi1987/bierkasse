@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\LegalArchive;
 use App\Support\AppSettings;
 use App\Support\LegalTexts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -167,8 +168,8 @@ class LegalNoticeTest extends TestCase
         $this->actingAs($user);
         $this->post('/zustimmung', [
             'consent' => '1',
-            'privacy_version' => LegalTexts::version(LegalTexts::PRIVACY),
-            'terms_version' => LegalTexts::version(LegalTexts::TERMS),
+            'privacy_revision' => LegalArchive::current(LegalTexts::PRIVACY)->id,
+            'terms_revision' => LegalArchive::current(LegalTexts::TERMS)->id,
         ]);
         $this->get('/konto')->assertOk()->assertDontSee('legal-notice-');
     }

@@ -21,9 +21,9 @@
 <section class="card">
     <form method="post" action="{{ route('consent.store') }}" class="stack">
         @csrf
-        {{-- Versions shown on this page; accepting fails when a text changed meanwhile. --}}
-        <input type="hidden" name="privacy_version" value="{{ $versions['privacy'] }}">
-        <input type="hidden" name="terms_version" value="{{ $versions['terms'] }}">
+        {{-- Revisions shown on this page; accepting fails when a text changed meanwhile. --}}
+        <input type="hidden" name="privacy_revision" value="{{ $revisions['privacy'] }}">
+        <input type="hidden" name="terms_revision" value="{{ $revisions['terms'] }}">
         @include('legal.consent-check')
         <button type="submit" class="btn primary big">{{ __('legal.consent_submit') }}</button>
     </form>

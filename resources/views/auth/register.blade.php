@@ -92,6 +92,9 @@
                 </div>
             </div>
         </details>
+        {{-- Revisions of the linked texts; registering fails when a text changed meanwhile. --}}
+        <input type="hidden" name="privacy_revision" value="{{ $revisions['privacy'] }}">
+        <input type="hidden" name="terms_revision" value="{{ $revisions['terms'] }}">
         @include('legal.consent-check')
         <button class="btn primary big" type="submit">{{ __('register.submit') }}</button>
     </form>

@@ -71,6 +71,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::post('/zustimmung', [LegalController::class, 'accept'])->middleware('throttle:20,1')->name('consent.store');
 
         Route::post('/rechtliches/{kind}/gelesen', [LegalController::class, 'dismissNotice'])->middleware('throttle:30,1')->whereIn('kind', ['privacy', 'terms'])->name('legal.notice.dismiss');
+        // Archived revisions of the legal texts (read-only, any logged-in user; never changed or deleted).
+        Route::get('/rechtliches/fassung/{revision}', [LegalController::class, 'revision'])->whereNumber('revision')->name('legal.revision');
 
         // Beer account (balance, beers, deposits, rounds, guests, leaving); not for "Nur Verwaltung" accounts.
         Route::middleware('beer')->group(function () {
@@ -178,6 +180,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::get('/protokoll/export', [Backend\AuditController::class, 'export'])->name('audit.export');
             Route::get('/protokoll/{entry}', [Backend\AuditController::class, 'show'])->whereNumber('entry')->name('audit.show');
             Route::post('/protokoll/pruefen', [Backend\AuditController::class, 'verify'])->name('audit.verify');
+            // Legal text revisions (read-only list, kassiers and admins).
+            Route::get('/rechtliches/fassungen', [Backend\LegalRevisionController::class, 'index'])->name('legal-revisions');
 
             // Admin only ("Backend" in the top bar, see BackendNav)
             Route::middleware('role:admin')->group(function () {

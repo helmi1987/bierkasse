@@ -7,6 +7,7 @@ use App\Models\Feedback;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\LegalArchive;
 use App\Support\AppSettings;
 use App\Support\LegalTexts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,13 +31,13 @@ class LegalConsentTest extends TestCase
         ], $overrides);
     }
 
-    /** Consent form as shown: checkbox plus the displayed versions. */
+    /** Consent form as shown: checkbox plus the displayed (current) revisions. */
     private function accept(array $overrides = []): array
     {
         return array_merge([
             'consent' => '1',
-            'privacy_version' => LegalTexts::version(LegalTexts::PRIVACY),
-            'terms_version' => LegalTexts::version(LegalTexts::TERMS),
+            'privacy_revision' => LegalArchive::current(LegalTexts::PRIVACY)->id,
+            'terms_revision' => LegalArchive::current(LegalTexts::TERMS)->id,
         ], $overrides);
     }
 
@@ -160,13 +161,14 @@ class LegalConsentTest extends TestCase
     {
         $user = User::factory()->withoutConsent()->create();
         $this->actingAs($user);
+        $shown = LegalArchive::current(LegalTexts::TERMS)->id;
         $this->get('/zustimmung')->assertOk()
-            ->assertSee('name="terms_version" value="'.LegalTexts::DEFAULT_VERSION.'"', false);
+            ->assertSee('name="terms_revision" value="'.$shown.'"', false);
 
         // An admin forces a new terms version while the page is open.
         Setting::put(AppSettings::TERMS_VERSION, '2026-10-24 12:00:00');
 
-        $this->post('/zustimmung', $this->accept(['terms_version' => LegalTexts::DEFAULT_VERSION]))
+        $this->post('/zustimmung', $this->accept(['terms_revision' => $shown]))
             ->assertRedirect(route('consent.show'))
             ->assertSessionHas('warning', 'Die Texte wurden geändert, bitte erneut lesen.');
         $this->assertNull($user->fresh()->consent_accepted_at);
@@ -272,7 +274,7 @@ class LegalConsentTest extends TestCase
         $open = User::factory()->withoutConsent()->create();
 
         $this->get(route('backend.users.show', $done))->assertOk()
-            ->assertSee('Datenschutz Stand '.LegalTexts::versionDate(LegalTexts::DEFAULT_VERSION));
+            ->assertSee('Datenschutzerklärung (Stand '.LegalTexts::versionDate(LegalTexts::DEFAULT_VERSION));
         $this->get(route('backend.users.show', $open))->assertOk()->assertSee('Zustimmung: noch offen');
     }
 }

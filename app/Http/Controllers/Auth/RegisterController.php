@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\InvitationUsedException;
 use App\Http\Controllers\Controller;
 use App\Models\Invitation;
+use App\Models\LegalRevision;
 use App\Models\RegistrationCode;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Audit;
 use App\Services\KassierNotifier;
 use App\Services\Ledger;
+use App\Services\LegalArchive;
 use App\Support\AppSettings;
 use App\Support\LegalTexts;
 use App\Support\Money;
@@ -107,6 +109,8 @@ class RegisterController extends Controller
             'regCode' => $regCode ? $this->regCode($request) : '',
             'code' => (string) $request->query('code', ''),
             'price' => AppSettings::beerPrice(),
+            // Revisions of the linked texts at the time the form is shown (hidden fields, checked on submit).
+            'revisions' => array_map(fn (LegalRevision $revision) => $revision->id, array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalArchive::forDisplay($kind), LegalTexts::KINDS))),
         ]);
     }
 
@@ -184,9 +188,19 @@ class RegisterController extends Controller
             throw $e;
         }
 
+        // Only the revisions shown with the form can be accepted (changed meanwhile = read again).
+        // Resolved outside the transaction: a rolled back registration does not take a revision with it.
+        $revisions = LegalArchive::currentAll();
+        foreach ($revisions as $kind => $revision) {
+            if ((int) $request->input($kind.'_revision') !== $revision->id) {
+                return $back('consent', __('legal.consent_changed'));
+            }
+        }
+        $consent = LegalTexts::consentAttributes($revisions);
+
         try {
-            [$user, $carryoverTx] = DB::transaction(function () use ($data, $carryover, $invitation, $regCode) {
-                $user = User::query()->forceCreate(LegalTexts::consentAttributes() + [
+            [$user, $carryoverTx] = DB::transaction(function () use ($data, $carryover, $invitation, $regCode, $consent) {
+                $user = User::query()->forceCreate($consent + [
                     'username' => $data['username'],
                     'first_name' => $data['first_name'] ?? null,
                     'last_name' => $data['last_name'] ?? null,
@@ -208,6 +222,8 @@ class RegisterController extends Controller
                     'registration_code_id' => $regCode?->id,
                     'privacy_accepted_version' => $user->privacy_accepted_version,
                     'terms_accepted_version' => $user->terms_accepted_version,
+                    'privacy_revision_id' => $user->privacy_revision_id,
+                    'terms_revision_id' => $user->terms_revision_id,
                 ], fn ($v) => $v !== null), $user);
                 $tx = $carryover ? Ledger::reportCarryover($user, ...$carryover) : null;
 

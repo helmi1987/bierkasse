@@ -115,7 +115,8 @@
 @php($footerVersion = \App\Support\SystemInfo::appVersion()['version'] ?? null)
 @php($footerCopyright = \App\Support\AppSettings::copyrightDisplay())
 <footer class="wrap site-footer">
-    <span>{{ $appName }}@if ($footerVersion) v{{ $footerVersion }}@endif</span>@if ($footerCopyright !== '')<span aria-hidden="true"> · </span><span>{{ $footerCopyright }}</span>@endif<span aria-hidden="true"> · </span><a href="{{ route('legal.privacy') }}">{{ __('legal.link.privacy') }}</a><span aria-hidden="true"> · </span><a href="{{ route('legal.terms') }}">{{ __('legal.link.terms') }}</a>
+    <div><span class="unit">{{ $appName }}@if ($footerVersion) v{{ $footerVersion }}@endif</span>@if ($footerCopyright !== '')<span aria-hidden="true"> · </span><span class="unit">{{ $footerCopyright }}</span>@endif</div>
+    <div><a class="unit" href="{{ route('legal.privacy') }}">{{ __('legal.link.privacy') }}</a><span aria-hidden="true"> · </span><a class="unit" href="{{ route('legal.terms') }}">{{ __('legal.link.terms') }}</a></div>
 </footer>
 @if ($livewirePage)
     @livewireScripts(['nonce' => $nonce])

@@ -426,6 +426,8 @@ textarea { resize: vertical; line-height: 1.45; }
 .legal-text ul { margin: .35rem 0 .75rem; padding-left: 1.2rem; }
 .legal-text p { margin: .35rem 0 .75rem; }
 .site-footer a { color: inherit; }
+/* Each footer part (app/version, copyright, links) wraps as a whole; only parts longer than a line break inside. */
+.site-footer .unit { display: inline-block; max-width: 100%; }
 .consent-check a { text-decoration: underline; }
 .consent-logout { margin-top: .75rem; }
 .legal-links { font-size: .85rem; }

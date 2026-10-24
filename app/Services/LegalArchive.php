@@ -15,9 +15,10 @@ use Throwable;
  * texts are shown or accepted (reason "auto"), so deploys of new default texts or changed
  * placeholder values are archived as well.
  *
- * Per request (scoped binding) the newest revision per kind is cached: an unchanged text costs one
- * hash and no query. Creation runs in a transaction that first locks the audit chain head (the
- * audit entry needs that lock anyway), so concurrent requests never store the same revision twice.
+ * Per request (scoped binding) the newest committed revision per kind is cached: an unchanged text
+ * costs one SELECT per kind and request, further calls only a hash. Creation runs in a transaction
+ * that first locks the audit chain head (the audit entry needs that lock anyway), so concurrent
+ * requests never store the same revision twice.
  */
 class LegalArchive
 {
@@ -76,11 +77,13 @@ class LegalArchive
             return $this->latest[$kind] = $latest;
         }
 
-        return $this->latest[$kind] = DB::transaction(function () use ($kind, $reason, $body, $hash, $version) {
+        return DB::transaction(function () use ($kind, $reason, $body, $hash, $version) {
             // Serialises writers (same lock Audit::log() takes below), then re-check under the lock.
             DB::table('audit_chain')->where('id', 1)->lockForUpdate()->first();
             $latest = LegalRevision::latestOf($kind, true);
             if ($latest !== null && $latest->matches($hash, $version)) {
+                DB::afterCommit(fn () => $this->latest[$kind] = $latest);
+
                 return $latest;
             }
 
@@ -97,6 +100,8 @@ class LegalArchive
             Audit::log('legal.revision', $revision, [], [
                 'kind' => $kind, 'version' => $version, 'hash' => $hash, 'reason' => $revision->reason,
             ]);
+            // Cached only once committed: a rolled back outer transaction must not leave a ghost revision.
+            DB::afterCommit(fn () => $this->latest[$kind] = $revision);
 
             return $revision;
         });

@@ -10,8 +10,10 @@ use App\Services\LegalArchive;
 use App\Support\AppSettings;
 use App\Support\LegalTexts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use LogicException;
+use RuntimeException;
 use Tests\TestCase;
 
 class LegalRevisionTest extends TestCase
@@ -167,6 +169,51 @@ class LegalRevisionTest extends TestCase
         $user = User::query()->where('username', 'neu.user')->firstOrFail();
         $this->assertSame(LegalRevision::latestOf(LegalTexts::PRIVACY)->id, $user->privacy_revision_id);
         $this->assertSame(LegalRevision::latestOf(LegalTexts::TERMS)->id, $user->terms_revision_id);
+    }
+
+    public function test_registration_with_outdated_revision_id_is_refused(): void
+    {
+        Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
+        Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
+        $this->get('/registrieren')->assertOk();
+        $privacy = LegalRevision::latestOf(LegalTexts::PRIVACY)->id;
+        $terms = LegalRevision::latestOf(LegalTexts::TERMS)->id;
+        $this->get('/registrieren')->assertSee('name="terms_revision" value="'.$terms.'"', false);
+
+        // The price changes while the form is open: new terms revision.
+        $this->setPrice(250);
+
+        $this->from('/registrieren')->post('/registrieren', [
+            'code' => 'durst', 'username' => 'neu.user', 'password' => 'password-123', 'password_confirmation' => 'password-123', 'consent' => '1',
+            'privacy_revision' => $privacy, 'terms_revision' => $terms,
+        ])->assertRedirect('/registrieren')
+            ->assertSessionHasErrors(['consent' => __('legal.consent_changed')])
+            ->assertSessionHasInput('username', 'neu.user');
+        $this->assertFalse(User::query()->where('username', 'neu.user')->exists());
+
+        // Form shown again with the new revision: registered with exactly that one.
+        $newTerms = LegalRevision::latestOf(LegalTexts::TERMS)->id;
+        $this->post('/registrieren', [
+            'code' => 'durst', 'username' => 'neu.user', 'password' => 'password-123', 'password_confirmation' => 'password-123', 'consent' => '1',
+            'privacy_revision' => $privacy, 'terms_revision' => $newTerms,
+        ])->assertRedirect(route('account.dashboard'));
+        $this->assertSame($newTerms, User::query()->where('username', 'neu.user')->value('terms_revision_id'));
+    }
+
+    public function test_cache_does_not_keep_rolled_back_revision(): void
+    {
+        LegalArchive::currentAll();
+        $this->setPrice(400);
+        try {
+            DB::transaction(function () {
+                LegalArchive::current(LegalTexts::TERMS, LegalRevision::REASON_SETTINGS);
+                throw new RuntimeException('rollback');
+            });
+        } catch (RuntimeException) {
+        }
+        $revision = LegalArchive::current(LegalTexts::TERMS);
+        $this->assertTrue(LegalRevision::query()->whereKey($revision->id)->exists());
+        $this->assertStringContainsString('CHF 4.00', $revision->body);
     }
 
     public function test_consent_stores_displayed_revision_ids(): void

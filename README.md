@@ -414,18 +414,25 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     - Neue Fassung, sobald Text-Hash oder Stand einer Art von der neuesten Fassung abweicht (gleicher Text mit
       "Erneut zustimmen" = neue Fassung mit neuem Stand). Anlass: `reaccept`/`update`/`silent` (Speichern im Backend,
       gewählter Modus, auch Name/E-Mail/Standort), `settings` (Bierpreis/Limit/Rückgängig-Minuten), `auto` (verzögert
-      erkannt beim Anzeigen von `/datenschutz`, `/nutzungsbestimmungen`, `/zustimmung`, der Fassungen-Liste, bei
-      Zustimmung und Registrierung, z. B. neuer Standardtext per Deploy oder Platzhalter anderswo geändert), `initial`
-      (erste Fassung einer Art, beim ersten Zugriff; keine Migration). Die öffentlichen Seiten zeigen genau den Text
-      der aktuellen Fassung (kann das Archiv nicht schreiben, z. B. Migration ausstehend: aktueller Text, Fehler geloggt).
+      erkannt beim Anzeigen von `/datenschutz`, `/nutzungsbestimmungen`, `/zustimmung`, `/registrieren`, der
+      Fassungen-Liste, bei Zustimmung und Registrierung, z. B. neuer Standardtext per Deploy oder Platzhalter anderswo
+      geändert), `initial` (erste Fassung einer Art, beim ersten Zugriff; keine Migration). Eine verzögert erkannte
+      Fassung (`auto`) trägt Zeitpunkt und Benutzer (`created_by`, bei Gästen leer) der ersten Anfrage nach der
+      Änderung, nicht den Zeitpunkt der Änderung selbst.
+    - Fehlerverhalten: Die öffentlichen Seiten und das Registrierungsformular zeigen genau den Text der aktuellen
+      Fassung; kann das Archiv nicht geschrieben werden (z. B. Migration ausstehend), zeigen sie den aktuellen Text
+      und loggen den Fehler. Registrierung und Zustimmung schlagen dann mit Fehler fehl (fail-closed, keine
+      Zustimmung ohne archivierte Fassung).
     - Sicher bei Parallelzugriff: Transaktion, Sperre auf den Audit-Kettenkopf (`audit_chain`), erneute Prüfung.
-      Pro Anfrage gecacht (eine Hash-Berechnung, keine Abfrage bei unverändertem Text). Audit `legal.revision`
+      Pro Anfrage gecacht: bei unverändertem Text eine Abfrage (SELECT) pro Art und Anfrage, danach nur noch die
+      Hash-Berechnung; gecacht wird erst nach dem Commit (kein Rest nach Rollback). Audit `legal.revision`
       (Art, Stand, Hash, Anlass; ohne Text). `legal.update` bleibt.
-    - Benutzer: `privacy_revision_id`/`terms_revision_id` bei Registrierung, Zustimmung und Setup-Admin. Die
-      Zustimmungsseite sendet die angezeigten Fassungs-IDs (statt der Versionen); ist eine davon nicht mehr die
-      neueste, wird nichts gespeichert ("Die Texte wurden geändert, bitte erneut lesen"), streng auch bei einer neuen
-      Fassung ohne neuen Stand (z. B. Preisänderung). Eine solche Fassung verlangt aber keine erneute Zustimmung
-      (Sperre weiterhin nur über den Stand).
+    - Benutzer: `privacy_revision_id`/`terms_revision_id` bei Registrierung, Zustimmung und Setup-Admin. Zustimmungsseite
+      und Registrierungsformular senden die angezeigten Fassungs-IDs als versteckte Felder (Zustimmung: statt der
+      Versionen); ist eine davon nicht mehr die neueste, wird nichts gespeichert bzw. kein Konto erstellt ("Die Texte
+      wurden geändert, bitte erneut lesen"; Registrierung: zurück mit Eingaben), streng auch bei einer neuen Fassung
+      ohne neuen Stand (z. B. Preisänderung). Eine solche Fassung verlangt aber keine erneute Zustimmung (Sperre
+      weiterhin nur über den Stand). Tests: `Tests\TestCase::post()` ergänzt beim Registrieren fehlende Fassungs-IDs.
     - Ansehen: `/rechtliches/fassung/{id}` für alle angemeldeten Benutzer (die Texte waren öffentlich), Kopf
       "Fassung vom <Datum> (Stand <Datum>)"; Gäste werden zur Anmeldung geleitet. Liste
       `/backend/rechtliches/fassungen` (Kassier und Admin, nur lesen, 25 pro Seite, Filter nach Text; Link in der

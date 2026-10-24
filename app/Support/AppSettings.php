@@ -4,6 +4,8 @@ namespace App\Support;
 
 use App\Models\QrCode;
 use App\Models\Setting;
+use App\Models\User;
+use Illuminate\Support\Carbon;
 use Throwable;
 
 /**
@@ -20,7 +22,7 @@ class AppSettings
     /** Copyright text in the page footer; unset = DEFAULT_COPYRIGHT, empty = hidden. */
     public const COPYRIGHT = 'copyright';
 
-    public const DEFAULT_COPYRIGHT = '© 2026 Stefan Diethelm';
+    public const DEFAULT_COPYRIGHT = '© {jahr} Stefan Diethelm';
 
     public const COPYRIGHT_MAX = 100;
 
@@ -187,6 +189,40 @@ class AppSettings
         $value = self::get(self::COPYRIGHT);
 
         return $value === null ? self::DEFAULT_COPYRIGHT : trim((string) $value);
+    }
+
+    /**
+     * Footer copyright with placeholders replaced: {jahr} = current year, {startjahr} = install year
+     * (year of the oldest account). "{startjahr}-{jahr}" / "{startjahr}–{jahr}" collapses to one year when equal.
+     */
+    public static function copyrightDisplay(): string
+    {
+        $text = self::copyright();
+        if ($text === '' || ! str_contains($text, '{')) {
+            return $text;
+        }
+        $now = (string) now()->year;
+        $start = (string) self::startYear();
+        if ($start === $now) {
+            $text = preg_replace('/\{startjahr\}\s*[–-]\s*\{jahr\}/u', $now, $text) ?? $text;
+        }
+
+        return str_replace(['{startjahr}', '{jahr}'], [$start, $now], $text);
+    }
+
+    /** Install year: year of the oldest account (assumption), current year without accounts. Cached per request. */
+    public static function startYear(): int
+    {
+        if (! app()->bound('app.start_year')) {
+            try {
+                $first = User::query()->min('created_at');
+            } catch (Throwable) {
+                $first = null;
+            }
+            app()->instance('app.start_year', $first ? (int) Carbon::parse($first)->setTimezone(config('app.timezone'))->year : (int) now()->year);
+        }
+
+        return app('app.start_year');
     }
 
     /** Responsible person named in the legal texts ({name}). */

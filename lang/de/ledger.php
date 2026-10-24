@@ -59,7 +59,7 @@ return [
     'deposit_pending' => 'Es gibt noch unbestätigte Einzahlungen.',
     'leave_negative' => 'Das Konto ist im Minus. Bitte zuerst einzahlen.',
     'user_left' => 'Dieses Konto ist geschlossen.',
-    'deposit_reported' => 'Einzahlung gemeldet. Sie zählt, sobald der Kassier bestätigt.',
+    'deposit_reported' => 'Einzahlung gemeldet. Sie zählt sofort, der Kassier prüft sie noch.',
     'deposit_reported_on_hold' => 'Einzahlung gemeldet. Sie zählt erst nach Bestätigung durch den Kassier.',
     'deposit_confirmed' => 'Einzahlung bestätigt.',
     'deposit_rejected' => 'Einzahlung abgelehnt.',

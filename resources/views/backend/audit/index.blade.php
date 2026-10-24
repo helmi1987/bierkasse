@@ -22,7 +22,7 @@
         <select id="f-action" name="action">
             <option value="">{{ __('audit.filter_action_all') }}</option>
             @foreach ($prefixes as $p)
-                <option value="{{ $p }}" @selected($filters['action'] === $p)>{{ $p }}</option>
+                <option value="{{ $p }}" @selected($filters['action'] === $p)>{{ \App\Support\AuditPresenter::prefixLabel($p) }}</option>
             @endforeach
         </select>
         <label for="f-from">{{ __('audit.filter_from') }}</label>
@@ -55,6 +55,7 @@
                         <th>{{ __('audit.actor') }}</th>
                         <th>{{ __('audit.action') }}</th>
                         <th>{{ __('audit.subject') }}</th>
+                        <th>{{ __('audit.details') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -62,8 +63,9 @@
                         <tr>
                             <td><a href="{{ route($auditBase.'.show', $entry) }}">{{ local_time($entry->at(), 'd.m.Y H:i:s') }}</a></td>
                             <td>{{ $entry->actor_name ?? __('audit.system') }}</td>
-                            <td><code>{{ $entry->action }}</code></td>
-                            <td>@if ($entry->subject_type){{ $entry->subject_type }} #{{ $entry->subject_id }}@else – @endif</td>
+                            <td>{{ \App\Support\AuditPresenter::actionLabel($entry->action) }} <small class="muted"><code>{{ $entry->action }}</code></small></td>
+                            <td>{{ $presenter->subjectLabel($entry) ?? '–' }}</td>
+                            <td>{{ $presenter->summary($entry) }}</td>
                         </tr>
                     @endforeach
                 </tbody>

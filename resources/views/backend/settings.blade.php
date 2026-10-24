@@ -19,6 +19,11 @@
                 <div class="hint">{{ __('settings.app_name_hint', ['default' => config('app.name')]) }}</div>
             </div>
             <div class="field">
+                <label for="copyright">{{ __('settings.copyright') }}</label>
+                <input type="text" id="copyright" name="copyright" value="{{ old('copyright', $copyright) }}" maxlength="{{ \App\Support\AppSettings::COPYRIGHT_MAX }}">
+                <div class="hint">{{ __('settings.copyright_hint') }}</div>
+            </div>
+            <div class="field">
                 <label for="beer_price">{{ __('settings.beer_price') }}</label>
                 <input type="text" id="beer_price" name="beer_price" inputmode="decimal" value="{{ old('beer_price', $beerPrice) }}" required>
                 <div class="hint">{{ __('settings.beer_price_hint') }}</div>

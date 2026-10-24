@@ -325,6 +325,9 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     seitlich, 33.5 mm oben/unten; **Annahme** 2026-10-22), je Öffnen/Drucken, PNG (A4 300 dpi) und SVG. Drucken mit 100 %.
 - Dashboard-Karten (Entscheid 2026-10-24): "Einzahlen" (Einzahlung melden + TWINT-Empfänger/Nummer, TWINT nur wenn aktiv; "Wartet auf
   Bestätigung" darunter) und "Meine Buchungen & Statistik" (Kennzahlen, Diagramm, letzte Buchungen) sind je eine Karte.
+- Fusszeile auf allen Seiten (auch Anmeldung): "<App-Name> v<Version> · <Copyright>". Version aus `VERSION`;
+  Copyright in den Einstellungen (max. 100 Zeichen, Text), Standard "© 2026 Stefan Diethelm", leer = ohne Copyright.
+  Nicht im Druck.
 - PWA-Name: `short_name` im Manifest = voller App-Name (Home-Bildschirm-Vorschlag z. B. "Bierkasse LUKS").
 - Runde spendieren (Entscheid 2026-10-21): Dashboard-Karte "Runde spendieren" (nach "Bier für Gast"). Angehakte
   aktive Kollegen (alle aktiven Benutzer ausser einem selbst, nach Name sortiert, mit Suchfeld) bekommen je 1 Bier,
@@ -401,7 +404,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Einstellungen und unten im Dashboard) Feedback: Art "Feedback" (Standard), "Idee" oder "Bug", Nachricht
   5–5000 Zeichen, optional "Antwort per Mail erwünscht" (nur mit hinterlegter E-Mail; die Mail hat dann
   Reply-To = E-Mail des Benutzers). Einmal-Token, max. 5 Feedbacks pro Stunde und Benutzer. Gespeichert in
-  `feedback` (mit Herkunftsseite aus dem Referer und User-Agent). `/backend/feedback` (nur Admins, Menüpunkt mit
+  `feedback` (mit Herkunftsseite aus dem Referer, User-Agent und App-Version `app_version` aus `VERSION`; in der
+  Liste neben der Seite und in der Mail, nur wenn gesetzt). `/backend/feedback` (nur Admins, Menüpunkt mit
   Zahl ungelesener): Liste (neueste zuerst), gelesen/ungelesen, löschen; dort auch die Empfänger der Mail:
   "Alle Admins" (Standard, aktive Admins mit E-Mail) oder "Feste E-Mail-Adressen" (1–20, eine pro Zeile oder
   mit Komma getrennt). Die Feedback-Mail geht immer raus, unabhängig vom Schalter "Kassier-Benachrichtigung".
@@ -459,6 +463,12 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
 - Backend `/backend/protokoll` (Kassier und Admin, nur lesen): neueste zuerst, Filter Person, Aktion (Präfix, z. B.
   `deposit`), Datum von/bis, Freitext; Detailansicht mit alten/neuen Werten und Hashes; "Integrität prüfen"
   prüft die ganze Kette und nennt den ersten fehlerhaften Eintrag; CSV-Export (mit Filtern).
+- Anzeige (nur Darstellung, gespeicherte Daten/Hash/CSV unverändert; `App\Support\AuditPresenter`): Aktion als
+  deutscher Text mit Code daneben (`lang/de/audit.php` `actions`, unbekannt = Code), Objekt mit Namen (pro Seite
+  gesammelt geladen; gelöscht = "Typ #ID"), Spalte "Details" (Kurzfassung, max. 80 Zeichen). Detail: deutsche
+  Feldnamen (`fields`, unbekannt = Schlüssel), Beträge als CHF, ja/nein, "–", Datum lokal, Benutzer-IDs als Namen.
+  **Annahme:** Zeiten ohne Zeitzone in den Werten stammen von Laravel in `APP_TIMEZONE`. Neue Aktionen/Felder in
+  `lang/de/audit.php` ergänzen.
 - Backups (`db:backup`, Download in der Wartung) enthalten `audit_logs` und `audit_chain`; `db:restore` stellt beide
   wieder her und hängt danach `backup.restore` an. Einträge nach dem Backup-Zeitpunkt sind nach einer
   Wiederherstellung weg (nur im neueren Backup).

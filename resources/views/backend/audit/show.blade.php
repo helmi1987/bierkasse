@@ -6,8 +6,8 @@
 {{-- Kassier bar or admin bar (same page). --}}
 @php($auditBase = request()->routeIs('backend.audit-admin*') ? 'backend.audit-admin' : 'backend.audit')
 @include('partials.backend-nav')
-<h1>{{ __('audit.entry', ['id' => $entry->id]) }} <code>{{ $entry->action }}</code></h1>
-<p class="muted">{{ local_time($entry->at(), 'd.m.Y H:i:s') }} · {{ $entry->actor_name ?? __('audit.system') }}@if ($entry->subject_type) · {{ $entry->subject_type }} #{{ $entry->subject_id }}@endif</p>
+<h1>{{ __('audit.entry', ['id' => $entry->id]) }}: {{ \App\Support\AuditPresenter::actionLabel($entry->action) }} <small class="muted"><code>{{ $entry->action }}</code></small></h1>
+<p class="muted">{{ local_time($entry->at(), 'd.m.Y H:i:s') }} · {{ $entry->actor_name ?? __('audit.system') }}@if ($entry->subject_type) · {{ $presenter->subjectLabel($entry) }} <small><code>{{ $entry->subject_type }} #{{ $entry->subject_id }}</code></small>@endif</p>
 
 @php($old = $entry->oldValues())
 @php($new = $entry->newValues())
@@ -24,9 +24,15 @@
                 <tbody>
                     @foreach ($keys as $key)
                         <tr>
-                            <td><code>{{ $key }}</code></td>
-                            <td>{{ array_key_exists($key, $old) ? json_encode($old[$key], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '' }}</td>
-                            <td>{{ array_key_exists($key, $new) ? json_encode($new[$key], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '' }}</td>
+                            <td>
+                                @if (\App\Support\AuditPresenter::hasFieldLabel($key))
+                                    {{ \App\Support\AuditPresenter::fieldLabel($key) }} <small class="muted"><code>{{ $key }}</code></small>
+                                @else
+                                    <code>{{ $key }}</code>
+                                @endif
+                            </td>
+                            <td>{{ array_key_exists($key, $old) ? $presenter->value($key, $old[$key]) : '' }}</td>
+                            <td>{{ array_key_exists($key, $new) ? $presenter->value($key, $new[$key]) : '' }}</td>
                         </tr>
                     @endforeach
                 </tbody>

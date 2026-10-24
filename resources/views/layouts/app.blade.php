@@ -93,5 +93,10 @@
     <div class="live-keep" data-live-keep="alerts">@include('partials.alerts')</div>
     @yield('content')
 </main>
+@php($footerVersion = \App\Support\SystemInfo::appVersion()['version'] ?? null)
+@php($footerCopyright = \App\Support\AppSettings::copyright())
+<footer class="wrap site-footer">
+    <span>{{ $appName }}@if ($footerVersion) v{{ $footerVersion }}@endif</span>@if ($footerCopyright !== '')<span aria-hidden="true"> · </span><span>{{ $footerCopyright }}</span>@endif
+</footer>
 </body>
 </html>

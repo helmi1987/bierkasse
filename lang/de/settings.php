@@ -7,6 +7,8 @@ return [
     'general' => 'Allgemein',
     'app_name' => 'App-Name',
     'app_name_hint' => 'Leer = «:default».',
+    'copyright' => 'Copyright (Fusszeile)',
+    'copyright_hint' => 'Erscheint unten auf jeder Seite nach der Version. Leer = kein Copyright.',
     'beer_price' => 'Bierpreis (CHF)',
     'beer_price_hint' => 'Gilt für neue Striche. Offene Biere behalten ihren alten Preis.',
     'default_limit' => 'Standard-Limit (CHF unter null)',

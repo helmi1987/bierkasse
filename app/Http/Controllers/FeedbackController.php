@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Feedback;
 use App\Services\FeedbackNotifier;
 use App\Support\FormToken;
+use App\Support\SystemInfo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -59,6 +60,7 @@ class FeedbackController extends Controller
             'wants_reply' => $request->boolean('wants_reply') && (string) $user->email !== '',
             'page' => str_starts_with($page, '/') ? $page : null,
             'user_agent' => Str::limit((string) $request->userAgent(), 250, '') ?: null,
+            'app_version' => SystemInfo::appVersion()['version'] ?? null,
         ]);
 
         FeedbackNotifier::send($feedback);

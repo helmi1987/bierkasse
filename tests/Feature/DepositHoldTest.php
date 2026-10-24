@@ -139,4 +139,72 @@ class DepositHoldTest extends TestCase
         $this->actingAs($user)->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => '5', 'method' => 'cash']))
             ->assertSessionHas('status', __('ledger.deposit_reported'));
     }
+
+    public function test_deposit_confirmed_in_the_same_second_after_the_rejection_releases(): void
+    {
+        $user = $this->user();
+        Ledger::consume($user, 2);
+        $fake = Ledger::reportDeposit($user, 2000, 'twint');
+        $real = Ledger::reportDeposit($user, 500, 'cash');
+        $this->freezeTime();
+        Ledger::rejectDeposit($fake, $this->kassier());
+        $this->assertTrue(Ledger::depositsOnHold($user));
+        // Confirmed in the same second: the older report confirmed after the rejection still releases.
+        Ledger::bookDeposit($user, 100, 'cash', $this->kassier());
+        $this->assertFalse(Ledger::depositsOnHold($user));
+
+        $other = $this->user();
+        Ledger::consume($other, 2);
+        $fake2 = Ledger::reportDeposit($other, 2000, 'twint');
+        $real2 = Ledger::reportDeposit($other, 100, 'cash');
+        Ledger::rejectDeposit($fake2, $this->kassier());
+        Ledger::confirmDeposit($real2, $this->kassier());
+        $this->assertFalse(Ledger::depositsOnHold($other));
+        $this->assertSame(500, $real->amount);
+    }
+
+    public function test_rejection_after_an_earlier_confirmation_keeps_the_hold(): void
+    {
+        $user = $this->user();
+        Ledger::consume($user, 2);
+        $real = Ledger::reportDeposit($user, 100, 'cash');
+        $fake = Ledger::reportDeposit($user, 2000, 'twint');
+        $this->freezeTime();
+        // Same second, confirmation first: the rejection is the later decision.
+        Ledger::confirmDeposit($real, $this->kassier());
+        Ledger::rejectDeposit($fake, $this->kassier());
+        $this->assertTrue(Ledger::depositsOnHold($user));
+
+        $this->travel(1)->minutes();
+        $older = $this->user();
+        Ledger::consume($older, 2);
+        Ledger::bookDeposit($older, 100, 'cash', $this->kassier());
+        $this->travel(1)->minutes();
+        Ledger::rejectDeposit(Ledger::reportDeposit($older, 2000, 'twint'), $this->kassier());
+        $this->assertTrue(Ledger::depositsOnHold($older));
+    }
+
+    public function test_correction_to_zero_releases_a_pending_deposit(): void
+    {
+        $user = $this->rejectedUser();
+        Ledger::reportDeposit($user, 2000, 'twint');
+        $this->assertSame(-600, Ledger::availableBalance($user));
+
+        Ledger::correction($user, 600, 'paid in person', $this->kassier());
+        $this->assertFalse(Ledger::depositsOnHold($user));
+        $this->assertSame(2000, Ledger::availableBalance($user));
+    }
+
+    public function test_leave_form_and_withdrawal_while_on_hold(): void
+    {
+        $user = $this->rejectedUser();
+        $pending = Ledger::reportDeposit($user, 2000, 'twint');
+
+        $this->actingAs($user)->get('/konto/verlassen')->assertOk()->assertSee('CHF -6.00')->assertSee(__('ledger.deposit_pending'));
+
+        $this->delete('/konto/einzahlung/'.$pending->id)->assertSessionHas('status', __('ledger.deposit_cancelled'));
+        $this->assertTrue(Ledger::depositsOnHold($user));
+        $this->assertSame(-600, Ledger::availableBalance($user));
+        $this->get('/konto')->assertOk()->assertDontSee(__('account.deposit_on_hold'));
+    }
 }

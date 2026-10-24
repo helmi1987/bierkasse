@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\AppSettings;
@@ -43,17 +44,39 @@ class Ledger
      */
     public static function depositsOnHold(User $user): bool
     {
-        $rejectedAt = Transaction::query()->where('user_id', $user->id)
-            ->where('type', Transaction::TYPE_DEPOSIT)->where('status', Transaction::STATUS_REJECTED)
-            ->max('confirmed_at');
-        if ($rejectedAt === null) {
+        if (self::balance($user) >= 0) {
             return false;
         }
-        $confirmedLater = Transaction::query()->where('user_id', $user->id)
-            ->where('type', Transaction::TYPE_DEPOSIT)->confirmed()
-            ->where('confirmed_at', '>', $rejectedAt)->exists();
 
-        return ! $confirmedLater && self::balance($user) < 0;
+        // Time of the decision: confirmed_at (set by rejectDeposit); legacy rows without it fall back to updated_at.
+        $decidedAt = DB::raw('COALESCE(confirmed_at, updated_at)');
+        $rejected = Transaction::query()->where('user_id', $user->id)
+            ->where('type', Transaction::TYPE_DEPOSIT)->where('status', Transaction::STATUS_REJECTED)
+            ->select('id')->selectRaw('COALESCE(confirmed_at, updated_at) as decided_at')->get();
+        if ($rejected->isEmpty()) {
+            return false;
+        }
+        $rejectedAt = $rejected->max('decided_at');
+        $deposits = Transaction::query()->where('user_id', $user->id)
+            ->where('type', Transaction::TYPE_DEPOSIT)->confirmed();
+        if ((clone $deposits)->where($decidedAt, '>', $rejectedAt)->exists()) {
+            return false;
+        }
+
+        // Same second (timestamps have second precision): the transaction id says nothing about the order of
+        // the decisions (an older report can be confirmed later), so compare the audit entries instead. They are
+        // written in the same DB transaction as the status change and appended under the audit chain lock, so
+        // their ids follow the commit order. Without audit entries the hold stays (conservative).
+        $tied = (clone $deposits)->where($decidedAt, '=', $rejectedAt)->pluck('id')->all();
+        if ($tied === []) {
+            return true;
+        }
+        $lastAudit = fn (array $actions, array $ids) => AuditLog::query()->where('subject_type', class_basename(Transaction::class))
+            ->whereIn('subject_id', $ids)->whereIn('action', $actions)->max('id');
+        $rejectAudit = $lastAudit(['deposit.reject'], $rejected->where('decided_at', $rejectedAt)->pluck('id')->all());
+        $confirmAudit = $lastAudit(['deposit.confirm', 'deposit.book'], $tied);
+
+        return ! ($confirmAudit !== null && $rejectAudit !== null && $confirmAudit > $rejectAudit);
     }
 
     /** Rows that make up availableBalance() (pending deposits left out while on hold). */

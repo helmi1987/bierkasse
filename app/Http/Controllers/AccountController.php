@@ -37,6 +37,7 @@ class AccountController extends Controller
     {
         $user = $request->user();
         // Includes reported deposits/carry-overs not yet confirmed (decision 2026-10-23): one number for the user.
+        // Pending deposits are left out while on hold (decision 2026-10-24, Ledger::depositsOnHold()).
         $balance = $user->availableBalance();
         $price = AppSettings::beerPrice();
         $stats = Stats::forUser($user);
@@ -101,6 +102,7 @@ class AccountController extends Controller
             'open' => Ledger::openItems($user, true),
             'undoable' => $undoable,
             'pending' => Transaction::query()->where('user_id', $user->id)->pending()->latest('id')->get(),
+            'depositsOnHold' => Ledger::depositsOnHold($user),
             'twintEnabled' => AppSettings::twintEnabled(),
             'twintRecipients' => AppSettings::twintRecipients(),
             'twintHtml' => AppSettings::twintRecipientText(true),
@@ -293,7 +295,8 @@ class AccountController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('status', __('ledger.deposit_reported'));
+        // Decision 2026-10-24: after a rejected deposit (and confirmed balance below 0) the report does not count yet.
+        return back()->with('status', __(Ledger::depositsOnHold($request->user()) ? 'ledger.deposit_reported_on_hold' : 'ledger.deposit_reported'));
     }
 
     /**

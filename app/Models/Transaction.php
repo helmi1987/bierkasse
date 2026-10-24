@@ -126,11 +126,16 @@ class Transaction extends Model
         return $query->where('status', self::STATUS_PENDING);
     }
 
-    /** Rows of the user's available balance: confirmed plus pending deposits and carry-overs. */
-    public function scopeAvailable(Builder $query): Builder
+    /**
+     * Rows of the user's available balance: confirmed plus pending deposits and carry-overs.
+     * With $depositsOnHold pending deposits are left out (see Ledger::depositsOnHold()).
+     */
+    public function scopeAvailable(Builder $query, bool $depositsOnHold = false): Builder
     {
+        $provisional = $depositsOnHold ? array_values(array_diff(self::PROVISIONAL_TYPES, [self::TYPE_DEPOSIT])) : self::PROVISIONAL_TYPES;
+
         return $query->where(fn (Builder $q) => $q->where('status', self::STATUS_CONFIRMED)
-            ->orWhere(fn (Builder $q) => $q->where('status', self::STATUS_PENDING)->whereIn('type', self::PROVISIONAL_TYPES)));
+            ->orWhere(fn (Builder $q) => $q->where('status', self::STATUS_PENDING)->whereIn('type', $provisional)));
     }
 
     public function isPending(): bool

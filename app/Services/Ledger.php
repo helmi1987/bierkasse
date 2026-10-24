@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\AppSettings;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -26,10 +28,67 @@ class Ledger
      * and carry-overs count before the kassier confirms them, so beers can be booked while the kassier
      * is absent. A rejected or withdrawn deposit may leave the user below the limit (settled in person).
      * Pending payouts are not included (they block bookings instead).
+     *
+     * Decision 2026-10-24: while depositsOnHold() is true (rejected deposit and confirmed balance below 0),
+     * pending deposits do not count until the kassier confirms them; pending carry-overs still count.
      */
     public static function availableBalance(User $user): int
     {
-        return (int) Transaction::query()->where('user_id', $user->id)->available()->sum('amount');
+        return (int) self::availableRows($user)->sum('amount');
+    }
+
+    /**
+     * Provisional deposits on hold (decision 2026-10-24): the user has a rejected deposit with no deposit
+     * confirmed (or booked by a kassier) after it, and the confirmed balance is below 0. Released
+     * automatically by a later confirmed deposit or once the confirmed balance is >= 0.
+     */
+    public static function depositsOnHold(User $user): bool
+    {
+        if (self::balance($user) >= 0) {
+            return false;
+        }
+
+        // Time of the decision: confirmed_at (set by rejectDeposit); legacy rows without it fall back to updated_at.
+        $decidedAt = DB::raw('COALESCE(confirmed_at, updated_at)');
+        $rejected = Transaction::query()->where('user_id', $user->id)
+            ->where('type', Transaction::TYPE_DEPOSIT)->where('status', Transaction::STATUS_REJECTED)
+            ->select('id')->selectRaw('COALESCE(confirmed_at, updated_at) as decided_at')->get();
+        if ($rejected->isEmpty()) {
+            return false;
+        }
+        $rejectedAt = $rejected->max('decided_at');
+        $deposits = Transaction::query()->where('user_id', $user->id)
+            ->where('type', Transaction::TYPE_DEPOSIT)->confirmed();
+        if ((clone $deposits)->where($decidedAt, '>', $rejectedAt)->exists()) {
+            return false;
+        }
+
+        // Same second (timestamps have second precision): the transaction id says nothing about the order of
+        // the decisions (an older report can be confirmed later), so compare the audit entries instead. They are
+        // written in the same DB transaction as the status change and appended under the audit chain lock, so
+        // their ids follow the commit order. Without audit entries the hold stays (conservative).
+        $tied = (clone $deposits)->where($decidedAt, '=', $rejectedAt)->pluck('id')->all();
+        if ($tied === []) {
+            return true;
+        }
+        $lastAudit = fn (array $actions, array $ids) => AuditLog::query()->where('subject_type', class_basename(Transaction::class))
+            ->whereIn('subject_id', $ids)->whereIn('action', $actions)->max('id');
+        $rejectAudit = $lastAudit(['deposit.reject'], $rejected->where('decided_at', $rejectedAt)->pluck('id')->all());
+        $confirmAudit = $lastAudit(['deposit.confirm', 'deposit.book'], $tied);
+
+        return ! ($confirmAudit !== null && $rejectAudit !== null && $confirmAudit > $rejectAudit);
+    }
+
+    /** Rows that make up availableBalance() (pending deposits left out while on hold). */
+    private static function availableRows(User $user): Builder
+    {
+        return Transaction::query()->where('user_id', $user->id)->available(self::depositsOnHold($user));
+    }
+
+    /** "Limit reached" error; while deposits are on hold it says that a reported deposit does not count yet. */
+    private static function limitReached(User $user): LedgerException
+    {
+        return new LedgerException(__(self::depositsOnHold($user) ? 'ledger.limit_reached_on_hold' : 'ledger.limit_reached'));
     }
 
     /**
@@ -81,7 +140,7 @@ class Ledger
             $price = AppSettings::beerPrice();
             $amount = -$quantity * $price;
             if (self::availableBalance($user) + $amount < -$user->effectiveLimit()) {
-                throw new LedgerException(__('ledger.limit_reached'));
+                throw self::limitReached($user);
             }
 
             $tx = Transaction::query()->create([
@@ -150,7 +209,7 @@ class Ledger
             $price = AppSettings::beerPrice();
             $amount = -$total * $price;
             if (self::availableBalance($giver) + $amount < -$giver->effectiveLimit()) {
-                throw new LedgerException(__('ledger.limit_reached'));
+                throw self::limitReached($giver);
             }
 
             $tx = Transaction::query()->create([
@@ -220,7 +279,7 @@ class Ledger
             $price = AppSettings::beerPrice();
             $total = $perRecipient * count($recipientIds);
             if (self::availableBalance($giver) - $total * $price < -$giver->effectiveLimit()) {
-                throw new LedgerException(__('ledger.limit_reached'));
+                throw self::limitReached($giver);
             }
 
             $row = fn (int $userId, int $quantity, int $amount, ?int $parentId) => Transaction::query()->create([
@@ -679,7 +738,8 @@ class Ledger
      *  - partial: the unpaid rest of a partly paid beer (original price);
      *  - other: uncovered non-beer debits (negative corrections etc.).
      *
-     * With $available the pending deposits and carry-overs count as well (user's own view).
+     * With $available the rows of availableBalance() count (user's own view, incl. pending deposits
+     * and carry-overs; pending deposits not while on hold).
      *
      * @return array{total:int, beers: list<array{unit_price:int, quantity:int, amount:int}>, partial: list<array{unit_price:int, amount:int}>, other:int}
      */
@@ -690,8 +750,8 @@ class Ledger
             return ['total' => 0, 'beers' => [], 'partial' => [], 'other' => 0];
         }
 
-        $query = Transaction::query()->where('user_id', $user->id);
-        $rows = ($available ? $query->available() : $query->confirmed())->orderBy('created_at')->orderBy('id')->get();
+        $query = $available ? self::availableRows($user) : Transaction::query()->where('user_id', $user->id)->confirmed();
+        $rows = $query->orderBy('created_at')->orderBy('id')->get();
         $credit = (int) $rows->where('amount', '>', 0)->sum('amount');
         $beers = [];
         $partial = [];

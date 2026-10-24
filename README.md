@@ -392,7 +392,11 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   werden aktualisiert. Aus bei Seiten nach POST, mit Validierungsfehlern/alten Eingaben oder einmalig gezeigten
   Geheimnissen (Wiederherstellungscodes, Wartungsausgabe) sowie per `@section('live_off')`. Abgemeldet: `/live` und
   `X-Live-Refresh`-Anfragen liefern 401 statt Weiterleitung, dann (wie bei 503/Weiterleitung) einmal neu laden.
-  **Annahme:** Die Abfrage hält die Session eines sichtbaren Tabs am Leben (kein Ablauf durch Inaktivität, solange offen).
+  Entscheid 2026-10-24: Die Abfrage hielte die Session eines sichtbaren Tabs ewig am Leben. Darum stoppt sie (samt
+  Neuladen der Seite) nach 30 Minuten ohne Benutzeraktivität (Konstante `IDLE_LIMIT` in `public/js/live.js`;
+  Aktivität = echtes pointerdown, keydown, touchstart, wheel, scroll, input). Danach läuft die Session normal ab
+  (`SESSION_LIFETIME`). Bei der nächsten Aktivität wird sofort wieder abgefragt; liefert der Server 401, wird neu
+  geladen (Login). Der Ablauf der Rückgängig-Knöpfe läuft unabhängig davon weiter.
 - Sicherheit: CSRF, CSP mit Nonce (keine Inline-Styles/-Handler), Rollen-Middleware, verschlüsselte
   Geheimnisse (Registrierungspasswort, SMTP-Passwort, SSO-Client-Secrets, TOTP), Rate-Limits auf Login,
   TOTP, Registrierung und Passwort-Reset.

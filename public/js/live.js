@@ -13,12 +13,16 @@
  *    A child is never swapped while a field in it has focus or was changed by the user (dirty), while one of its
  *    forms is being sent or a sortable list has unsaved changes; the open state of <details> and the
  *    scroll position are kept. Flash messages (data-live-keep) stay as they are.
+ *    After IDLE_LIMIT (30 minutes) without user activity (trusted pointerdown, keydown, touchstart,
+ *    wheel, scroll, input) polling stops, so the session can expire; the next activity polls at once.
  */
 (function () {
     'use strict';
 
     var INTERVAL = 10000;
     var FORCE = 300000;
+    // No polling after this long without user activity, so the server session can expire (SESSION_LIFETIME).
+    var IDLE_LIMIT = 30 * 60 * 1000;
 
     var body = document.body;
     var offset = 0; // server time - client time (ms)
@@ -87,6 +91,8 @@
     var busy = false;
     var stopped = false;
     var pausedUntil = 0;
+    var lastActivity = Date.now();
+    var idleStopped = false;
     // Parts not swapped because the user was busy; re-render as soon as one of them is free again.
     var staleCheck = null;
 
@@ -332,6 +338,10 @@
         if (stopped || document.hidden) {
             return;
         }
+        if (Date.now() - lastActivity > IDLE_LIMIT) {
+            idleStopped = true; // resumed by onActivity()
+            return;
+        }
         if (busy || Date.now() < pausedUntil) {
             schedule();
             return;
@@ -362,6 +372,22 @@
             schedule();
         });
     }
+
+    function onActivity(e) {
+        if (!e.isTrusted) {
+            return;
+        }
+        lastActivity = Date.now();
+        if (idleStopped && !stopped) {
+            idleStopped = false;
+            window.clearTimeout(timer);
+            tick();
+        }
+    }
+
+    ['pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll', 'input'].forEach(function (name) {
+        document.addEventListener(name, onActivity, { capture: true, passive: true });
+    });
 
     // A form being sent leaves the page: no refresh meanwhile (would also take its flash message).
     document.addEventListener('submit', function (e) {

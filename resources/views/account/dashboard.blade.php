@@ -15,7 +15,8 @@
     @else
         <div class="balance-amount" data-testid="balance">{{ chf($balance) }}</div>
     @endif
-    {{-- Pending deposits/carry-overs are part of $balance (decision 2026-10-23): one number, no "ausstehend" note. --}}
+    {{-- Pending deposits/carry-overs are part of $balance (decision 2026-10-23): one number, no "ausstehend" note.
+         Exception: pending deposits on hold (decision 2026-10-24), hint in the pending list below. --}}
     @if ($balance < 0)
         @include('partials.open-items', ['open' => $open])
     @endif
@@ -343,6 +344,10 @@
     @if ($pending->isNotEmpty())
         <h3>{{ __('account.pending_heading') }}</h3>
         @if ($pending->where('type', \App\Models\Transaction::TYPE_DEPOSIT)->isNotEmpty())
+            @if ($depositsOnHold)
+                {{-- Decision 2026-10-24: after a rejected deposit, reported deposits are not part of $balance. --}}
+                <p class="hint" data-testid="deposit-on-hold">{{ __('account.deposit_on_hold') }}</p>
+            @endif
             <p class="hint">{{ __('account.pending_tap_hint') }}</p>
         @endif
         <ul class="list">

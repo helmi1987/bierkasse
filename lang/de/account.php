@@ -32,6 +32,7 @@ return [
     'deposit_cancel' => 'Nicht bezahlt – zurückziehen',
     'deposit_cancel_confirm' => 'Einzahlungsmeldung zurückziehen? Sie wird gelöscht.',
     'pending_tap_hint' => 'Antippen zum Ändern oder Zurückziehen.',
+    'deposit_on_hold' => 'Einzahlung zählt erst nach Bestätigung durch den Kassier.',
     'twint_send_amount' => 'Bitte z.B. :amount per TWINT an :name senden.',
     'twint_send' => 'Bitte per TWINT an :name senden.',
     'twint_or' => 'oder',

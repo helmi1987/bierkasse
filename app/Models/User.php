@@ -190,7 +190,7 @@ class User extends Authenticatable
         return Ledger::balance($this);
     }
 
-    /** Balance the user sees and may spend (incl. pending deposits/carry-overs), see Ledger::availableBalance(). */
+    /** Balance the user sees and may spend (incl. pending deposits/carry-overs unless on hold), see Ledger::availableBalance(). */
     public function availableBalance(): int
     {
         return Ledger::availableBalance($this);

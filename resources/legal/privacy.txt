@@ -9,7 +9,7 @@ Führen der Bierkasse: Konsum, Einzahlungen, Guthaben, Statistik. Keine Werbung,
 3. Welche Daten
 - Konto: Benutzername, Vor- und Nachname, E-Mail, Passwort (verschlüsselt), Zwei-Faktor-Einstellungen, letzte Anmeldung
 - Buchungen: Biere, Runden, Geschenke, Einzahlungen, Auszahlungen (Datum, Betrag)
-- Protokoll: Änderungen mit Zeitpunkt, IP-Adresse und Browser-Kennung
+- Protokoll: Änderungen und Anmeldungen mit Zeitpunkt, Benutzer, alten und neuen Werten, IP-Adresse und Browser-Kennung
 - Feedback: Text und Browser-Kennung
 - Gäste: Name freiwillig; Gäste-Käufe werden anonym als "Gäste" gezählt
 

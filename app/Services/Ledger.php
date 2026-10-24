@@ -9,7 +9,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * All bookings on the users' ledgers. Balance = sum of the confirmed amounts.
+ * All bookings on the users' ledgers. Balance = sum of the confirmed amounts (backend accounting).
+ * Available balance = balance plus pending deposits and carry-overs (what the user sees and may spend).
  */
 class Ledger
 {
@@ -18,6 +19,17 @@ class Ledger
     public static function balance(User $user): int
     {
         return (int) Transaction::query()->where('user_id', $user->id)->confirmed()->sum('amount');
+    }
+
+    /**
+     * Balance shown to the user and used for the limit checks (decision 2026-10-23): reported deposits
+     * and carry-overs count before the kassier confirms them, so beers can be booked while the kassier
+     * is absent. A rejected or withdrawn deposit may leave the user below the limit (settled in person).
+     * Pending payouts are not included (they block bookings instead).
+     */
+    public static function availableBalance(User $user): int
+    {
+        return (int) Transaction::query()->where('user_id', $user->id)->available()->sum('amount');
     }
 
     /**
@@ -68,7 +80,7 @@ class Ledger
 
             $price = AppSettings::beerPrice();
             $amount = -$quantity * $price;
-            if (self::balance($user) + $amount < -$user->effectiveLimit()) {
+            if (self::availableBalance($user) + $amount < -$user->effectiveLimit()) {
                 throw new LedgerException(__('ledger.limit_reached'));
             }
 
@@ -137,7 +149,7 @@ class Ledger
 
             $price = AppSettings::beerPrice();
             $amount = -$total * $price;
-            if (self::balance($giver) + $amount < -$giver->effectiveLimit()) {
+            if (self::availableBalance($giver) + $amount < -$giver->effectiveLimit()) {
                 throw new LedgerException(__('ledger.limit_reached'));
             }
 
@@ -207,7 +219,7 @@ class Ledger
 
             $price = AppSettings::beerPrice();
             $total = $perRecipient * count($recipientIds);
-            if (self::balance($giver) - $total * $price < -$giver->effectiveLimit()) {
+            if (self::availableBalance($giver) - $total * $price < -$giver->effectiveLimit()) {
                 throw new LedgerException(__('ledger.limit_reached'));
             }
 
@@ -585,16 +597,19 @@ class Ledger
      *  - partial: the unpaid rest of a partly paid beer (original price);
      *  - other: uncovered non-beer debits (negative corrections etc.).
      *
+     * With $available the pending deposits and carry-overs count as well (user's own view).
+     *
      * @return array{total:int, beers: list<array{unit_price:int, quantity:int, amount:int}>, partial: list<array{unit_price:int, amount:int}>, other:int}
      */
-    public static function openItems(User $user): array
+    public static function openItems(User $user, bool $available = false): array
     {
-        $balance = self::balance($user);
+        $balance = $available ? self::availableBalance($user) : self::balance($user);
         if ($balance >= 0) {
             return ['total' => 0, 'beers' => [], 'partial' => [], 'other' => 0];
         }
 
-        $rows = Transaction::query()->where('user_id', $user->id)->confirmed()->orderBy('created_at')->orderBy('id')->get();
+        $query = Transaction::query()->where('user_id', $user->id);
+        $rows = ($available ? $query->available() : $query->confirmed())->orderBy('created_at')->orderBy('id')->get();
         $credit = (int) $rows->where('amount', '>', 0)->sum('amount');
         $beers = [];
         $partial = [];

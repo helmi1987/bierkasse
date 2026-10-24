@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\AppSettings;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -27,12 +28,19 @@ class GuestSale extends Model
         return $this->belongsTo(User::class, 'booked_by');
     }
 
+    /** End of the undo window of a guest sale booked on the dashboard; null for public/cashbox sales. */
+    public function undoExpiresAt(): ?CarbonInterface
+    {
+        return $this->booked_by !== null && $this->created_at !== null
+            ? $this->created_at->copy()->addMinutes(AppSettings::undoMinutes('guest'))
+            : null;
+    }
+
     /** The booking user may undo the own guest sale within the consumption undo window. */
     public function canBeUndoneBy(User $user): bool
     {
         return $this->booked_by !== null
             && $this->booked_by === $user->id
-            && $this->created_at !== null
-            && $this->created_at->gt(now()->subMinutes(AppSettings::undoMinutes('guest')));
+            && $this->undoExpiresAt()?->isFuture() === true;
     }
 }

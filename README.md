@@ -236,15 +236,27 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Anfragen an eigene Anbieter gehen nie über einen Proxy (auch nicht `HTTPS_PROXY`): der Server braucht dafür
   direkten ausgehenden HTTPS-Zugang.
 - Geld immer in Rappen (Integer), Anzeige `CHF 1.50`. Saldo = Summe der bestätigten Buchungen (`transactions`).
+  Verfügbarer Saldo (Entscheid 2026-10-23, ersetzt "offene Einzahlungen zählen nicht"): gemeldete, noch nicht
+  bestätigte Einzahlungen (Bar/TWINT) und Überträge zählen für den Benutzer sofort (`Ledger::availableBalance()`,
+  Scope `Transaction::available()`): Anzeige im Konto/Verlauf als eine Zahl (Biere und CHF, kein "ausstehend"),
+  "Offen" und alle Limit-Prüfungen (Abstreichen, Runde, Verschenken). So kann getrunken werden, wenn der Kassier
+  fehlt. Lehnt der Kassier ab oder zieht der Benutzer zurück, geht der Benutzer einfach ins Minus, auch über das
+  Limit hinaus (wird persönlich geklärt, keine automatische Sperre). Offene Auszahlungen zählen nicht (sperren das
+  Buchen wie bisher). Backend (Kassenstand, Guthaben aller Benutzer, Überschuss, Saldo in der Benutzerverwaltung,
+  "Im Minus") zählt nur bestätigtes Geld.
   - Doppeltes Abschicken (Doppeltipp) wird verhindert: Einmal-Token pro Formular (Bier, Bier für Gast, Einzahlung melden)
     und Sperre des Knopfs nach dem Absenden.
   - Bier: Preis im Moment des Abstreichens wird pro Buchung gespeichert; Preisänderungen ändern alte Buchungen nie.
-    Limit: neuer Saldo darf nicht unter `-Limit` fallen (individuell oder Standard). Eigene Striche rückgängig machbar
-    (Zeit siehe Einstellungen "Rückgängig").
+    Limit: neuer verfügbarer Saldo darf nicht unter `-Limit` fallen (individuell oder Standard). Eigene Striche rückgängig machbar
+    (Zeit siehe Einstellungen "Rückgängig"). Die Rückgängig-Knöpfe (Bier, Runde, Verschenken, Bier für Gast)
+    verschwinden genau bei Ablauf, auch wenn die Seite offen bleibt: jede Zeile trägt `data-expires` (Ablauf in ms,
+    vom Server berechnet, `undoExpiresAt()`), `public/js/live.js` rechnet mit der Serverzeit
+    (`<meta name="server-now">`), damit eine falsche Uhr am Gerät nicht stört. Der Server prüft weiterhin selbst.
   - "Offen": bei negativem Saldo der offene Betrag; die offenen Biere werden mit ihrem ursprünglichen Preis
     angezeigt (Einzahlungen decken die ältesten Biere zuerst). Die Positionen ergeben immer das Total:
     volle offene Biere, Rest eines teilweise bezahlten Biers, übrige Beträge (negative Korrekturen).
   - Einzahlung: Benutzer meldet (offen), Kassier bestätigt/lehnt ab; Kassier kann direkt buchen.
+    Zählt für den Benutzer sofort (verfügbarer Saldo, siehe oben).
     Solange offen, kann der Benutzer die eigene Meldung im Dashboard antippen und ändern (Betrag, Bar/TWINT) oder
     zurückziehen ("Nicht bezahlt", Meldung wird gelöscht); der Kassier sieht "geändert". Bereits bestätigte oder
     abgelehnte Meldungen sind gesperrt. **Annahme:** keine neue Kassier-Mail bei Änderung/Rückzug.
@@ -254,10 +266,11 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   - Übertrag von der alten Strichliste (Entscheid 2026-10-21): bei der Registrierung optional "Ich schulde noch" /
     "Ich habe noch Guthaben", in Bieren (1–500, umgerechnet zum aktuellen Bierpreis, Anzahl und Preis werden
     gespeichert) oder CHF (max. 500.00). Wird als offene Buchung Typ `carryover` gespeichert (Schuld negativ,
-    Guthaben positiv) und zählt erst nach Bestätigung im Saldo. Kassier/Admin bestätigen (Betrag anpassbar; dann
+    Guthaben positiv); zählt für den Benutzer sofort (verfügbarer Saldo, siehe oben), im Backend erst nach
+    Bestätigung. Kassier/Admin bestätigen (Betrag anpassbar; dann
     wird die Bier-Anzahl verworfen und der gemeldete Wert in der Bemerkung festgehalten) oder lehnen ab im
     Backend-Dashboard; zählt bei den offenen Posten (Badge). Erwähnt in der Registrierungs-Mail. Der Benutzer sieht
-    "Übertrag ausstehend" und kann ihn nicht ändern; solange offen, ist "Haus verlassen" gesperrt.
+    ihn in der Liste "Wartet auf Bestätigung" und kann ihn nicht ändern; solange offen, ist "Haus verlassen" gesperrt.
     Übertrag-Biere ändern weder Lager noch Statistik (vor der App getrunken); bestätigte Übertrag-Schulden in
     Bieren erscheinen unter "Offen" als Biere. **Annahme:** der Übertrag ändert den Kassenstand nicht, aber das
     Guthaben aller Benutzer und damit den Überschuss.
@@ -367,6 +380,19 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 - TWINT: Satz "Bitte z.B. CHF x per TWINT an A, B oder C senden." (Betrag = Einzahlungs-Vorschlag inkl. Minus),
   Nummern nicht angezeigt, nur Knöpfe "Nummer kopieren"; es gibt keinen öffentlichen TWINT-Deep-Link für
   Zahlungen an Privatpersonen.
+- Live-Aktualisierung (Entscheid 2026-10-23): alle Seiten für angemeldete Benutzer (Konto, Kassier, Backend,
+  Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Keine Websockets:
+  `public/js/live.js` fragt alle 10 Sekunden `/live` ab (JSON `fp`, `App\Support\LiveFingerprint`: eine Abfrage mit
+  MAX(id)/COUNT/MAX(updated_at) der relevanten Tabellen, global für alle). Nur wenn sich `fp` geändert hat (oder alle
+  5 Minuten), wird die aktuelle Seite mit Header `X-Live-Refresh` neu geladen und die geänderten direkten Kinder von
+  `<main>` sowie die Kopfzeile ausgetauscht (Formulare danach neu verdrahtet via `window.BierkasseUi.init`).
+  Pausiert, solange der Tab verborgen ist; beim Zurückkehren sofort. Nie ausgetauscht wird ein Teil mit Fokus in
+  einem Feld, mit geänderten Feldern, mit gerade abgeschicktem Formular oder ungespeicherter Sortierung; offene
+  `<details>`, Scroll-Position und Meldungen (`data-live-keep`) bleiben. Einmal-Tokens nicht ausgetauschter Formulare
+  werden aktualisiert. Aus bei Seiten nach POST, mit Validierungsfehlern/alten Eingaben oder einmalig gezeigten
+  Geheimnissen (Wiederherstellungscodes, Wartungsausgabe) sowie per `@section('live_off')`. Abgemeldet: `/live` und
+  `X-Live-Refresh`-Anfragen liefern 401 statt Weiterleitung, dann (wie bei 503/Weiterleitung) einmal neu laden.
+  **Annahme:** Die Abfrage hält die Session eines sichtbaren Tabs am Leben (kein Ablauf durch Inaktivität, solange offen).
 - Sicherheit: CSRF, CSP mit Nonce (keine Inline-Styles/-Handler), Rollen-Middleware, verschlüsselte
   Geheimnisse (Registrierungspasswort, SMTP-Passwort, SSO-Client-Secrets, TOTP), Rate-Limits auf Login,
   TOTP, Registrierung und Passwort-Reset.

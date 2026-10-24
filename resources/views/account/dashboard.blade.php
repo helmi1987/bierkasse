@@ -15,20 +15,7 @@
     @else
         <div class="balance-amount" data-testid="balance">{{ chf($balance) }}</div>
     @endif
-    @if ($pendingDeposit > 0)
-        @php($pendingBeers = intdiv($pendingDeposit, max(1, $price)))
-        <div class="pending-pill" data-testid="pending-deposit">
-            @if ($pendingBeers > 0)
-                <strong>{{ trans_choice('account.pending_beers', $pendingBeers, ['count' => $pendingBeers]) }}</strong>
-            @endif
-            <span>{{ chf($pendingDeposit) }} – {{ __('account.pending_waiting') }}</span>
-        </div>
-    @endif
-    @if ($pendingCarryover)
-        <div class="pending-pill" data-testid="pending-carryover">
-            <span>{{ __('account.carryover_pending', ['amount' => chf($pendingCarryover->amount)]) }}</span>
-        </div>
-    @endif
+    {{-- Pending deposits/carry-overs are part of $balance (decision 2026-10-23): one number, no "ausstehend" note. --}}
     @if ($balance < 0)
         @include('partials.open-items', ['open' => $open])
     @endif
@@ -73,18 +60,20 @@
         @endif
 
         @if ($undoable->isNotEmpty())
-            <ul class="undo-list">
-                @foreach ($undoable as $tx)
-                    <li>
-                        <span>{{ local_time($tx->created_at, 'H:i') }} · {{ trans_choice('ledger.beers', $tx->quantity, ['count' => $tx->quantity, 'price' => chf($tx->unit_price)]) }}</span>
-                        <form method="post" action="{{ route('account.undo', $tx) }}" class="inline">
-                            @csrf
-                            <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
-                        </form>
-                    </li>
-                @endforeach
-            </ul>
-            <p class="hint">{{ __('account.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('consume')]) }}</p>
+            <div class="undo-group" data-undo-group>
+                <ul class="undo-list">
+                    @foreach ($undoable as $tx)
+                        <li data-expires="{{ $tx->undoExpiresAt()?->getTimestampMs() }}">
+                            <span>{{ local_time($tx->created_at, 'H:i') }} · {{ trans_choice('ledger.beers', $tx->quantity, ['count' => $tx->quantity, 'price' => chf($tx->unit_price)]) }}</span>
+                            <form method="post" action="{{ route('account.undo', $tx) }}" class="inline">
+                                @csrf
+                                <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
+                            </form>
+                        </li>
+                    @endforeach
+                </ul>
+                <p class="hint">{{ __('account.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('consume')]) }}</p>
+            </div>
         @endif
     </section>
 @endif
@@ -143,18 +132,20 @@
             </form>
 
             @if ($roundUndoable->isNotEmpty())
-                <ul class="undo-list">
-                    @foreach ($roundUndoable as $tx)
-                        <li>
-                            <span>{{ local_time($tx->created_at, 'H:i') }} · {{ trans_choice('round.beers', $tx->quantity, ['count' => $tx->quantity]) }} · {{ chf(-$tx->amount) }}<br><small class="muted">{{ __('round.tx_for', ['names' => \App\Services\Rounds::recipientsText($tx)]) }}</small></span>
-                            <form method="post" action="{{ route('account.undo', $tx) }}" class="inline">
-                                @csrf
-                                <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
-                            </form>
-                        </li>
-                    @endforeach
-                </ul>
-                <p class="hint">{{ __('round.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('round')]) }}</p>
+                <div class="undo-group" data-undo-group>
+                    <ul class="undo-list">
+                        @foreach ($roundUndoable as $tx)
+                            <li data-expires="{{ $tx->undoExpiresAt()?->getTimestampMs() }}">
+                                <span>{{ local_time($tx->created_at, 'H:i') }} · {{ trans_choice('round.beers', $tx->quantity, ['count' => $tx->quantity]) }} · {{ chf(-$tx->amount) }}<br><small class="muted">{{ __('round.tx_for', ['names' => \App\Services\Rounds::recipientsText($tx)]) }}</small></span>
+                                <form method="post" action="{{ route('account.undo', $tx) }}" class="inline">
+                                    @csrf
+                                    <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
+                                </form>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <p class="hint">{{ __('round.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('round')]) }}</p>
+                </div>
             @endif
         </details>
     </section>
@@ -207,18 +198,20 @@
             </form>
 
             @if ($giftUndoable->isNotEmpty())
-                <ul class="undo-list">
-                    @foreach ($giftUndoable as $tx)
-                        <li>
-                            <span>{{ local_time($tx->created_at, 'H:i') }} · {{ trans_choice('round.beers', $tx->quantity, ['count' => $tx->quantity]) }} · {{ chf(-$tx->amount) }}<br><small class="muted">{{ __('gift.tx_to', ['names' => \App\Services\Gifts::recipientsText($tx)]) }}</small></span>
-                            <form method="post" action="{{ route('account.undo', $tx) }}" class="inline">
-                                @csrf
-                                <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
-                            </form>
-                        </li>
-                    @endforeach
-                </ul>
-                <p class="hint">{{ __('gift.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('gift')]) }}</p>
+                <div class="undo-group" data-undo-group>
+                    <ul class="undo-list">
+                        @foreach ($giftUndoable as $tx)
+                            <li data-expires="{{ $tx->undoExpiresAt()?->getTimestampMs() }}">
+                                <span>{{ local_time($tx->created_at, 'H:i') }} · {{ trans_choice('round.beers', $tx->quantity, ['count' => $tx->quantity]) }} · {{ chf(-$tx->amount) }}<br><small class="muted">{{ __('gift.tx_to', ['names' => \App\Services\Gifts::recipientsText($tx)]) }}</small></span>
+                                <form method="post" action="{{ route('account.undo', $tx) }}" class="inline">
+                                    @csrf
+                                    <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
+                                </form>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <p class="hint">{{ __('gift.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('gift')]) }}</p>
+                </div>
             @endif
         </details>
     </section>
@@ -263,18 +256,20 @@
             </form>
 
             @if ($guestUndoable->isNotEmpty())
-                <ul class="undo-list">
-                    @foreach ($guestUndoable as $sale)
-                        <li>
-                            <span>{{ local_time($sale->created_at, 'H:i') }} · {{ $sale->name ?? __('guest.anonymous') }} · {{ trans_choice('stock.beers', $sale->beers, ['count' => $sale->beers]) }} · {{ __('ledger.method.'.$sale->method) }} · {{ chf($sale->amount) }}</span>
-                            <form method="post" action="{{ route('account.guest.undo', $sale) }}" class="inline">
-                                @csrf
-                                <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
-                            </form>
-                        </li>
-                    @endforeach
-                </ul>
-                <p class="hint">{{ __('guest.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('guest')]) }}</p>
+                <div class="undo-group" data-undo-group>
+                    <ul class="undo-list">
+                        @foreach ($guestUndoable as $sale)
+                            <li data-expires="{{ $sale->undoExpiresAt()?->getTimestampMs() }}">
+                                <span>{{ local_time($sale->created_at, 'H:i') }} · {{ $sale->name ?? __('guest.anonymous') }} · {{ trans_choice('stock.beers', $sale->beers, ['count' => $sale->beers]) }} · {{ __('ledger.method.'.$sale->method) }} · {{ chf($sale->amount) }}</span>
+                                <form method="post" action="{{ route('account.guest.undo', $sale) }}" class="inline">
+                                    @csrf
+                                    <button type="submit" class="btn small ghost">{{ __('account.undo') }}</button>
+                                </form>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <p class="hint">{{ __('guest.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('guest')]) }}</p>
+                </div>
             @endif
         </details>
     </section>

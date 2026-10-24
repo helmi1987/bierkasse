@@ -3,6 +3,11 @@
     $appName ??= \App\Support\AppSettings::appName();
     $openItems ??= 0;
     $authUser = auth()->user();
+    // Live refresh (public/js/live.js) only for logged-in GET pages without one-time content: after a
+    // POST render, validation errors/old input or flashed secrets the page must stay as rendered.
+    $live = $authUser && request()->isMethod('GET') && ! $__env->hasSection('live_off')
+        && ! (isset($errors) && $errors->any()) && ! session()->hasOldInput()
+        && ! session()->has('totp.recovery_codes') && ! session()->has('maintenance_output');
 @endphp
 <!DOCTYPE html>
 <html lang="de-CH">
@@ -22,9 +27,11 @@
     <meta name="apple-mobile-web-app-title" content="{{ $appName }}">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ @filemtime(public_path('css/app.css')) }}">
+    <meta name="server-now" content="{{ now()->getTimestampMs() }}">
+    <script src="{{ asset('js/live.js') }}?v={{ @filemtime(public_path('js/live.js')) }}" nonce="{{ $nonce }}" defer></script>
     <script src="{{ asset('js/app.js') }}?v={{ @filemtime(public_path('js/app.js')) }}" nonce="{{ $nonce }}" defer></script>
 </head>
-<body class="@yield('body_class')">
+<body class="@yield('body_class')" @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ \App\Support\LiveFingerprint::current() }}" @endif>
 <a class="skip-link" href="#main">{{ __('site.skip_to_content') }}</a>
 @if ($authUser)
     <header class="topbar">
@@ -83,7 +90,7 @@
     @if ($authUser?->isKassier() && (string) $authUser->email === '')
         <div class="alert warn" role="alert">{{ __('account.email_missing') }} <a href="{{ route('account.settings') }}">{{ __('account.email_missing_link') }}</a></div>
     @endif
-    @include('partials.alerts')
+    <div class="live-keep" data-live-keep="alerts">@include('partials.alerts')</div>
     @yield('content')
 </main>
 </body>

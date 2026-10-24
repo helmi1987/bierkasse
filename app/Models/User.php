@@ -146,9 +146,16 @@ class User extends Authenticatable
         return $this->overdraft_limit ?? AppSettings::defaultLimit();
     }
 
+    /** Confirmed balance (backend accounting). */
     public function balance(): int
     {
         return Ledger::balance($this);
+    }
+
+    /** Balance the user sees and may spend (incl. pending deposits/carry-overs), see Ledger::availableBalance(). */
+    public function availableBalance(): int
+    {
+        return Ledger::availableBalance($this);
     }
 
     public function hasTotp(): bool

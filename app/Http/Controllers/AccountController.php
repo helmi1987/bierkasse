@@ -31,7 +31,8 @@ class AccountController extends Controller
     public function dashboard(Request $request): View
     {
         $user = $request->user();
-        $balance = $user->balance();
+        // Includes reported deposits/carry-overs not yet confirmed (decision 2026-10-23): one number for the user.
+        $balance = $user->availableBalance();
         $price = AppSettings::beerPrice();
         $stats = Stats::forUser($user);
 
@@ -43,14 +44,6 @@ class AccountController extends Controller
 
         $suggestions = DepositSuggestions::for($balance, $price, AppSettings::depositSuggestions());
         $suggested = $suggestions[DepositSuggestions::defaultIndex($suggestions, AppSettings::depositDefault(), $price)] ?? null;
-
-        // Reported deposits waiting for the kassier: shown only, never part of balance or limit.
-        $pendingDeposit = (int) Transaction::query()->where('user_id', $user->id)->pending()
-            ->where('type', Transaction::TYPE_DEPOSIT)->sum('amount');
-
-        // Carry-over from the old tally list waiting for the kassier (not editable by the user).
-        $pendingCarryover = Transaction::query()->where('user_id', $user->id)->pending()
-            ->where('type', Transaction::TYPE_CARRYOVER)->latest('id')->first();
 
         // Booking for guests (own guest sales within the undo window can be undone).
         $guestBooking = AppSettings::guestUserBooking();
@@ -88,11 +81,9 @@ class AccountController extends Controller
             'giftsReceived' => Gifts::receivedRecently($user),
             'roundUndoable' => $roundUndoable,
             'roundsReceived' => $rounds ? Rounds::receivedRecently($user) : collect(),
-            'pendingDeposit' => $pendingDeposit,
-            'pendingCarryover' => $pendingCarryover,
             'balance' => $balance,
             'price' => $price,
-            'open' => Ledger::openItems($user),
+            'open' => Ledger::openItems($user, true),
             'undoable' => $undoable,
             'pending' => Transaction::query()->where('user_id', $user->id)->pending()->latest('id')->get(),
             'twintEnabled' => AppSettings::twintEnabled(),
@@ -311,7 +302,7 @@ class AccountController extends Controller
 
         return view('account.history', [
             'user' => $user,
-            'balance' => $user->balance(),
+            'balance' => $user->availableBalance(),
             'transactions' => Transaction::query()->with(['roundItems.user', 'giftParts.user', 'giftParent.user'])->where('user_id', $user->id)->latest('id')->paginate(25),
         ]);
     }
@@ -327,7 +318,7 @@ class AccountController extends Controller
         }
 
         return view('account.leave', [
-            'balance' => $user->balance(),
+            'balance' => $user->availableBalance(),
             'blocked' => $blocked,
             'pendingPayout' => Ledger::hasPendingPayout($user),
         ]);

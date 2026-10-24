@@ -51,7 +51,8 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Live refresh requests (public/js/live.js) get 401 instead of a redirect to the login page.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson() || $request->hasHeader('X-Live-Refresh'),
         );
     })->create();

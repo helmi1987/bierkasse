@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\QrCode;
 use App\Models\RegistrationCode;
 use App\Models\Setting;
 use App\Support\AppSettings;
@@ -22,6 +23,7 @@ class FlyerSvgTest extends TestCase
     {
         Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_PASSWORD);
         Setting::put(AppSettings::REGISTRATION_PASSWORD, 'durst');
+        QrCode::ensureFirst(QrCode::KIND_FLYER);
     }
 
     /** Path data of the QR code inside a QR SVG (unique per content). */

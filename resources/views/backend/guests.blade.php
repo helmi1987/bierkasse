@@ -33,7 +33,7 @@
         <p><a class="btn small" href="{{ route('backend.qr-admin') }}">{{ __('qr.manage_link') }} →</a></p>
     @endif
     @if ($cashboxActive->isEmpty())
-        <p class="muted">{{ __('qr.none_active') }}</p>
+        <p class="muted">{{ $admin ? __('qr.none_active') : __('qr.none_kassier') }}</p>
     @endif
     <div class="row-buttons">
         @foreach ($cashboxActive as $code)

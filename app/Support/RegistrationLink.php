@@ -13,13 +13,12 @@ class RegistrationLink
     public const FLYER_QUERY = 'flyer';
 
     /**
-     * With $withFlyerCode the newest active flyer code (the first one is created when there never was one);
-     * plain URL when all flyer codes are deactivated.
+     * With $withFlyerCode the newest active flyer code; plain URL when there is none (never created by an admin
+     * yet, or all deactivated). Never creates a code (GET of a kassier).
      */
     public static function url(bool $withFlyerCode): string
     {
         if ($withFlyerCode) {
-            QrCode::ensureFirst(QrCode::KIND_FLYER);
             $code = QrCode::newestActive(QrCode::KIND_FLYER);
             if ($code !== null) {
                 return $code->url();

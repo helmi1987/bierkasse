@@ -15,6 +15,9 @@
         @if ($admin)
             <p><a class="btn small" href="{{ route('backend.qr-admin') }}">{{ __('qr.manage_link') }} →</a></p>
         @endif
+        @if ($active->isEmpty())
+            <p class="muted">{{ $admin ? __('qr.none_active') : __('qr.none_kassier') }}</p>
+        @endif
         <ul class="list">
             @foreach ($active as $code)
                 <li class="wrap-row" data-testid="guest-code">

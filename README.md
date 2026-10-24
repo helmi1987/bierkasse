@@ -80,7 +80,7 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Texte im SVG werden nach Zeichenanzahl umbrochen (**Annahme:** Systemschriften sind nicht breiter als
      angenommen). Entscheid 2026-10-21: Der QR-Code enthält nie das Registrierungspasswort, sondern einen
      zufälligen Flyer-Code (`/registrieren?flyer=<code>`, Tabelle `qr_codes`, Art `flyer`; mehrere aktiv möglich,
-     der erste wird automatisch erzeugt). Gültig nur im Modus "Offen mit
+     der erste legt ein Admin an, siehe "QR-Codes"). Gültig nur im Modus "Offen mit
      Registrierungspasswort"; dann zeigt die Registrierung kein Passwortfeld. Falscher Code zählt wie ein falsches
      Passwort. Ein deaktivierter Flyer-Code macht die damit gedruckten Flyer ungültig, bis er reaktiviert wird. Gedruckt wird
      als Text nur `/registrieren` plus Hinweis "Registrierungspasswort beim Kassier", nie die URL mit Code.
@@ -100,6 +100,13 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Gäste-Seite", Gäste-Passwort; pro Art neuer Code (Name freiwillig), umbenennen, deaktivieren, Historie mit
      Reaktivieren; Registrierungscodes erstellen, deaktivieren, reaktivieren. Mehrere
      Codes pro Art können aktiv sein; nichts wird gelöscht, deaktivierte bleiben als Historie (nur Admin sichtbar).
+     Erste Codes (Entscheid 1.15.2): Kassier-Seiten (GET) legen nie Codes an und zeigen "Noch kein Code. Ein Admin muss
+     einen anlegen." Fehlende erste Codes (Kasse Bar/TWINT, Gäste, Flyer nur im Modus "Offen mit Registrierungspasswort")
+     erzeugt nur ein Admin: beim Öffnen der QR-Verwaltung, beim Speichern der QR-Schalter bzw. der Einstellungen
+     (`created_by` = Admin, Audit `qr_code.create`; Sperre + erneute Prüfung gegen doppeltes Anlegen). Ohne Flyer-Code
+     fällt der Einladungs-/Flyer-Link auf den normalen Registrierungslink zurück. Aktiv/Inaktiv-Schalter: `active` ist
+     Pflicht (boolean); unveränderter Zustand schreibt keinen Audit-Eintrag. Wird der letzte aktive Code einer Art
+     deaktiviert, erscheint eine Warnung mit den Folgen (zusätzlich zur Rückfrage am Knopf).
      Tabelle `qr_codes` (Art `cashbox_cash`/`cashbox_twint`/`flyer`/`guest`, Name freiwillig, Code verschlüsselt +
      SHA-256 für die Suche, `deactivated_at`); die früheren Einzel-Codes aus den Settings werden beim Migrieren
      übernommen (gedruckte Aufkleber/Flyer bleiben gültig). Audit: `qr_code.create/label/deactivate/activate`.
@@ -135,8 +142,17 @@ Domain eingestellt (Beispiel unten: `bier.helminet.ch`).
      Backend `/backend/einladungen` (Kassier und Admin): alle Einladungen mit Ersteller, Status
      (offen / benutzt von X / abgelaufen), unbenutzte zurückziehen.
   - Anmeldung: "Eigene Anbieter für User erlauben" (Standard an), siehe "Eigener Anmelde-Anbieter".
-8. Steht ein Reverse-Proxy vor PHP, dessen IP in `.env` als `TRUSTED_PROXIES` (kommagetrennt, Standard: keine)
-   eintragen, sonst werden `X-Forwarded-*`-Header ignoriert. Wichtig: Die Rate-Limits (Login, TOTP, Gäste,
+8. Steht ein Reverse-Proxy vor PHP, dessen IP in `.env` als `TRUSTED_PROXIES` (kommagetrennt, Standard: keine;
+   gelesen in `bootstrap/app.php`, einzelne IPs oder CIDR, `*` = alle) eintragen, sonst werden `X-Forwarded-*`-Header
+   ignoriert.
+   Plesk: Dort läuft nginx vor Apache bzw. PHP-FPM auf demselben Server. Ohne Eintrag sieht Laravel als Client-IP
+   immer die Proxy-Adresse, alle Besucher teilen sich dann die Rate-Limits. In `.env`: `TRUSTED_PROXIES=127.0.0.1`
+   (**Annahme:** nginx verbindet sich von localhost; sonst die als `REMOTE_ADDR` sichtbare Adresse eintragen, z. B. die
+   Server-IP), danach `php artisan config:clear`. Prüfen: Neue Audit-Einträge speichern die IP (Spalte `ip`), dort muss die
+   echte Client-IP stehen.
+   Wirkung auf das Kassen-QR-Limit (`/kasse/<code>`: 60 Aufrufe bzw. 30 Buchungen pro Minute und IP): ohne Eintrag
+   zählen alle Gäste zusammen und die Kasse sperrt sich schon bei wenigen gleichzeitigen Gästen; mit korrekter
+   Proxy-IP zählt jede Client-IP einzeln. Wichtig: Die Rate-Limits (Login, TOTP, Gäste,
    eigener Anbieter) zählen pro Client-IP; ohne korrekt gesetzte Proxy-IP teilen sich alle Benutzer die IP des
    Proxys. Nie `*` eintragen, sonst kann jeder Client seine IP per `X-Forwarded-For` fälschen.
 
@@ -297,8 +313,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     falsche Passwörter), Einmal-Token gegen Doppelbuchung.
   - "Kassen-QR aktiv" (Entscheid 2026-10-22, Standard aus): feste Aufkleber für die Kasse, für Gäste ohne Konto
     (Vertrauensbasis, keine Ortsprüfung): "Kein Konto? Bar bezahlt" und "Kein Konto? Ich habe getwintet". Jeder hat
-    einen eigenen geheimen Code (Tabelle `qr_codes`, Art `cashbox_cash`/`cashbox_twint`, je einer automatisch
-    erzeugt, mehrere aktiv möglich), unabhängig vom Gäste-Passwort; der Code bestimmt die Zahlart
+    einen eigenen geheimen Code (Tabelle `qr_codes`, Art `cashbox_cash`/`cashbox_twint`, je einer vom Admin
+    angelegt, mehrere aktiv möglich), unabhängig vom Gäste-Passwort; der Code bestimmt die Zahlart
     und öffnet nur `/kasse/<code>`. Seite: Anzahl 1–10 wählen und bestätigen ("Abbrechen" führt zu `/`: Login bzw. eigenes Konto), sofort als Gäste-Verkauf gebucht
     (`guest_sales.source = cashbox`, Liste "Kassen-QR"). Die Bar-Seite zeigt nie TWINT-Daten; die TWINT-Seite zeigt die
     Empfänger wie hinterlegt (Kopier-Knopf nur mit Nummer) und funktioniert nur, solange TWINT aktiv ist. Ungültiger
@@ -350,8 +366,12 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     mit positivem Betrag (`transactions.parent_id` = Buchung des Schenkers). Steigt der Preis später, reicht die
     Gutschrift für weniger Biere. Kein Bier getrunken: Lager und Kassenstand unverändert; getrunken wird später normal.
   - Schenker kann zurücknehmen (Zeit siehe Einstellungen, Standard 5 Minuten); dabei werden alle Gutschriften
-    gelöscht. Entscheid 2026-10-22: nicht mehr möglich, sobald ein Empfänger seit dem Geschenk selbst Bier
-    abgestrichen oder eine Runde spendiert hat (Einzahlungen zählen nicht).
+    gelöscht. Entscheid 2026-10-22 (erweitert 1.15.2): nicht mehr möglich, sobald ein Empfänger seit dem Geschenk
+    irgendeine Ausgangsbuchung hat (Bier, Runde, selbst verschenkt, Auszahlung auch beantragt, Spende, Korrektur;
+    alles mit negativem Betrag). Eingänge (Einzahlung, weiteres Geschenk) zählen nicht. Geprüft unter Sperre der
+    Empfänger. Ein zweites Rückgängig (Doppelklick, parallele Anfrage) lädt die Buchung unter Zeilensperre neu,
+    scheitert mit Fehlermeldung und schreibt weder einen zweiten Audit-Eintrag noch ein zweites Lager-Rearm
+    (gilt auch für Bier, Runde und Bier für Gast).
   - Empfänger sehen 1 Tag lang "🎁 <Schenker> hat dir N Biere geschenkt – <Nachricht>" (max. 3) mit ×-Knopf (wie bei Runden), keine Mail.
   - Statistik: "Verschenkt: N" (Schenker) und "Geschenkt bekommen: N" (Empfänger), auch in der Benutzer-Detailansicht;
     zählen nicht als getrunkene Biere. **Annahme:** "Total ausgegeben" des Schenkers enthält die verschenkten Beträge.

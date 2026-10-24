@@ -88,6 +88,8 @@ class CashboxQrTest extends TestCase
     {
         $kassier = $this->kassier();
         $admin = $this->admin();
+        QrCode::ensureFirst(QrCode::KIND_CASH, $admin);
+        QrCode::ensureFirst(QrCode::KIND_TWINT, $admin);
         $page = $this->actingAs($kassier)->get('/backend/gaeste')->assertOk()->assertDontSee('Neuer Bar-Code')->assertDontSee(__('qr.deactivate'));
         $cash = QrCode::newestActive(QrCode::KIND_CASH);
         $twint = QrCode::newestActive(QrCode::KIND_TWINT);

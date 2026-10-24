@@ -52,11 +52,25 @@ class Gifts
             ->where('type', Transaction::TYPE_GIFT)->whereNotNull('parent_id')->sum('quantity');
     }
 
-    /** A recipient booked a beer (own consumption or a round he paid) after the gift (giver's row). */
-    public static function recipientsBookedSince(Transaction $gift): bool
+    /**
+     * A recipient has any outgoing booking (negative amount, confirmed or pending: beer, round, gift given,
+     * payout, donation, correction, carryover ...) after the gift (giver's row). The gifted credit may have
+     * been used by it, so the gift can no longer be undone. Incoming credits (deposit, gift received) do not count.
+     */
+    public static function recipientsBookedSince(Transaction $gift, bool $lock = false): bool
     {
-        return Transaction::query()->whereIn('user_id', $gift->giftParts()->select('user_id'))
-            ->whereIn('type', Transaction::BEER_TYPES)->where('id', '>', $gift->id)->exists();
+        // $lock = true: current read (FOR UPDATE) that ignores the REPEATABLE READ snapshot, so a booking
+        // committed while we waited for locks is seen. Only valid inside a DB transaction, after the recipients are locked.
+        return self::recipientsBookedQuery($gift, $lock)->first() !== null;
+    }
+
+    /** Query behind recipientsBookedSince (separate so the lock mode is testable on SQLite, which drops locks). */
+    public static function recipientsBookedQuery(Transaction $gift, bool $lock = false): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = Transaction::query()->select('id')->whereIn('user_id', $gift->giftParts()->select('user_id'))
+            ->where('amount', '<', 0)->where('id', '>', $gift->id)->limit(1);
+
+        return $lock ? $query->lockForUpdate() : $query;
     }
 
     /** Recipients of a gift (giver's row), e.g. "Anna, Beat". */

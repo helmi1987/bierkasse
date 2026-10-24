@@ -142,6 +142,7 @@ class GuestTest extends TestCase
     public function test_guest_qr_codes_never_contain_the_password_and_have_history(): void
     {
         $kassier = $this->kassier();
+        QrCode::ensureFirst(QrCode::KIND_GUEST, $this->admin());
         $page = $this->actingAs($kassier)->get('/backend/gaeste/qr')->assertOk()->assertDontSee('gast-1234')->assertDontSee('Neuer Code');
         $code = QrCode::query()->where('kind', QrCode::KIND_GUEST)->sole();
         $page->assertSee(Qr::dataUri($code->url(), 480), false);

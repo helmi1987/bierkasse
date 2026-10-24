@@ -380,8 +380,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     seitlich, 33.5 mm oben/unten; **Annahme** 2026-10-22), je Öffnen/Drucken, PNG (A4 300 dpi) und SVG. Drucken mit 100 %.
 - Dashboard-Karten (Entscheid 2026-10-24): "Einzahlen" (Einzahlung melden + TWINT-Empfänger/Nummer, TWINT nur wenn aktiv; "Wartet auf
   Bestätigung" darunter) und "Meine Buchungen & Statistik" (Kennzahlen, Diagramm, letzte Buchungen) sind je eine Karte.
-- Fusszeile auf allen Seiten (auch Anmeldung, Gäste-Seiten): "<App-Name> v<Version> · <Copyright> · Datenschutz ·
-  Nutzungsbestimmungen" (Links). Version aus `VERSION`;
+- Fusszeile auf allen Seiten (auch Anmeldung, Gäste-Seiten): Zeile 1 "<App-Name> v<Version> · <Copyright>",
+  Zeile 2 "Datenschutz · Nutzungsbestimmungen" (Links); jeder Teil bricht nur als Ganzes um (Entscheid 2026-10-24). Version aus `VERSION`;
   Copyright in den Einstellungen (max. 100 Zeichen, Text), Standard "© {startjahr}–{jahr} Stefan Diethelm" (gleiche Jahre = ein Jahr), leer = ohne Copyright.
   Platzhalter: `{jahr}` = aktuelles Jahr, `{startjahr}` = Jahr der Installation (**Annahme**: Jahr des ersten Kontos, ohne Konto
   aktuelles Jahr); "{startjahr}–{jahr}" zeigt bei gleichen Jahren nur ein Jahr. Gespeicherte Texte werden nicht migriert.

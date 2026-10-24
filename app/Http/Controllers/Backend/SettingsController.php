@@ -85,7 +85,9 @@ class SettingsController extends Controller
             $text = str_replace(["\r\n", "\r"], "\n", trim((string) ($data[$kind.'_text'] ?? '')));
             // Unchanged default text is not stored, so a later default update still applies.
             $text = $text === trim(str_replace(["\r\n", "\r"], "\n", LegalTexts::defaultText($kind))) ? '' : $text;
-            $textChanged = $text !== (string) AppSettings::get(LegalTexts::textKey($kind), '');
+            // Normalise the stored text like the submitted one, so a legacy \r\n text is not seen as changed.
+            $storedText = str_replace(["\r\n", "\r"], "\n", trim((string) AppSettings::get(LegalTexts::textKey($kind), '')));
+            $textChanged = $text !== $storedText;
             if ($textChanged) {
                 $values[LegalTexts::textKey($kind)] = $text;
             }

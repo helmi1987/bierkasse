@@ -98,6 +98,28 @@ class LegalNoticeTest extends TestCase
         $this->assertNull(LegalTexts::noticeAt(LegalTexts::PRIVACY));
     }
 
+    public function test_auto_mode_ignores_line_ending_difference_of_stored_text(): void
+    {
+        Setting::put(LegalTexts::textKey(LegalTexts::TERMS), "Titel\r\n\r\nText.\r\n");
+        $this->actingAs($this->admin());
+        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['terms_text' => "Titel\n\nText."]))->assertSessionHasNoErrors();
+        $this->assertNull(LegalTexts::noticeAt(LegalTexts::TERMS));
+    }
+
+    public function test_banner_hidden_on_own_text_page_only(): void
+    {
+        Setting::put(AppSettings::TERMS_NOTICE, '2026-11-05 09:00:00');
+        Setting::put(AppSettings::PRIVACY_NOTICE, '2026-11-05 09:00:00');
+        $this->actingAs($this->user());
+
+        $this->get('/datenschutz')->assertOk()
+            ->assertDontSee('data-testid="legal-notice-privacy"', false)
+            ->assertSee('data-testid="legal-notice-terms"', false);
+        $this->get('/nutzungsbestimmungen')->assertOk()
+            ->assertDontSee('data-testid="legal-notice-terms"', false)
+            ->assertSee('data-testid="legal-notice-privacy"', false);
+    }
+
     public function test_banner_shown_dismissed_and_not_on_consent_page(): void
     {
         $user = $this->user();

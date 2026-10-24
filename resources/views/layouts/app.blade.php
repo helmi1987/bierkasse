@@ -89,6 +89,7 @@
     @include('partials.install-hint')
     @if ($authUser && ! request()->routeIs('consent.*'))
         @foreach (\App\Support\LegalTexts::pendingNotices($authUser) as $noticeKind => $noticeDate)
+            @continue(request()->routeIs($noticeKind === 'privacy' ? 'legal.privacy' : 'legal.terms'))
             <div class="alert ok legal-notice no-print" role="status" data-testid="legal-notice-{{ $noticeKind }}">
                 <span>{{ __('legal.notice_'.$noticeKind, ['date' => $noticeDate]) }}</span>
                 <a href="{{ route($noticeKind === 'privacy' ? 'legal.privacy' : 'legal.terms') }}">{{ __('legal.notice_view') }}</a>

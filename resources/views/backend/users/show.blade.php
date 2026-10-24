@@ -36,6 +36,20 @@
 @endif
 
 <div class="grid-2">
+    <section class="card" data-testid="staff-note">
+        <h2>{{ __('users.note_heading') }}</h2>
+        <form method="post" action="{{ route('backend.users.note', $user) }}" class="stack" autocomplete="off">
+            @csrf
+            @method('PUT')
+            <div class="field">
+                <label for="staff_note">{{ __('users.note_label') }}</label>
+                <input type="text" id="staff_note" name="staff_note" value="{{ old('staff_note', $user->staff_note) }}" maxlength="100">
+                <div class="hint">{{ __('users.note_hint') }}</div>
+            </div>
+            <button type="submit" class="btn">{{ __('account.save') }}</button>
+        </form>
+    </section>
+
     @unless ($user->isAdminOnly())
     <section class="card">
         <h2>{{ __('users.deposit_heading') }}</h2>

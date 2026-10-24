@@ -31,6 +31,17 @@
         }, 0);
     });
 
+    // Forms with data-no-enter-submit: Enter in a single-line field does not submit (only the buttons do).
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' || e.isComposing) {
+            return;
+        }
+        var el = e.target;
+        if (el.tagName === 'INPUT' && el.form && el.form.hasAttribute('data-no-enter-submit')) {
+            e.preventDefault();
+        }
+    });
+
     // Back/forward cache: re-enable forms that were submitted before.
     window.addEventListener('pageshow', function () {
         document.querySelectorAll('form[data-submitted]').forEach(function (form) {

@@ -152,6 +152,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::get('/benutzer', [Backend\UserController::class, 'index'])->name('users.index');
             Route::get('/benutzer/{user}', [Backend\UserController::class, 'show'])->whereNumber('user')->name('users.show');
             Route::put('/benutzer/{user}/limit', [Backend\UserController::class, 'limit'])->whereNumber('user')->name('users.limit');
+            Route::put('/benutzer/{user}/hinweis', [Backend\UserController::class, 'note'])->whereNumber('user')->name('users.note');
             Route::put('/benutzer/{user}/passwort', [Backend\UserController::class, 'password'])->whereNumber('user')->name('users.password');
             Route::post('/benutzer/{user}/totp-zuruecksetzen', [Backend\UserController::class, 'resetTotp'])->whereNumber('user')->name('users.totp');
             Route::post('/benutzer/{user}/status', [Backend\UserController::class, 'status'])->whereNumber('user')->name('users.status');

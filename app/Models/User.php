@@ -39,7 +39,7 @@ class User extends Authenticatable
         'overdraft_limit', 'stats_opt_out', 'must_change_password', 'last_login_at', 'left_at',
     ];
 
-    protected $hidden = ['password', 'remember_token', 'totp_secret', 'totp_recovery_codes'];
+    protected $hidden = ['password', 'remember_token', 'totp_secret', 'totp_recovery_codes', 'staff_note'];
 
     protected $attributes = [
         'role' => self::ROLE_USER,
@@ -68,6 +68,7 @@ class User extends Authenticatable
             'totp_confirmed_at' => 'datetime',
             'totp_last_step' => 'integer',
             'totp_recovery_codes' => 'encrypted:array',
+            'staff_note' => 'encrypted',
         ];
     }
 

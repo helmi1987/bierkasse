@@ -69,7 +69,7 @@
                             @foreach ($users as $user)
                                 @php($balance = $balances[$user->id] ?? 0)
                                 <tr wire:key="user-{{ $user->id }}">
-                                    <td><a href="{{ route('backend.users.show', $user) }}"><strong>{{ $user->displayName() }}</strong></a>@if ($user->isAdminOnly()) <span class="pill">{{ __('account.admin_only') }}</span>@endif @if ($user->isLocked())<span class="pill bad">{{ __('users.locked_badge') }}</span>@endif<br><span class="muted">{{ $user->username }}</span></td>
+                                    <td><a href="{{ route('backend.users.show', $user) }}"><strong>{{ $user->displayName() }}</strong></a>@if ($user->isAdminOnly()) <span class="pill">{{ __('account.admin_only') }}</span>@endif @if ($user->isLocked())<span class="pill bad">{{ __('users.locked_badge') }}</span>@endif<br><span class="muted">{{ $user->username }}</span>@if ($user->staff_note)<br><small class="muted" data-testid="staff-note">{{ $user->staff_note }}</small>@endif</td>
                                     <td>{{ __('users.roles.'.$user->role) }}</td>
                                     @if ($user->isAdminOnly())
                                         <td class="num muted">–</td>

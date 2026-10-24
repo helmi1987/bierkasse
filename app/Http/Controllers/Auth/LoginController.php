@@ -75,6 +75,11 @@ class LoginController extends Controller
 
         RateLimiter::clear($key);
 
+        // Locked accounts: only after the correct password, so the lock does not reveal account names.
+        if ($user->isLocked()) {
+            return $this->lockedResponse($user);
+        }
+
         if (! $user->hasTotp()) {
             return $this->finish($request, $user, $request->boolean('remember'), 'local');
         }
@@ -108,7 +113,13 @@ class LoginController extends Controller
             }
         }
 
-        $user = User::query()->where('id', $pending['user'])->where('status', User::STATUS_ACTIVE)->first();
+        $user = User::query()->where('id', $pending['user'])->whereIn('status', [User::STATUS_ACTIVE, User::STATUS_LOCKED])->first();
+        if ($user?->isLocked()) {
+            // Locked while the second factor was pending.
+            $request->session()->forget(self::PENDING);
+
+            return $this->lockedResponse($user);
+        }
         if (! $user || ! Totp::verifyUser($user, (string) $request->input('code'))) {
             RateLimiter::hit($key, 300);
             RateLimiter::hit($ipKey, 900);
@@ -195,6 +206,9 @@ class LoginController extends Controller
             return redirect()->route($failRoute)->withErrors([$field => __('sso.login_failed', ['provider' => $p->name, 'error' => Str::limit($e->getMessage(), 200)])]);
         }
 
+        if ($user?->isLocked()) {
+            return $this->lockedResponse($user);
+        }
         if (! $user || ! $user->isActive()) {
             return redirect()->route('login')->withErrors(['username' => __('sso.no_user', ['provider' => $p->name])]);
         }
@@ -265,10 +279,21 @@ class LoginController extends Controller
         return redirect()->intended($user->homeUrl());
     }
 
-    /** Active user by user name, or by e-mail address when the input contains "@" (only if unambiguous). */
+    /** Login refused for a locked account (message with the public contact e-mail). */
+    private function lockedResponse(User $user): RedirectResponse
+    {
+        Audit::try('auth.login_locked', $user, [], ['username' => $user->username], $user);
+
+        return redirect()->route('login')->withErrors(['username' => __('auth.locked', ['email' => AppSettings::legalEmail()])]);
+    }
+
+    /**
+     * Active (or locked, refused after the password check) user by user name, or by e-mail address when the
+     * input contains "@" (only if unambiguous).
+     */
     private function findLoginUser(string $login): ?User
     {
-        $query = User::query()->where('status', User::STATUS_ACTIVE);
+        $query = User::query()->whereIn('status', [User::STATUS_ACTIVE, User::STATUS_LOCKED]);
         if (! str_contains($login, '@')) {
             return $query->where('username', $login)->first();
         }

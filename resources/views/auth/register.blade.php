@@ -92,6 +92,7 @@
                 </div>
             </div>
         </details>
+        @include('legal.consent-check')
         <button class="btn primary big" type="submit">{{ __('register.submit') }}</button>
     </form>
 @endif

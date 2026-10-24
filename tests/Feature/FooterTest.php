@@ -51,7 +51,7 @@ class FooterTest extends TestCase
         $this->put('/backend/einstellungen', $base + ['copyright' => ''])->assertSessionHasNoErrors();
         $this->assertSame('', AppSettings::copyright());
         $this->get('/konto/einstellungen')->assertOk()
-            ->assertDontSee(AppSettings::DEFAULT_COPYRIGHT)->assertDontSee('<span aria-hidden="true"> · </span>', false);
+            ->assertDontSee(AppSettings::DEFAULT_COPYRIGHT)->assertDontSee('<span aria-hidden="true"> · </span><span>', false);
 
         $this->put('/backend/einstellungen', $base + ['copyright' => str_repeat('x', AppSettings::COPYRIGHT_MAX + 1)])
             ->assertSessionHasErrors('copyright');

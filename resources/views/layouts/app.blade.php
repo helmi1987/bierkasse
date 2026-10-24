@@ -96,7 +96,7 @@
 @php($footerVersion = \App\Support\SystemInfo::appVersion()['version'] ?? null)
 @php($footerCopyright = \App\Support\AppSettings::copyright())
 <footer class="wrap site-footer">
-    <span>{{ $appName }}@if ($footerVersion) v{{ $footerVersion }}@endif</span>@if ($footerCopyright !== '')<span aria-hidden="true"> · </span><span>{{ $footerCopyright }}</span>@endif
+    <span>{{ $appName }}@if ($footerVersion) v{{ $footerVersion }}@endif</span>@if ($footerCopyright !== '')<span aria-hidden="true"> · </span><span>{{ $footerCopyright }}</span>@endif<span aria-hidden="true"> · </span><a href="{{ route('legal.privacy') }}">{{ __('legal.link.privacy') }}</a><span aria-hidden="true"> · </span><a href="{{ route('legal.terms') }}">{{ __('legal.link.terms') }}</a>
 </footer>
 </body>
 </html>

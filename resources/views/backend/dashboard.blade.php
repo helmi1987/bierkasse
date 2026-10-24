@@ -124,7 +124,7 @@
         <ul class="list">
             @foreach ($minus as $row)
                 <li>
-                    <a href="{{ route('backend.users.show', $row['user']) }}">{{ $row['user']->displayName() }}</a>
+                    <a href="{{ route('backend.users.show', $row['user']) }}">{{ $row['user']->displayName() }}</a>@if ($row['user']->isLocked()) <span class="pill bad">{{ __('users.locked_badge') }}</span>@endif
                     <strong class="amount neg">{{ __('account.open', ['amount' => chf(-$row['balance'])]) }}</strong>
                 </li>
             @endforeach

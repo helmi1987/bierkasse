@@ -1,0 +1,31 @@
+Datenschutzerklärung
+
+1. Verantwortlich
+{name}, Privatperson, {email}
+
+2. Zweck
+Führen der Bierkasse: Konsum, Einzahlungen, Guthaben, Statistik. Keine Werbung, keine Weitergabe an Dritte zu anderen Zwecken.
+
+3. Welche Daten
+- Konto: Benutzername, Vor- und Nachname, E-Mail, Passwort (verschlüsselt), Zwei-Faktor-Einstellungen, letzte Anmeldung
+- Buchungen: Biere, Runden, Geschenke, Einzahlungen, Auszahlungen (Datum, Betrag)
+- Protokoll: Änderungen mit Zeitpunkt, IP-Adresse und Browser-Kennung
+- Feedback: Text und Browser-Kennung
+- Gäste: Name freiwillig; Gäste-Käufe werden anonym als "Gäste" gezählt
+
+4. Wer sieht was
+- Andere Benutzer: Name in der Rangliste (abschaltbar unter Einstellungen > Statistik)
+- Kassier/Admin: alle Buchungen, Salden und das Protokoll
+
+5. Speicherort und Ausland
+Server-Standort: {standort}. Bei Anmeldung über Google, Microsoft oder Facebook erhalten diese Anbieter Daten zur Anmeldung; sie können Daten ausserhalb der Schweiz (u. a. USA) bearbeiten. Die Anmeldung über diese Anbieter ist freiwillig.
+
+6. Speicherdauer
+- Konto und Buchungen: solange das Konto besteht; nach Austritt bleiben die Buchungen für die Nachvollziehbarkeit der Kasse erhalten.
+- Protokoll: unbefristet, nicht löschbar (Nachvollziehbarkeit der Kasse).
+
+7. Deine Rechte (Art. 25 ff. DSG)
+Auskunft, Berichtigung, Löschung soweit kein Aufbewahrungsgrund besteht. Anfrage an {email}.
+
+8. Cookies
+Nur technisch nötige Cookies (Anmeldung, Sicherheit). Keine Analyse, kein Tracking.

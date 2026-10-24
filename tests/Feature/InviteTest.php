@@ -45,7 +45,7 @@ class InviteTest extends TestCase
         return array_merge([
             'username' => 'neu.user',
             'password' => 'password-123',
-            'password_confirmation' => 'password-123',
+            'password_confirmation' => 'password-123', 'consent' => '1',
         ], $overrides);
     }
 

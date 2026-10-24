@@ -50,4 +50,5 @@
     @endif
     <button class="btn primary big" type="submit">{{ __('guest.submit') }}</button>
 </form>
+@include('legal.links')
 @endsection

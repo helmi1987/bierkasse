@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Support\AppSettings;
 use App\Support\FlyerSvg;
+use App\Support\LegalTexts;
 use App\Support\Money;
 use App\Support\Qr;
 use Illuminate\Http\RedirectResponse;
@@ -43,7 +44,52 @@ class SettingsController extends Controller
             'notifyKassier' => AppSettings::notifyKassier(),
             'personalSso' => AppSettings::personalSsoAllowed(),
             'mail' => AppSettings::mail(),
+            'legal' => [
+                'name' => AppSettings::legalName(),
+                'email' => AppSettings::legalEmail(),
+                'location' => AppSettings::legalLocation(),
+                'texts' => array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalTexts::text($kind), LegalTexts::KINDS)),
+                'dates' => array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalTexts::versionDate(LegalTexts::version($kind)), LegalTexts::KINDS)),
+            ],
         ]);
+    }
+
+    /**
+     * Privacy policy / terms of use with contact data. Per text: "Alle Benutzer müssen erneut zustimmen"
+     * sets a new version (now) and every user has to accept again; without it the change is editorial
+     * (version unchanged). An empty text falls back to the default text.
+     */
+    public function legal(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'legal_name' => ['required', 'string', 'max:100'],
+            'legal_email' => ['required', 'email', 'max:255'],
+            'legal_location' => ['required', 'string', 'max:100'],
+            'privacy_text' => ['nullable', 'string', 'max:'.LegalTexts::TEXT_MAX],
+            'terms_text' => ['nullable', 'string', 'max:'.LegalTexts::TEXT_MAX],
+        ]);
+
+        $values = [
+            AppSettings::LEGAL_NAME => trim($data['legal_name']),
+            AppSettings::LEGAL_EMAIL => trim($data['legal_email']),
+            AppSettings::LEGAL_LOCATION => trim($data['legal_location']),
+        ];
+        $reaccept = false;
+        foreach (LegalTexts::KINDS as $kind) {
+            $text = str_replace(["\r\n", "\r"], "\n", trim((string) ($data[$kind.'_text'] ?? '')));
+            // Unchanged default text is not stored, so a later default update still applies.
+            $text = $text === trim(str_replace(["\r\n", "\r"], "\n", LegalTexts::defaultText($kind))) ? '' : $text;
+            if ($text !== (string) AppSettings::get(LegalTexts::textKey($kind), '')) {
+                $values[LegalTexts::textKey($kind)] = $text;
+            }
+            if ($request->boolean($kind.'_reaccept')) {
+                $values[LegalTexts::versionKey($kind)] = LegalTexts::newVersion();
+                $reaccept = true;
+            }
+        }
+        Setting::putMany($values, 'legal.update');
+
+        return redirect()->to(route('backend.settings').'#rechtliches')->with('status', __($reaccept ? 'legal.saved_reaccept' : 'legal.saved'));
     }
 
     public function update(Request $request): RedirectResponse

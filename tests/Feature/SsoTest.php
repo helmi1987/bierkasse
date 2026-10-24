@@ -104,6 +104,19 @@ class SsoTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_sso_login_of_locked_user_is_refused_with_contact(): void
+    {
+        $user = $this->user(['status' => \App\Models\User::STATUS_LOCKED]);
+        UserIdentity::query()->create(['user_id' => $user->id, 'sso_provider_id' => $this->provider->id, 'subject' => 'sub-123']);
+        $query = $this->startFlow('/login/sso/firma');
+        $this->fakeTokenEndpoint($this->claims(['nonce' => $query['nonce']]));
+
+        $this->get('/login/sso/firma/callback?code=abc&state='.$query['state'])
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors(['username' => __('auth.locked', ['email' => \App\Support\AppSettings::legalEmail()])]);
+        $this->assertGuest();
+    }
+
     public function test_subject_linked_to_other_user_cannot_be_linked_again(): void
     {
         $other = $this->user();

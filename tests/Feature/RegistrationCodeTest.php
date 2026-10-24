@@ -26,7 +26,7 @@ class RegistrationCodeTest extends TestCase
             'first_name' => 'Neu',
             'email' => 'neu@example.org',
             'password' => 'password-123',
-            'password_confirmation' => 'password-123',
+            'password_confirmation' => 'password-123', 'consent' => '1',
         ], $overrides);
     }
 

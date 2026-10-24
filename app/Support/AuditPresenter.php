@@ -36,7 +36,7 @@ class AuditPresenter
     ];
 
     /** Value keys holding user ids (int or list of int). */
-    private const USER_KEYS = ['user_id', 'created_by', 'confirmed_by', 'booked_by', 'used_by', 'recipients'];
+    private const USER_KEYS = ['user_id', 'created_by', 'confirmed_by', 'booked_by', 'used_by', 'recipients', 'locked_by'];
 
     /** Value keys holding a date (Y-m-d) or a date and time. */
     private const DATE_KEYS = ['date', 'expires_at', 'confirmed_at', 'edited_at', 'left_at', 'used_at', 'last_login_at', 'discovered_at'];

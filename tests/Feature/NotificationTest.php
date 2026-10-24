@@ -65,7 +65,7 @@ class NotificationTest extends TestCase
             'last_name' => 'Ling',
             'email' => 'neu@example.org',
             'password' => 'password-123',
-            'password_confirmation' => 'password-123',
+            'password_confirmation' => 'password-123', 'consent' => '1',
         ])->assertRedirect(route('account.dashboard'));
 
         $user = User::query()->where('username', 'neu.user')->firstOrFail();
@@ -96,7 +96,7 @@ class NotificationTest extends TestCase
             'code' => 'durst',
             'username' => 'ohne.mail',
             'password' => 'password-123',
-            'password_confirmation' => 'password-123',
+            'password_confirmation' => 'password-123', 'consent' => '1',
         ];
 
         $this->post('/registrieren', $data)->assertRedirect(route('account.dashboard'));

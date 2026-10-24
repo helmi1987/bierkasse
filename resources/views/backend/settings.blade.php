@@ -157,4 +157,39 @@
 
     <button type="submit" class="btn primary big">{{ __('settings.save') }}</button>
 </form>
+
+{{-- Own form: the "re-accept" checkboxes belong to the texts only. --}}
+<form method="post" action="{{ route('backend.settings.legal') }}" class="stack" id="rechtliches" autocomplete="off">
+    @csrf
+    @method('PUT')
+    <section class="card stack">
+        <h2>{{ __('legal.settings_heading') }}</h2>
+        <p class="hint">{{ __('legal.settings_intro') }}</p>
+        <div class="grid-2">
+            <div class="field">
+                <label for="legal_name">{{ __('legal.name') }}</label>
+                <input type="text" id="legal_name" name="legal_name" value="{{ old('legal_name', $legal['name']) }}" maxlength="100" required>
+            </div>
+            <div class="field">
+                <label for="legal_email">{{ __('legal.email') }}</label>
+                <input type="email" id="legal_email" name="legal_email" value="{{ old('legal_email', $legal['email']) }}" maxlength="255" required>
+                <div class="hint">{{ __('legal.email_hint') }}</div>
+            </div>
+            <div class="field">
+                <label for="legal_location">{{ __('legal.location') }}</label>
+                <input type="text" id="legal_location" name="legal_location" value="{{ old('legal_location', $legal['location']) }}" maxlength="100" required>
+            </div>
+        </div>
+        @foreach (\App\Support\LegalTexts::KINDS as $kind)
+            <div class="field">
+                <label for="{{ $kind }}_text">{{ __('legal.text_'.$kind) }}</label>
+                <textarea id="{{ $kind }}_text" name="{{ $kind }}_text" rows="14" maxlength="{{ \App\Support\LegalTexts::TEXT_MAX }}">{{ old($kind.'_text', $legal['texts'][$kind]) }}</textarea>
+                <div class="hint">{{ __('legal.current_version', ['date' => $legal['dates'][$kind]]) }} · <a href="{{ route($kind === 'privacy' ? 'legal.privacy' : 'legal.terms') }}" target="_blank" rel="noopener">{{ __('legal.consent_open_page') }}</a> · {{ __('legal.reset_default') }}</div>
+                <label class="check"><input type="checkbox" name="{{ $kind }}_reaccept" value="1" @checked(old($kind.'_reaccept'))> {{ __('legal.reaccept') }}</label>
+            </div>
+        @endforeach
+        <p class="hint">{{ __('legal.reaccept_hint') }}</p>
+        <button type="submit" class="btn primary">{{ __('legal.save') }}</button>
+    </section>
+</form>
 @endsection

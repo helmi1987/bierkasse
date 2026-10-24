@@ -185,8 +185,11 @@ class RegisterController extends Controller
         }
 
         try {
-            [$user, $carryoverTx] = DB::transaction(function () use ($data, $carryover, $invitation, $regCode) {
-                $user = User::query()->forceCreate(LegalTexts::consentAttributes() + [
+            // Current revisions (archived when missing) outside the transaction: a rolled back
+            // registration does not take a revision with it.
+            $consent = LegalTexts::consentAttributes();
+            [$user, $carryoverTx] = DB::transaction(function () use ($data, $carryover, $invitation, $regCode, $consent) {
+                $user = User::query()->forceCreate($consent + [
                     'username' => $data['username'],
                     'first_name' => $data['first_name'] ?? null,
                     'last_name' => $data['last_name'] ?? null,
@@ -208,6 +211,8 @@ class RegisterController extends Controller
                     'registration_code_id' => $regCode?->id,
                     'privacy_accepted_version' => $user->privacy_accepted_version,
                     'terms_accepted_version' => $user->terms_accepted_version,
+                    'privacy_revision_id' => $user->privacy_revision_id,
+                    'terms_revision_id' => $user->terms_revision_id,
                 ], fn ($v) => $v !== null), $user);
                 $tx = $carryover ? Ledger::reportCarryover($user, ...$carryover) : null;
 

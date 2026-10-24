@@ -2,7 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\LegalRevision;
 use App\Models\User;
+use App\Services\LegalArchive;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\HtmlString;
 use Throwable;
@@ -224,11 +226,38 @@ class LegalTexts
     }
 
     /**
+     * Text with placeholders (stored or default text) rendered.
+     *
      * @return array{title: ?string, html: HtmlString}
      */
     public static function renderText(string $text): array
     {
-        $text = strtr(str_replace(["\r\n", "\r"], "\n", $text), self::placeholders());
+        return self::renderSource(self::substitute($text));
+    }
+
+    /**
+     * Current text of a kind as plain text with the placeholders replaced (what users see, archived
+     * as LegalRevision body).
+     */
+    public static function source(string $kind): string
+    {
+        return self::substitute(self::text($kind));
+    }
+
+    /** Line endings normalised, placeholders replaced, trimmed. */
+    public static function substitute(string $text): string
+    {
+        return trim(strtr(str_replace(["\r\n", "\r"], "\n", $text), self::placeholders()));
+    }
+
+    /**
+     * Renders plain text whose placeholders are already replaced (e.g. an archived revision).
+     *
+     * @return array{title: ?string, html: HtmlString}
+     */
+    public static function renderSource(string $text): array
+    {
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
         $blocks = preg_split('/\n\s*\n/', trim($text)) ?: [];
         $title = null;
         if ($blocks !== []) {
@@ -286,15 +315,21 @@ class LegalTexts
     /**
      * Attributes that record the consent to both current versions now.
      *
-     * Also marks both update notices as seen (the user just read the texts).
+     * Also marks both update notices as seen (the user just read the texts) and records the accepted
+     * revisions (default: the current ones, created when missing).
      *
+     * @param  array<string, LegalRevision>|null  $revisions  kind => revision the user saw
      * @return array<string, mixed>
      */
-    public static function consentAttributes(): array
+    public static function consentAttributes(?array $revisions = null): array
     {
+        $revisions ??= LegalArchive::currentAll();
+
         return [
-            'privacy_accepted_version' => self::version(self::PRIVACY),
-            'terms_accepted_version' => self::version(self::TERMS),
+            'privacy_accepted_version' => $revisions[self::PRIVACY]->version,
+            'terms_accepted_version' => $revisions[self::TERMS]->version,
+            'privacy_revision_id' => $revisions[self::PRIVACY]->id,
+            'terms_revision_id' => $revisions[self::TERMS]->id,
             'consent_accepted_at' => now(),
             self::seenColumn(self::PRIVACY) => now(),
             self::seenColumn(self::TERMS) => now(),

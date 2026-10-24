@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\Ledger;
+use App\Services\LegalArchive;
 use App\Support\AppSettings;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -17,6 +18,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Loaded here as well so a stale Composer autoloader cannot break the views.
         require_once app_path('helpers.php');
+        // Newest legal text revisions, cached per request.
+        $this->app->scoped(LegalArchive::class);
     }
 
     public function boot(): void

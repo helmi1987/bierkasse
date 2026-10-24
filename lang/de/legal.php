@@ -58,6 +58,30 @@ return [
 
     // Backend user detail
     'user_consent' => 'Zustimmung',
-    'user_consent_done' => ':date (Datenschutz Stand :privacy, Nutzungsbestimmungen Stand :terms)',
     'user_consent_open' => 'noch offen',
+    'user_consent_revision' => 'Fassung vom :date',
+    'all_revisions' => 'Alle Fassungen',
+
+    // Archived revisions ("Fassungen")
+    'revision_header' => 'Fassung vom :date (Stand :version)',
+    'revisions_title' => 'Fassungen Datenschutz und Nutzungsbestimmungen',
+    'revisions_intro' => 'Jede veröffentlichte Fassung wird unveränderlich gespeichert (Text mit eingesetzten Platzhaltern), damit nachweisbar ist, welchen Text ein Benutzer akzeptiert hat.',
+    'revisions_kind' => 'Text',
+    'revisions_all' => 'Alle',
+    'revisions_date' => 'Fassung vom',
+    'revisions_version' => 'Stand',
+    'revisions_reason' => 'Anlass',
+    'revisions_by' => 'Von',
+    'revisions_system' => 'System',
+    'revisions_none' => 'Noch keine Fassungen.',
+    'reason' => [
+        'reaccept' => 'Gespeichert: Erneut zustimmen',
+        'update' => 'Gespeichert: Als Update',
+        'silent' => 'Gespeichert: Ohne Meldung',
+        'settings' => 'Bierpreis, Limit oder Rückgängig-Minuten geändert',
+        'auto' => 'Automatisch erkannt (z. B. Standardtext oder Platzhalter)',
+        'initial' => 'Erste Fassung',
+    ],
+    'account_consent' => 'Akzeptiert am :date',
+    'account_consent_heading' => 'Datenschutz und Nutzungsbestimmungen',
 ];

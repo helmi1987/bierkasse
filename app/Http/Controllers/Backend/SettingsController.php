@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\LegalRevision;
 use App\Models\QrCode;
 use App\Models\RegistrationCode;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\Audit;
+use App\Services\LegalArchive;
 use App\Support\AppSettings;
 use App\Support\FlyerSvg;
 use App\Support\LegalTexts;
@@ -16,6 +18,7 @@ use App\Support\Qr;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -81,6 +84,7 @@ class SettingsController extends Controller
         $reaccept = false;
         $update = false;
         $modes = [];
+        $reasons = [];
         foreach (LegalTexts::KINDS as $kind) {
             $text = str_replace(["\r\n", "\r"], "\n", trim((string) ($data[$kind.'_text'] ?? '')));
             // Unchanged default text is not stored, so a later default update still applies.
@@ -112,12 +116,19 @@ class SettingsController extends Controller
             if ($mode !== LegalTexts::MODE_SILENT) {
                 $modes[$kind] = $mode;
             }
+            $reasons[$kind] = $mode;
         }
-        Setting::putMany($values, 'legal.update');
-        if ($modes !== []) {
-            // Which announcement was chosen (the settings diff above only shows the changed keys).
-            Audit::log('legal.mode', null, [], $modes);
-        }
+        DB::transaction(function () use ($values, $modes, $reasons) {
+            Setting::putMany($values, 'legal.update');
+            if ($modes !== []) {
+                // Which announcement was chosen (the settings diff above only shows the changed keys).
+                Audit::log('legal.mode', null, [], $modes);
+            }
+            // Archive the published texts (only kinds whose rendered text or "Stand" changed).
+            foreach ($reasons as $kind => $reason) {
+                LegalArchive::current($kind, $reason);
+            }
+        });
 
         return redirect()->to(route('backend.settings').'#rechtliches')->with('status', __($reaccept ? 'legal.saved_reaccept' : ($update ? 'legal.saved_update' : 'legal.saved')));
     }
@@ -177,7 +188,7 @@ class SettingsController extends Controller
         $legalChanged = $price !== AppSettings::beerPrice() || $limit !== AppSettings::defaultLimit()
             || $newUndo !== AppSettings::undoMinutes('consume');
 
-        Setting::putMany(($legalChanged ? LegalTexts::settingChangeValues() : []) + [
+        $settings = ($legalChanged ? LegalTexts::settingChangeValues() : []) + [
             AppSettings::BEER_PRICE => $price,
             AppSettings::DEFAULT_LIMIT => $limit,
             AppSettings::APP_NAME => trim((string) ($data['app_name'] ?? '')),
@@ -199,7 +210,14 @@ class SettingsController extends Controller
                 'smtp_password' => $smtpPassword,
                 'smtp_encryption' => (string) ($data['smtp_encryption'] ?? ''),
             ],
-        ]);
+        ];
+        DB::transaction(function () use ($settings, $legalChanged) {
+            Setting::putMany($settings);
+            if ($legalChanged) {
+                // Texts with {bierpreis}/{limit}/{undo_minuten} get a new archived revision.
+                LegalArchive::currentAll(LegalRevision::REASON_SETTINGS);
+            }
+        });
         // Admin saves the registration mode: make sure the first flyer code exists when it is needed.
         QrCode::ensureFirstForAdmin($request->user());
 

@@ -111,6 +111,18 @@ class User extends Authenticatable
         return $this->belongsTo(self::class, 'locked_by');
     }
 
+    /** Accepted revision of the privacy policy (null for consents before 1.19.0). */
+    public function privacyRevision(): BelongsTo
+    {
+        return $this->belongsTo(LegalRevision::class, 'privacy_revision_id');
+    }
+
+    /** Accepted revision of the terms of use (null for consents before 1.19.0). */
+    public function termsRevision(): BelongsTo
+    {
+        return $this->belongsTo(LegalRevision::class, 'terms_revision_id');
+    }
+
     /** Accepted versions differ from the current privacy policy / terms of use (consent page). */
     public function needsConsent(): bool
     {

@@ -101,19 +101,22 @@ img { max-width: 100%; height: auto; }
 @media (min-width: 640px) { .nav-user { display: inline; } }
 .icon { width: 22px; height: 22px; fill: currentColor; }
 .badge { display: inline-flex; min-width: 1.4rem; height: 1.4rem; padding: 0 .35rem; align-items: center; justify-content: center; border-radius: 999px; background: var(--bad); color: #fff; font-size: .75rem; font-weight: 700; }
-/* Phones: logo, nav, user and logout in one row (name hidden, tighter items); wrapping stays the fallback. */
+/* Phones: logo left, nav fills the remaining width (items spread evenly, size scales with the viewport);
+   name hidden; one row, scrolls inside the nav as a safety net; wraps under 360px. */
 @media (max-width: 520px) {
     .brand span { display: none; }
     .topbar .wrap { padding: 0 8px; }
     .topbar-inner { gap: 0 .25rem; }
     .brand { flex: none; }
-    .nav { flex: 1 1 0; flex-wrap: nowrap; justify-content: flex-start; gap: 0; overflow-x: auto; scrollbar-width: none; }
+    .nav { --nav-fs: clamp(.9rem, 4.2vw, 1.05rem); flex: 1 1 0; flex-wrap: nowrap; justify-content: space-between; gap: 0; overflow-x: auto; scrollbar-width: none; font-size: var(--nav-fs); }
     .nav::-webkit-scrollbar { display: none; }
-    .nav a, .nav .linkish { padding: 0 .35rem; gap: .2rem; font-size: .875rem; flex: none; }
-    .nav .badge { min-width: 1.2rem; height: 1.2rem; padding: 0 .25rem; font-size: .7rem; }
+    .nav a, .nav .linkish { padding: 0 .45em; gap: .25em; font-size: inherit; flex: 0 0 auto; }
+    .nav .badge { min-width: 1.25em; height: 1.25em; padding: 0 .3em; font-size: .75em; }
+    /* Many items (Kassier/Backend with badges): compact. */
+    .nav:has(> :nth-child(6)) { --nav-fs: clamp(.72rem, 3.5vw, .9rem); }
+    .nav:has(> :nth-child(6)) a, .nav:has(> :nth-child(6)) .linkish { padding: 0 .25em; }
 }
 @media (max-width: 400px) {
-    .nav a, .nav .linkish { padding: 0 .25rem; font-size: .8rem; gap: .15rem; }
     .nav .icon { width: 20px; height: 20px; }
     .brand img { width: 28px; height: 28px; }
 }

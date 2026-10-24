@@ -219,12 +219,19 @@
                     headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     credentials: 'same-origin',
                 }).then(function (response) {
+                    if (response.status === 419 || response.status === 401) {
+                        // Session/CSRF expired: reload so the user lands on a fresh page or the login.
+                        window.location.reload();
+                        return null;
+                    }
                     if (!response.ok) {
                         throw new Error('pin failed');
                     }
                     return response.json();
                 }).then(function (data) {
-                    setPinned(btn.dataset.pin, !!data.pinned, btn);
+                    if (data) {
+                        setPinned(btn.dataset.pin, !!data.pinned, btn);
+                    }
                 }).catch(function () {
                     // Fall back to the normal form post (reloads the page).
                     form.action = btn.formAction;

@@ -107,9 +107,15 @@ img { max-width: 100%; height: auto; }
     .topbar .wrap { padding: 0 8px; }
     .topbar-inner { gap: 0 .25rem; }
     .brand { flex: none; }
-    .nav { flex: 1 1 0; flex-wrap: nowrap; gap: 0; }
+    .nav { flex: 1 1 0; flex-wrap: nowrap; justify-content: flex-start; gap: 0; overflow-x: auto; scrollbar-width: none; }
+    .nav::-webkit-scrollbar { display: none; }
     .nav a, .nav .linkish { padding: 0 .35rem; gap: .2rem; font-size: .875rem; flex: none; }
     .nav .badge { min-width: 1.2rem; height: 1.2rem; padding: 0 .25rem; font-size: .7rem; }
+}
+@media (max-width: 400px) {
+    .nav a, .nav .linkish { padding: 0 .25rem; font-size: .8rem; gap: .15rem; }
+    .nav .icon { width: 20px; height: 20px; }
+    .brand img { width: 28px; height: 28px; }
 }
 @media (max-width: 359px) { .nav { flex-wrap: wrap; flex: 1 1 100%; } }
 

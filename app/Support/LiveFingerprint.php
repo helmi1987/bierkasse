@@ -27,7 +27,6 @@ class LiveFingerprint
         'invitations' => ['id', 'count', 'updated_at'],
         'registration_codes' => ['id', 'count', 'updated_at'],
         'qr_codes' => ['id', 'count', 'updated_at'],
-        'notice_dismissals' => ['id', 'count'],
         'user_favorites' => ['id', 'count'],
         'audit_logs' => ['id'],
     ];

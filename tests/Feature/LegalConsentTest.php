@@ -184,9 +184,9 @@ class LegalConsentTest extends TestCase
         $admin->forceFill(['admin_only' => true])->save();
         $this->actingAs($admin);
 
-        $this->get('/backend')->assertRedirect(route('consent.show'));
+        $this->get('/admin')->assertRedirect(route('consent.show'));
         $this->post('/zustimmung', $this->accept())->assertRedirect(route('backend.dashboard'));
-        $this->get('/backend')->assertOk();
+        $this->get('/admin')->assertOk();
     }
 
     public function test_password_change_comes_before_consent(): void
@@ -218,7 +218,7 @@ class LegalConsentTest extends TestCase
         $user = $this->user();
         $this->actingAs($admin);
 
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm([
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm([
             'terms_text' => "Nutzungsbestimmungen\n\n1. Neu\nGanz neue Regeln.",
             'terms_mode' => 'reaccept',
         ]))->assertSessionHasNoErrors()->assertSessionHas('status', __('legal.saved_reaccept'));
@@ -229,7 +229,7 @@ class LegalConsentTest extends TestCase
         $this->get('/nutzungsbestimmungen')->assertSee('Ganz neue Regeln.')->assertSee('Stand: '.LegalTexts::versionDate(LegalTexts::version(LegalTexts::TERMS)));
 
         // Everybody, the admin included, has to accept again.
-        $this->get('/backend')->assertRedirect(route('consent.show'));
+        $this->get('/admin')->assertRedirect(route('consent.show'));
         $this->actingAs($user);
         $this->get('/konto')->assertRedirect(route('consent.show'));
         $this->get('/zustimmung')->assertOk()->assertSee(__('legal.consent_renewal'));
@@ -244,7 +244,7 @@ class LegalConsentTest extends TestCase
         $user = $this->user();
         $this->actingAs($admin);
 
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm([
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm([
             'legal_email' => 'kasse@example.org',
             'privacy_text' => "Datenschutzerklärung\n\nTippfehler korrigiert, {email}.",
             'privacy_mode' => 'silent',
@@ -252,7 +252,7 @@ class LegalConsentTest extends TestCase
 
         $this->assertSame(LegalTexts::DEFAULT_VERSION, LegalTexts::version(LegalTexts::PRIVACY));
         $this->get('/datenschutz')->assertSee('Tippfehler korrigiert, kasse@example.org.');
-        $this->get('/backend')->assertOk();
+        $this->get('/admin')->assertOk();
         $this->actingAs($user);
         $this->get('/konto')->assertOk();
     }
@@ -260,11 +260,11 @@ class LegalConsentTest extends TestCase
     public function test_contact_email_is_required_and_only_admins_edit(): void
     {
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['legal_email' => '']))->assertSessionHasErrors('legal_email');
-        $this->get('/backend/einstellungen')->assertOk()->assertSee(__('legal.mode_reaccept'));
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['legal_email' => '']))->assertSessionHasErrors('legal_email');
+        $this->get('/admin/einstellungen')->assertOk()->assertSee(__('legal.mode_reaccept'));
 
         $this->actingAs($this->kassier());
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm())->assertForbidden();
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm())->assertForbidden();
     }
 
     public function test_backend_user_detail_shows_consent(): void

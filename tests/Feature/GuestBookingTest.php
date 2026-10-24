@@ -63,7 +63,7 @@ class GuestBookingTest extends TestCase
         $this->assertSame(0, Stats::forUser($user)['total_beers']);
 
         $this->get('/konto')->assertOk()->assertSee('Fritz');
-        $this->actingAs($this->kassier())->get('/backend/gaeste')->assertOk()->assertSee('gebucht von '.$user->username);
+        $this->actingAs($this->kassier())->get('/admin/buchungen?tab=gaeste')->assertOk()->assertSee('gebucht von '.$user->username);
     }
 
     public function test_booking_works_with_overdraft_limit_reached(): void
@@ -178,14 +178,19 @@ class GuestBookingTest extends TestCase
         $this->assertNotNull(GuestSale::query()->find($second->id));
     }
 
-    public function test_kassier_switches_user_booking(): void
+    public function test_admin_switches_user_booking(): void
     {
-        $this->actingAs($this->kassier())->get('/backend/gaeste')->assertOk()
+        // Kassiers see the state in Buchungen > Gäste; switching is admin-only since 1.20.0.
+        $this->actingAs($this->kassier())->get('/admin/buchungen?tab=gaeste')->assertOk()
             ->assertSee('Gäste durch Benutzer buchen')->assertSee('Öffentliche Gäste-Seite (QR + Gäste-Passwort)');
-        $this->put('/backend/gaeste', ['guest_user_booking' => '1'])->assertSessionHas('status');
+        $this->put('/admin/einstellungen/funktionen', $this->featureForm(['guest_user_booking' => '0']))->assertForbidden();
+        $this->assertTrue(AppSettings::guestUserBooking());
+
+        $this->actingAs($this->admin());
+        $this->put('/admin/einstellungen/funktionen', $this->featureForm(['guest_user_booking' => '1']))->assertSessionHas('status');
         $this->assertTrue(AppSettings::guestUserBooking());
         $this->assertFalse(AppSettings::guestOpen());
-        $this->put('/backend/gaeste', [])->assertSessionHas('status');
+        $this->put('/admin/einstellungen/funktionen', $this->featureForm(['guest_user_booking' => '0']))->assertSessionHas('status');
         $this->assertFalse(AppSettings::guestUserBooking());
     }
 

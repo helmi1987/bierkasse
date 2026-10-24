@@ -3,9 +3,6 @@
 @section('title', __('stats.title'))
 
 @section('content')
-@if ($backend)
-    @include('partials.backend-nav')
-@endif
 <h1>{{ __('stats.title') }}</h1>
 
 <div class="kpis">

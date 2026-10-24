@@ -63,7 +63,7 @@ class CarryoverTest extends TestCase
 
         Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => ($m->rows['Übertrag'] ?? null) === 'schuldet 12 Biere à CHF 1.50 (CHF 18.00)'
             && str_contains($m->render(), 'schuldet 12 Biere à CHF 1.50 (CHF 18.00)')
-            && str_contains($m->render(), 'Übertrag von der alten Strichliste muss im Backend bestätigt werden'));
+            && str_contains($m->render(), 'Übertrag von der alten Strichliste muss im Admin-Bereich bestätigt werden'));
 
         // Counts for the user right away (decision 2026-10-23), shown as one number without "ausstehend".
         $this->assertSame(-1800, $user->availableBalance());
@@ -112,7 +112,7 @@ class CarryoverTest extends TestCase
         $tx = $this->carryover($user);
 
         $this->assertSame(1, Ledger::pendingCount());
-        $this->actingAs($kassier)->get('/backend')->assertOk()
+        $this->actingAs($kassier)->get('/admin')->assertOk()
             ->assertSee('Überträge von der alten Strichliste')->assertSee('schuldet 12 Biere à CHF 1.50 (CHF 18.00)');
 
         $this->post(route('backend.carryovers.confirm', $tx), ['amount' => '-18.00'])->assertSessionHas('status');

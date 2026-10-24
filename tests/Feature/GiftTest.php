@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\BeerStock;
 use App\Services\CashBook;
+use App\Services\Gifts;
 use App\Services\GuestSales;
 use App\Services\Ledger;
 use App\Services\LedgerException;
@@ -161,19 +162,19 @@ class GiftTest extends TestCase
         Setting::put(AppSettings::GIFT_UNDO_MINUTES, 7);
         $this->assertSame([10, 10, 10, 7], array_map(fn ($k) => AppSettings::undoMinutes($k), ['consume', 'round', 'guest', 'gift']));
         $admin = $this->admin();
-        $this->actingAs($admin)->get('/backend/einstellungen')->assertOk()->assertSee('name="undo_minutes[gift]" value="7"', false);
+        $this->actingAs($admin)->get('/admin/einstellungen')->assertOk()->assertSee('name="undo_minutes[gift]" value="7"', false);
 
         $form = ['beer_price' => '1.50', 'default_limit' => '0', 'registration_mode' => 'invite', 'mail_transport' => 'sendmail'];
-        $this->actingAs($admin)->put('/backend/einstellungen', $form + ['undo_minutes' => ['consume' => 3, 'round' => 0, 'guest' => 15, 'gift' => 61]])
+        $this->actingAs($admin)->put('/admin/einstellungen', $form + ['undo_minutes' => ['consume' => 3, 'round' => 0, 'guest' => 15, 'gift' => 61]])
             ->assertSessionHasErrors('undo_minutes.gift');
-        $this->actingAs($admin)->put('/backend/einstellungen', $form + ['undo_minutes' => ['consume' => 3, 'round' => 0, 'guest' => 15, 'gift' => 60]])
+        $this->actingAs($admin)->put('/admin/einstellungen', $form + ['undo_minutes' => ['consume' => 3, 'round' => 0, 'guest' => 15, 'gift' => 60]])
             ->assertSessionHas('status');
         $this->assertSame([3, 0, 15, 60], array_map(fn ($k) => AppSettings::undoMinutes($k), ['consume', 'round', 'guest', 'gift']));
 
         $tx = Ledger::consume($this->giver, 1);
         $this->travel(4)->minutes();
         $this->assertFalse($tx->canBeUndoneBy($this->giver));
-        $this->actingAs($this->kassier())->put('/backend/einstellungen', $form)->assertForbidden();
+        $this->actingAs($this->kassier())->put('/admin/einstellungen', $form)->assertForbidden();
     }
 
     public function test_backend_switch_and_list(): void
@@ -181,10 +182,14 @@ class GiftTest extends TestCase
         $anna = $this->user(['first_name' => 'Anna']);
         Ledger::giveBeers($this->giver, [$anna->id], 2);
         $kassier = $this->kassier();
-        $this->actingAs($kassier)->get('/backend/verschenkt')->assertOk()->assertSee('an Anna', false);
-        $this->actingAs($this->user())->get('/backend/verschenkt')->assertForbidden();
+        $this->actingAs($kassier)->get('/admin/verschenkt')->assertRedirect(route('backend.bookings', ['tab' => 'geschenke']));
+        $this->get('/admin/buchungen?tab=geschenke')->assertOk()->assertSee('an Anna', false);
+        $this->actingAs($this->user())->get('/admin/buchungen?tab=geschenke')->assertForbidden();
 
-        $this->actingAs($kassier)->put('/backend/verschenkt', [])->assertSessionHas('status');
+        // Switch: admins only (Admin > Einstellungen > Funktionen) since 1.20.0.
+        $this->actingAs($kassier)->put('/admin/einstellungen/funktionen', $this->featureForm(['gifts_enabled' => '0']))->assertForbidden();
+        $this->assertTrue(AppSettings::giftsAllowed());
+        $this->actingAs($this->admin())->put('/admin/einstellungen/funktionen', $this->featureForm(['gifts_enabled' => '0']))->assertSessionHas('status');
         $this->assertFalse(AppSettings::giftsAllowed());
         $this->actingAs($this->giver)->get('/konto')->assertOk()->assertDontSee('data-testid="gift"', false);
         $this->actingAs($this->giver)->post('/konto/verschenken', $this->tokened('gift', ['gift_recipients' => [$anna->id], 'gift_quantity' => 1]))->assertNotFound();
@@ -205,13 +210,13 @@ class GiftTest extends TestCase
         $anna = $this->user();
         $tx = Ledger::giveBeers($this->giver, [$anna->id], 1);
 
-        $this->assertNull(\App\Services\Gifts::recipientsBookedQuery($tx)->getQuery()->lock);
-        $this->assertTrue(\App\Services\Gifts::recipientsBookedQuery($tx, true)->getQuery()->lock);
-        $this->assertFalse(\App\Services\Gifts::recipientsBookedSince($tx, true));
+        $this->assertNull(Gifts::recipientsBookedQuery($tx)->getQuery()->lock);
+        $this->assertTrue(Gifts::recipientsBookedQuery($tx, true)->getQuery()->lock);
+        $this->assertFalse(Gifts::recipientsBookedSince($tx, true));
 
         Ledger::bookDeposit($anna, 1000, 'cash', $this->kassier());
         Ledger::consume($anna, 1);
-        $this->assertTrue(\App\Services\Gifts::recipientsBookedSince($tx, true));
+        $this->assertTrue(Gifts::recipientsBookedSince($tx, true));
         $this->assertFalse($tx->fresh()->canBeUndoneBy($this->giver, true));
     }
 }

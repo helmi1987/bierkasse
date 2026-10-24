@@ -50,7 +50,7 @@ class LegalNoticeTest extends TestCase
     public function test_silent_mode_only_sets_last_changed(): void
     {
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['terms_text' => 'Neu', 'terms_mode' => 'silent']))
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['terms_text' => 'Neu', 'terms_mode' => 'silent']))
             ->assertSessionHasNoErrors();
 
         $this->assertNotNull(LegalTexts::changedAt(LegalTexts::TERMS));
@@ -64,7 +64,7 @@ class LegalNoticeTest extends TestCase
     {
         $user = $this->user();
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['privacy_mode' => 'update']))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['privacy_mode' => 'update']))->assertSessionHasNoErrors();
 
         $this->assertNotNull(LegalTexts::noticeAt(LegalTexts::PRIVACY));
         $this->assertNotNull(LegalTexts::changedAt(LegalTexts::PRIVACY));
@@ -78,7 +78,7 @@ class LegalNoticeTest extends TestCase
     public function test_reaccept_mode_sets_version_and_no_notice(): void
     {
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['terms_mode' => 'reaccept']))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['terms_mode' => 'reaccept']))->assertSessionHasNoErrors();
 
         $this->assertNotSame(LegalTexts::DEFAULT_VERSION, LegalTexts::version(LegalTexts::TERMS));
         $this->assertNull(LegalTexts::noticeAt(LegalTexts::TERMS));
@@ -88,13 +88,13 @@ class LegalNoticeTest extends TestCase
     public function test_auto_mode_update_when_text_changed_and_silent_otherwise(): void
     {
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['legal_name' => 'Anderer Name', 'legal_email' => 'x@example.org', 'legal_location' => 'Bern']))
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['legal_name' => 'Anderer Name', 'legal_email' => 'x@example.org', 'legal_location' => 'Bern']))
             ->assertSessionHasNoErrors();
         $this->assertNull(LegalTexts::noticeAt(LegalTexts::PRIVACY));
         $this->assertNull(LegalTexts::noticeAt(LegalTexts::TERMS));
         $this->assertNull(LegalTexts::changedAt(LegalTexts::PRIVACY));
 
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['terms_text' => "Titel\n\nGeänderter Text."]))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['terms_text' => "Titel\n\nGeänderter Text."]))->assertSessionHasNoErrors();
         $this->assertNotNull(LegalTexts::noticeAt(LegalTexts::TERMS));
         $this->assertNull(LegalTexts::noticeAt(LegalTexts::PRIVACY));
     }
@@ -103,7 +103,7 @@ class LegalNoticeTest extends TestCase
     {
         Setting::put(LegalTexts::textKey(LegalTexts::TERMS), "Titel\r\n\r\nText.\r\n");
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['terms_text' => "Titel\n\nText."]))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['terms_text' => "Titel\n\nText."]))->assertSessionHasNoErrors();
         $this->assertNull(LegalTexts::noticeAt(LegalTexts::TERMS));
     }
 
@@ -177,7 +177,7 @@ class LegalNoticeTest extends TestCase
     public function test_price_change_triggers_terms_notice(): void
     {
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen', $this->settingsForm(['beer_price' => '2.00']))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen', $this->settingsForm(['beer_price' => '2.00']))->assertSessionHasNoErrors();
 
         $this->assertNotNull(LegalTexts::noticeAt(LegalTexts::TERMS));
         $this->assertNotNull(LegalTexts::changedAt(LegalTexts::TERMS));
@@ -188,18 +188,18 @@ class LegalNoticeTest extends TestCase
     public function test_limit_and_undo_change_trigger_terms_notice(): void
     {
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen', $this->settingsForm(['default_limit' => '5.00']))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen', $this->settingsForm(['default_limit' => '5.00']))->assertSessionHasNoErrors();
         $this->assertNotNull(LegalTexts::noticeAt(LegalTexts::TERMS));
 
         Setting::forget(AppSettings::TERMS_NOTICE);
-        $this->put('/backend/einstellungen', $this->settingsForm(['default_limit' => '5.00', 'undo_minutes' => ['consume' => 20, 'round' => 10, 'guest' => 10, 'gift' => 5]]))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen', $this->settingsForm(['default_limit' => '5.00', 'undo_minutes' => ['consume' => 20, 'round' => 10, 'guest' => 10, 'gift' => 5]]))->assertSessionHasNoErrors();
         $this->assertNotNull(LegalTexts::noticeAt(LegalTexts::TERMS));
     }
 
     public function test_unchanged_values_do_not_trigger_notice(): void
     {
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen', $this->settingsForm())->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen', $this->settingsForm())->assertSessionHasNoErrors();
 
         $this->assertNull(LegalTexts::noticeAt(LegalTexts::TERMS));
         $this->assertNull(LegalTexts::changedAt(LegalTexts::TERMS));

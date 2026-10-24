@@ -57,6 +57,7 @@ return [
     'cancel' => 'Storno',
     'cancel_confirm' => 'Gäste-Verkauf stornieren (löschen)?',
     'cancelled' => 'Gäste-Verkauf storniert.',
+    'cancel_missing' => 'Gäste-Verkauf nicht gefunden (bereits storniert?).',
 
     // Cashbox QR stickers (cash / TWINT)
     'cashbox_title_cash' => 'Kein Konto? Bar bezahlt',

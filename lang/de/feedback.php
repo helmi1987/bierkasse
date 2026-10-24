@@ -66,7 +66,7 @@ return [
     'mail_wants_reply' => 'Antwort erwünscht',
     'mail_time' => 'Zeit',
     'mail_version' => 'App-Version',
-    'mail_button' => 'Im Backend ansehen',
+    'mail_button' => 'Im Admin-Bereich ansehen',
     'yes' => 'Ja',
     'no' => 'Nein',
 ];

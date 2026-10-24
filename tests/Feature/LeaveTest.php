@@ -38,7 +38,7 @@ class LeaveTest extends TestCase
         // While the payout is pending no further beers.
         $this->post('/konto/bier', $this->tokened('consume', ['quantity' => 1]))->assertSessionHas('error');
 
-        $this->actingAs($kassier)->post("/backend/auszahlungen/{$payout->id}/bestaetigen", ['method' => 'cash'])->assertSessionHas('status');
+        $this->actingAs($kassier)->post("/admin/auszahlungen/{$payout->id}/bestaetigen", ['method' => 'cash'])->assertSessionHas('status');
 
         $payout->refresh();
         $this->assertSame('confirmed', $payout->status);
@@ -58,7 +58,7 @@ class LeaveTest extends TestCase
         Ledger::bookDeposit($user, 500, 'cash', $this->kassier());
         $payout = Ledger::requestPayout($user);
 
-        $this->actingAs($this->kassier())->post("/backend/auszahlungen/{$payout->id}/ablehnen")->assertSessionHas('status');
+        $this->actingAs($this->kassier())->post("/admin/auszahlungen/{$payout->id}/ablehnen")->assertSessionHas('status');
         $this->assertSame('rejected', $payout->fresh()->status);
         $this->assertTrue($user->fresh()->isActive());
         $this->assertSame(500, $user->balance());

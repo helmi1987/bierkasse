@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\EnsureActiveUser;
+use App\Http\Middleware\RequireRole;
 use App\Services\Ledger;
 use App\Services\LegalArchive;
 use App\Support\AppSettings;
@@ -10,6 +12,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 use Throwable;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Livewire updates re-run these middleware of the page the component was rendered on (in addition to the
+        // admin middleware of the update route in routes/web.php): consent/active gate and role.
+        Livewire::addPersistentMiddleware([EnsureActiveUser::class, RequireRole::class]);
+
         // Links in mails (password reset) must not depend on the Host header of the request:
         // once installed, the root URL is always APP_URL (set by the setup wizard).
         $appUrl = rtrim((string) config('app.url'), '/');

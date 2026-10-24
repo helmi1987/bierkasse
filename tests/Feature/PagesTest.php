@@ -74,9 +74,11 @@ class PagesTest extends TestCase
         Ledger::requestPayout($admin);
 
         $this->actingAs($admin);
-        foreach (['/konto', '/konto/verlauf', '/konto/verlassen', '/konto/einstellungen', '/statistik', '/backend', '/backend/kasse',
-            '/backend/benutzer', "/backend/benutzer/{$user->id}", '/backend/statistik', '/backend/runden', '/backend/einstellungen', '/backend/sso',
-            '/backend/sso/create', '/backend/registrierung-qr'] as $url) {
+        foreach (['/konto', '/konto/verlauf', '/konto/verlassen', '/konto/einstellungen', '/statistik', '/admin', '/admin/kasse',
+            '/admin/kasse?tab=vorschlaege', '/admin/benutzer', '/admin/benutzer?tab=einladungen', '/admin/benutzer?status=left',
+            "/admin/benutzer/{$user->id}", '/admin/buchungen', '/admin/buchungen?tab=geschenke', '/admin/buchungen?tab=gaeste',
+            '/admin/lager', '/admin/qr-codes', '/admin/qr-codes/kassen-qr', '/admin/gaeste/qr', '/admin/protokoll', '/admin/protokoll?tab=fassungen',
+            '/admin/einstellungen', '/admin/sso', '/admin/sso/create', '/admin/registrierung-qr', '/admin/feedback', '/admin/navigation'] as $url) {
             $this->get($url)->assertOk()->assertHeader('Cache-Control', 'no-store, private');
         }
     }
@@ -84,7 +86,8 @@ class PagesTest extends TestCase
     public function test_html_has_no_inline_style_or_script_handlers(): void
     {
         $this->actingAs($this->admin());
-        foreach (['/konto', '/konto/einstellungen', '/statistik', '/backend', '/backend/einstellungen'] as $url) {
+        foreach (['/konto', '/konto/einstellungen', '/statistik', '/admin', '/admin/einstellungen', '/admin/buchungen', '/admin/benutzer',
+            '/admin/kasse?tab=vorschlaege', '/admin/qr-codes', '/admin/protokoll', '/admin/protokoll?tab=fassungen'] as $url) {
             $html = (string) $this->get($url)->getContent();
             $this->assertDoesNotMatchRegularExpression('/\sstyle=|\son[a-z]+=/i', $html, $url);
         }

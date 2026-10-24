@@ -74,7 +74,7 @@ class HardeningTest extends TestCase
         $this->assertSame('cash', $payout->method);
         $this->assertSame(0, $user->balance());
 
-        $this->actingAs($kassier)->post("/backend/auszahlungen/{$payout->id}/bestaetigen")->assertSessionHas('error');
+        $this->actingAs($kassier)->post("/admin/auszahlungen/{$payout->id}/bestaetigen")->assertSessionHas('error');
     }
 
     public function test_deposit_cannot_be_confirmed_or_rejected_twice(): void
@@ -108,9 +108,9 @@ class HardeningTest extends TestCase
         $user->forceFill(['status' => User::STATUS_LEFT])->save();
 
         $this->actingAs($kassier);
-        $this->post("/backend/benutzer/{$user->id}/einzahlung", ['amount' => '10', 'method' => 'cash'])->assertSessionHas('error');
-        $this->post("/backend/benutzer/{$user->id}/korrektur", ['amount' => '5', 'note' => 'x'])->assertSessionHas('error');
-        $this->post("/backend/einzahlungen/{$deposit->id}/bestaetigen")->assertSessionHas('error');
+        $this->post("/admin/benutzer/{$user->id}/einzahlung", ['amount' => '10', 'method' => 'cash'])->assertSessionHas('error');
+        $this->post("/admin/benutzer/{$user->id}/korrektur", ['amount' => '5', 'note' => 'x'])->assertSessionHas('error');
+        $this->post("/admin/einzahlungen/{$deposit->id}/bestaetigen")->assertSessionHas('error');
 
         $this->assertSame('pending', $deposit->fresh()->status);
         $this->assertSame(0, $user->balance());
@@ -130,15 +130,15 @@ class HardeningTest extends TestCase
         Ledger::bookDeposit($user, 300, 'cash', $kassier);
         $this->actingAs($kassier);
 
-        $this->post("/backend/benutzer/{$user->id}/status", ['active' => 0])->assertSessionHas('error');
+        $this->post("/admin/benutzer/{$user->id}/status", ['active' => 0])->assertSessionHas('error');
         $this->assertTrue($user->fresh()->isActive());
 
         Ledger::correction($user, -300, 'Ausgleich', $kassier);
         $pending = Ledger::reportDeposit($user, 100, 'cash');
-        $this->post("/backend/benutzer/{$user->id}/status", ['active' => 0])->assertSessionHas('error');
+        $this->post("/admin/benutzer/{$user->id}/status", ['active' => 0])->assertSessionHas('error');
 
         Ledger::rejectDeposit($pending, $kassier);
-        $this->post("/backend/benutzer/{$user->id}/status", ['active' => 0])->assertSessionHas('status');
+        $this->post("/admin/benutzer/{$user->id}/status", ['active' => 0])->assertSessionHas('status');
         $this->assertFalse($user->fresh()->isActive());
     }
 
@@ -149,15 +149,15 @@ class HardeningTest extends TestCase
 
         // Kassiers cannot touch admins at all.
         $this->actingAs($this->kassier());
-        $this->post("/backend/benutzer/{$first->id}/status", ['active' => 0])->assertForbidden();
+        $this->post("/admin/benutzer/{$first->id}/status", ['active' => 0])->assertForbidden();
 
         // With two active admins one may deactivate the other ...
         $this->actingAs($second);
-        $this->post("/backend/benutzer/{$first->id}/status", ['active' => 0])->assertSessionHas('status');
+        $this->post("/admin/benutzer/{$first->id}/status", ['active' => 0])->assertSessionHas('status');
         $this->assertFalse($first->fresh()->isActive());
 
         // ... but the remaining (last) admin cannot deactivate the own account.
-        $this->post("/backend/benutzer/{$second->id}/status", ['active' => 0])->assertForbidden();
+        $this->post("/admin/benutzer/{$second->id}/status", ['active' => 0])->assertForbidden();
         $this->assertSame(1, User::query()->where('role', 'admin')->where('status', 'active')->count());
     }
 

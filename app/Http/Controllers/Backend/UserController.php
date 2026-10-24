@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Audit;
+use App\Services\Gifts;
 use App\Services\Ledger;
 use App\Services\LedgerException;
-use App\Services\Gifts;
 use App\Services\Rounds;
 use App\Support\Money;
 use App\Support\UserRules;
@@ -24,25 +24,17 @@ use Illuminate\View\View;
  */
 class UserController extends Controller
 {
-    public function index(Request $request): View
+    /** Page shell of the Livewire component App\Livewire\Backend\Users (tabs "Benutzer" and "Einladungen"). */
+    public function index(): View
     {
-        $status = $request->query('status') === 'left' ? User::STATUS_LEFT : User::STATUS_ACTIVE;
-        $balances = Ledger::balances();
-        // Locked accounts are listed with the active ones (badge "Gesperrt"): they still have a balance.
-        $statuses = $status === User::STATUS_LEFT ? [User::STATUS_LEFT] : [User::STATUS_ACTIVE, User::STATUS_LOCKED];
-
-        return view('backend.users.index', [
-            'users' => User::query()->whereIn('status', $statuses)->orderBy('username')->get(),
-            'balances' => $balances,
-            'status' => $status,
-        ]);
+        return view('backend.users.index');
     }
 
     public function show(User $user): View
     {
         return view('backend.users.show', [
             'user' => $user->loadMissing('lockedBy'),
-            'adminOnlySettled' => \App\Services\Ledger::adminOnlySettled($user),
+            'adminOnlySettled' => Ledger::adminOnlySettled($user),
             'balance' => $user->balance(),
             'personalSso' => $user->personalSsoProvider()->withCount('identities')->first(),
             'open' => Ledger::openItems($user),

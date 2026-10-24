@@ -48,6 +48,14 @@ class SettingsController extends Controller
             'notifyKassier' => AppSettings::notifyKassier(),
             'personalSso' => AppSettings::personalSsoAllowed(),
             'mail' => AppSettings::mail(),
+            'features' => [
+                'rounds_enabled' => AppSettings::roundsAllowed(),
+                'gifts_enabled' => AppSettings::giftsAllowed(),
+                'guest_user_booking' => AppSettings::guestUserBooking(),
+                'guest_enabled' => (bool) AppSettings::get(AppSettings::GUEST_ENABLED, false),
+                'guest_password' => AppSettings::guestPassword(),
+                'cashbox_qr_enabled' => (bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED, false),
+            ],
             'legal' => [
                 'name' => AppSettings::legalName(),
                 'email' => AppSettings::legalEmail(),
@@ -57,6 +65,31 @@ class SettingsController extends Controller
                 'changed' => array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalTexts::changedAt($kind) !== null ? LegalTexts::versionDate(LegalTexts::changedAt($kind)) : null, LegalTexts::KINDS)),
             ],
         ]);
+    }
+
+    /**
+     * Feature switches (section "Funktionen", admins only since 1.20.0; before, kassiers switched rounds, gifts
+     * and guest booking on their pages): rounds, gifts, guest booking by users, public guest page with guest
+     * password, cashbox QR. The guest page can only be enabled together with a guest password.
+     */
+    public function features(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'guest_password' => ['nullable', 'required_if_accepted:guest_enabled', 'string', 'min:4', 'max:100'],
+        ], ['guest_password.required_if_accepted' => __('guest.password_required')]);
+
+        Setting::putMany([
+            AppSettings::ROUNDS_ENABLED => $request->boolean('rounds_enabled'),
+            AppSettings::GIFTS_ENABLED => $request->boolean('gifts_enabled'),
+            AppSettings::GUEST_USER_BOOKING => $request->boolean('guest_user_booking'),
+            AppSettings::GUEST_ENABLED => $request->boolean('guest_enabled'),
+            AppSettings::GUEST_PASSWORD => (string) ($data['guest_password'] ?? ''),
+            AppSettings::CASHBOX_QR_ENABLED => $request->boolean('cashbox_qr_enabled'),
+        ]);
+        // Switching a QR page on: make sure its first code exists (admin path).
+        QrCode::ensureFirstForAdmin($request->user());
+
+        return redirect()->to(route('backend.settings').'#funktionen')->with('status', __('settings.saved'));
     }
 
     /**

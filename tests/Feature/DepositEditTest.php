@@ -35,7 +35,7 @@ class DepositEditTest extends TestCase
         $this->put("/konto/einzahlung/{$tx->id}", ['amount' => '10', 'method' => 'gold'])->assertSessionHasErrors('method');
 
         // Kassier sees the new values marked as changed.
-        $this->actingAs($this->kassier())->get('/backend')->assertOk()->assertSee('CHF 20.00')->assertSee('geändert');
+        $this->actingAs($this->kassier())->get('/admin')->assertOk()->assertSee('CHF 20.00')->assertSee('geändert');
     }
 
     public function test_user_withdraws_own_pending_deposit(): void
@@ -102,7 +102,7 @@ class DepositEditTest extends TestCase
         $this->assertSame(0, $user->balance());
 
         // Via HTTP: clean error message, no 500.
-        $this->actingAs($kassier)->post("/backend/einzahlungen/{$tx->id}/bestaetigen")->assertNotFound();
+        $this->actingAs($kassier)->post("/admin/einzahlungen/{$tx->id}/bestaetigen")->assertNotFound();
 
         // The other way round: confirmed first, then the user's withdrawal fails.
         $tx2 = Ledger::reportDeposit($user, 1500, 'cash');

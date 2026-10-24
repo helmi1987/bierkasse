@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Backend\AuditLogList;
 use App\Models\AuditLog;
 use App\Models\LegalRevision;
 use App\Models\Setting;
@@ -12,6 +13,7 @@ use App\Support\LegalTexts;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Livewire\Livewire;
 use LogicException;
 use RuntimeException;
 use Tests\TestCase;
@@ -75,7 +77,7 @@ class LegalRevisionTest extends TestCase
         $this->actingAs($admin);
         LegalArchive::currentAll();
 
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['terms_text' => "Nutzungsbestimmungen\n\n1. Neu\nNeue Regeln, {bierpreis}."]))
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['terms_text' => "Nutzungsbestimmungen\n\n1. Neu\nNeue Regeln, {bierpreis}."]))
             ->assertSessionHasNoErrors();
         $latest = LegalRevision::latestOf(LegalTexts::TERMS);
         $this->assertSame(2, $this->revisions(LegalTexts::TERMS));
@@ -86,7 +88,7 @@ class LegalRevisionTest extends TestCase
         $this->assertSame(1, $this->revisions(LegalTexts::PRIVACY));
 
         // Saving again without change and viewing the pages: no duplicates.
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['terms_text' => "Nutzungsbestimmungen\n\n1. Neu\nNeue Regeln, {bierpreis}."]))
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['terms_text' => "Nutzungsbestimmungen\n\n1. Neu\nNeue Regeln, {bierpreis}."]))
             ->assertSessionHasNoErrors();
         $this->get('/nutzungsbestimmungen')->assertOk()->assertSee('Neue Regeln, CHF 1.50.');
         $this->assertSame(2, $this->revisions(LegalTexts::TERMS));
@@ -97,7 +99,7 @@ class LegalRevisionTest extends TestCase
     {
         $this->actingAs($this->admin());
         LegalArchive::currentAll();
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['privacy_mode' => 'reaccept']))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['privacy_mode' => 'reaccept']))->assertSessionHasNoErrors();
 
         $latest = LegalRevision::latestOf(LegalTexts::PRIVACY);
         $this->assertSame(2, $this->revisions(LegalTexts::PRIVACY));
@@ -110,7 +112,7 @@ class LegalRevisionTest extends TestCase
     {
         $this->actingAs($this->admin());
         LegalArchive::currentAll();
-        $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['legal_name' => 'Hans Muster']))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['legal_name' => 'Hans Muster']))->assertSessionHasNoErrors();
 
         $privacy = LegalRevision::latestOf(LegalTexts::PRIVACY);
         $this->assertSame(LegalRevision::REASON_SILENT, $privacy->reason);
@@ -121,7 +123,7 @@ class LegalRevisionTest extends TestCase
     {
         $this->actingAs($this->admin());
         LegalArchive::currentAll();
-        $this->put('/backend/einstellungen', $this->settingsForm(['beer_price' => '2.00']))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen', $this->settingsForm(['beer_price' => '2.00']))->assertSessionHasNoErrors();
 
         $terms = LegalRevision::latestOf(LegalTexts::TERMS);
         $this->assertSame(2, $this->revisions(LegalTexts::TERMS));
@@ -131,7 +133,7 @@ class LegalRevisionTest extends TestCase
         $this->assertSame(1, $this->revisions(LegalTexts::PRIVACY));
 
         // Unchanged price: nothing new.
-        $this->put('/backend/einstellungen', $this->settingsForm(['beer_price' => '2.00']))->assertSessionHasNoErrors();
+        $this->put('/admin/einstellungen', $this->settingsForm(['beer_price' => '2.00']))->assertSessionHasNoErrors();
         $this->assertSame(2, $this->revisions(LegalTexts::TERMS));
     }
 
@@ -285,18 +287,24 @@ class LegalRevisionTest extends TestCase
     {
         LegalArchive::currentAll();
         $this->actingAs($this->user());
-        $this->get(route('backend.legal-revisions'))->assertForbidden();
+        $this->get(route('backend.audit', ['tab' => 'fassungen']))->assertForbidden();
 
+        // Tab "Fassungen" of the audit log page (since 1.20.0); the old URL redirects.
         $this->actingAs($this->kassier());
-        $this->get(route('backend.legal-revisions'))->assertOk()
+        $this->get(route('backend.legal-revisions'))->assertRedirect(route('backend.audit', ['tab' => 'fassungen']));
+        $this->get(route('backend.audit', ['tab' => 'fassungen']))->assertOk()
             ->assertSee('data-testid="legal-revisions"', false)
             ->assertSee(route('legal.revision', LegalRevision::latestOf(LegalTexts::TERMS)))
             ->assertSee(__('legal.reason.initial'));
-        $this->get(route('backend.legal-revisions', ['kind' => 'privacy']))->assertOk()
+        $this->get(route('backend.audit', ['tab' => 'fassungen', 'kind' => 'privacy']))->assertOk()
+            ->assertDontSee(route('legal.revision', LegalRevision::latestOf(LegalTexts::TERMS)));
+        Livewire::withQueryParams(['tab' => 'fassungen'])->test(AuditLogList::class)
+            ->assertSee(route('legal.revision', LegalRevision::latestOf(LegalTexts::TERMS)))
+            ->set('kind', 'privacy')
             ->assertDontSee(route('legal.revision', LegalRevision::latestOf(LegalTexts::TERMS)));
 
         $this->actingAs($this->admin());
-        $this->get(route('backend.legal-revisions'))->assertOk();
+        $this->get(route('backend.audit', ['tab' => 'fassungen']))->assertOk();
     }
 
     public function test_backend_user_detail_links_accepted_revisions(): void

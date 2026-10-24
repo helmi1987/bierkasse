@@ -22,11 +22,11 @@ class SubnavBadgeTest extends TestCase
         $kassier = $this->kassier();
 
         $this->actingAs($kassier);
-        $this->assertStringNotContainsString('class="badge"', $this->subnav($this->get('/backend/kasse')->getContent()));
+        $this->assertStringNotContainsString('class="badge"', $this->subnav($this->get('/admin/kasse')->getContent()));
 
         $this->actingAs($user)->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => '20.50', 'method' => 'twint']))->assertSessionHas('status');
 
-        $nav = $this->subnav($this->actingAs($kassier)->get('/backend/kasse')->getContent());
+        $nav = $this->subnav($this->actingAs($kassier)->get('/admin/kasse')->getContent());
         $this->assertMatchesRegularExpression('/>\s*Übersicht\s*<span class="badge"[^>]*>1<\/span>/u', $nav);
         $this->assertSame(1, substr_count($nav, 'class="badge"'));
     }

@@ -93,7 +93,7 @@ class PendingCountsTest extends TestCase
         $this->assertSame(4500, $user->availableBalance());
 
         // Kassier views: user detail shows the confirmed balance.
-        $this->actingAs($kassier)->get("/backend/benutzer/{$user->id}")->assertOk()->assertSee('CHF 10.00');
+        $this->actingAs($kassier)->get("/admin/benutzer/{$user->id}")->assertOk()->assertSee('CHF 10.00');
     }
 
     public function test_pending_carryover_counts_like_a_pending_deposit(): void

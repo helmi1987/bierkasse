@@ -29,17 +29,17 @@ class StockTest extends TestCase
         $this->actingAs($this->kassier());
         $entry = ['type' => 'expense_beer', 'date' => '2026-10-01', 'amount' => '24.00', 'method' => 'cash', 'note' => 'Harass'];
 
-        $this->post('/backend/kasse', $entry)->assertSessionHasErrors('beers');
-        $this->post('/backend/kasse', $entry + ['beers' => '0'])->assertSessionHasErrors('beers');
-        $this->post('/backend/kasse', $entry + ['beers' => '24'])->assertSessionHas('status');
-        $this->post('/backend/kasse', ['type' => 'income', 'date' => '2026-10-01', 'amount' => '5', 'method' => 'cash', 'note' => 'x', 'beers' => '99'])->assertSessionHas('status');
+        $this->post('/admin/kasse', $entry)->assertSessionHasErrors('beers');
+        $this->post('/admin/kasse', $entry + ['beers' => '0'])->assertSessionHasErrors('beers');
+        $this->post('/admin/kasse', $entry + ['beers' => '24'])->assertSessionHas('status');
+        $this->post('/admin/kasse', ['type' => 'income', 'date' => '2026-10-01', 'amount' => '5', 'method' => 'cash', 'note' => 'x', 'beers' => '99'])->assertSessionHas('status');
 
         // Older purchase without a count.
         CashEntry::query()->create(['type' => 'expense_beer', 'date' => '2026-01-01', 'amount' => -1000, 'method' => 'cash', 'note' => 'alt']);
 
         $this->assertSame(24, BeerStock::current());
         $this->assertNull(CashEntry::query()->where('type', 'income')->value('beers'));
-        $this->get('/backend/kasse')->assertOk()->assertSee('24 Biere');
+        $this->get('/admin/kasse')->assertOk()->assertSee('24 Biere');
     }
 
     public function test_stock_computation_with_undo_and_correction(): void
@@ -65,10 +65,10 @@ class StockTest extends TestCase
         }
         $this->assertSame(-4, BeerStock::current());
 
-        $this->actingAs($kassier)->post('/backend/lager/korrektur', ['counted' => '10', 'note' => 'gezählt'])->assertSessionHas('status');
+        $this->actingAs($kassier)->post('/admin/lager/korrektur', ['counted' => '10', 'note' => 'gezählt'])->assertSessionHas('status');
         $this->assertSame(10, BeerStock::current());
         $this->assertDatabaseHas('stock_corrections', ['delta' => 14, 'counted' => 10, 'note' => 'gezählt', 'created_by' => $kassier->id]);
-        $this->get('/backend')->assertOk()->assertSee('Lagerbestand')->assertSee('10 Biere')->assertSee('Bierlager tief');
+        $this->get('/admin')->assertOk()->assertSee('Lagerbestand')->assertSee('10 Biere')->assertSee('Bierlager tief');
     }
 
     public function test_single_mail_when_crossing_and_rearm_after_restock(): void
@@ -116,21 +116,21 @@ class StockTest extends TestCase
         Ledger::consume($this->user(), 10);
         Mail::assertNothingSent();
         $this->assertFalse(BeerStock::isLow());
-        $this->actingAs($this->kassier())->get('/backend')->assertOk()->assertDontSee('Bierlager tief');
+        $this->actingAs($this->kassier())->get('/admin')->assertOk()->assertDontSee('Bierlager tief');
     }
 
     public function test_kassier_edits_minimum_and_user_is_forbidden(): void
     {
-        $this->actingAs($this->user())->get('/backend/lager')->assertForbidden();
-        $this->put('/backend/lager/mindestbestand', ['minimum' => '5'])->assertForbidden();
-        $this->post('/backend/lager/korrektur', ['counted' => '5'])->assertForbidden();
+        $this->actingAs($this->user())->get('/admin/lager')->assertForbidden();
+        $this->put('/admin/lager/mindestbestand', ['minimum' => '5'])->assertForbidden();
+        $this->post('/admin/lager/korrektur', ['counted' => '5'])->assertForbidden();
 
         $this->assertSame(20, BeerStock::minimum());
-        $this->actingAs($this->kassier())->get('/backend/lager')->assertOk()->assertSee('Mindestbestand');
-        $this->put('/backend/lager/mindestbestand', ['minimum' => '12'])->assertSessionHas('status');
+        $this->actingAs($this->kassier())->get('/admin/lager')->assertOk()->assertSee('Mindestbestand');
+        $this->put('/admin/lager/mindestbestand', ['minimum' => '12'])->assertSessionHas('status');
         $this->assertSame(12, AppSettings::stockMinimum());
-        $this->put('/backend/lager/mindestbestand', ['minimum' => '-1'])->assertSessionHasErrors('minimum');
-        $this->actingAs($this->admin())->put('/backend/lager/mindestbestand', ['minimum' => '0'])->assertSessionHas('status');
+        $this->put('/admin/lager/mindestbestand', ['minimum' => '-1'])->assertSessionHasErrors('minimum');
+        $this->actingAs($this->admin())->put('/admin/lager/mindestbestand', ['minimum' => '0'])->assertSessionHas('status');
         $this->assertSame(0, AppSettings::stockMinimum());
     }
 

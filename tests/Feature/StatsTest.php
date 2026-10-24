@@ -27,7 +27,9 @@ class StatsTest extends TestCase
 
         $this->actingAs($visible)->get('/statistik')->assertOk()
             ->assertSee('Vreni Sichtbar')->assertDontSee('Versteckt')->assertSee('<svg class="chart"', false);
-        $this->actingAs($this->kassier())->get('/backend/statistik')->assertOk()->assertDontSee('Versteckt');
+        // The former kassier statistics tab redirects to the statistics page (1.20.0).
+        $this->actingAs($this->kassier())->get('/admin/statistik')->assertRedirect(route('stats'));
+        $this->get('/statistik')->assertOk()->assertDontSee('Versteckt');
     }
 
     public function test_user_toggles_stats_visibility(): void

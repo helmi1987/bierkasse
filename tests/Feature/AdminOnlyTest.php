@@ -32,14 +32,14 @@ class AdminOnlyTest extends TestCase
         $kassier = $this->kassier();
         $this->actingAs($admin);
 
-        $this->get("/backend/benutzer/{$kassier->id}")->assertOk()->assertSee(route('backend.users.admin-only', $kassier));
-        $this->put("/backend/benutzer/{$kassier->id}/nur-verwaltung", ['admin_only' => 1])->assertSessionHas('status');
+        $this->get("/admin/benutzer/{$kassier->id}")->assertOk()->assertSee(route('backend.users.admin-only', $kassier));
+        $this->put("/admin/benutzer/{$kassier->id}/nur-verwaltung", ['admin_only' => 1])->assertSessionHas('status');
         $this->assertTrue($kassier->fresh()->isAdminOnly());
 
-        $this->put("/backend/benutzer/{$admin->id}/nur-verwaltung", ['admin_only' => 1])->assertSessionHas('status');
+        $this->put("/admin/benutzer/{$admin->id}/nur-verwaltung", ['admin_only' => 1])->assertSessionHas('status');
         $this->assertTrue($admin->fresh()->isAdminOnly());
 
-        $this->put("/backend/benutzer/{$kassier->id}/nur-verwaltung", ['admin_only' => 0])->assertSessionHas('status');
+        $this->put("/admin/benutzer/{$kassier->id}/nur-verwaltung", ['admin_only' => 0])->assertSessionHas('status');
         $this->assertFalse($kassier->fresh()->admin_only);
     }
 
@@ -48,7 +48,7 @@ class AdminOnlyTest extends TestCase
         $other = $this->kassier();
         $this->actingAs($this->kassier());
 
-        $this->put("/backend/benutzer/{$other->id}/nur-verwaltung", ['admin_only' => 1])->assertForbidden();
+        $this->put("/admin/benutzer/{$other->id}/nur-verwaltung", ['admin_only' => 1])->assertForbidden();
         $this->assertFalse($other->fresh()->admin_only);
     }
 
@@ -57,10 +57,10 @@ class AdminOnlyTest extends TestCase
         $user = $this->user();
         $this->actingAs($this->admin());
 
-        $this->put("/backend/benutzer/{$user->id}/nur-verwaltung", ['admin_only' => 1])
+        $this->put("/admin/benutzer/{$user->id}/nur-verwaltung", ['admin_only' => 1])
             ->assertSessionHas('error', __('account.admin_only_role'));
         $this->assertFalse($user->fresh()->admin_only);
-        $this->get("/backend/benutzer/{$user->id}")->assertOk()->assertDontSee(route('backend.users.admin-only', $user));
+        $this->get("/admin/benutzer/{$user->id}")->assertOk()->assertDontSee(route('backend.users.admin-only', $user));
     }
 
     public function test_switching_role_to_user_resets_flag(): void
@@ -68,7 +68,7 @@ class AdminOnlyTest extends TestCase
         $kassier = $this->kassier(['admin_only' => true]);
         $this->actingAs($this->admin());
 
-        $this->put("/backend/benutzer/{$kassier->id}/rolle", ['role' => 'user'])->assertSessionHas('status');
+        $this->put("/admin/benutzer/{$kassier->id}/rolle", ['role' => 'user'])->assertSessionHas('status');
         $kassier->refresh();
         $this->assertSame(User::ROLE_USER, $kassier->role);
         $this->assertFalse($kassier->admin_only);
@@ -81,14 +81,14 @@ class AdminOnlyTest extends TestCase
         Ledger::bookDeposit($kassier, 500, 'cash', $admin);
         $this->actingAs($admin);
 
-        $this->put("/backend/benutzer/{$kassier->id}/nur-verwaltung", ['admin_only' => 1])
+        $this->put("/admin/benutzer/{$kassier->id}/nur-verwaltung", ['admin_only' => 1])
             ->assertSessionHas('error', __('account.admin_only_settle_first'));
         $this->assertFalse($kassier->fresh()->admin_only);
 
         // Balance 0 again, but a pending deposit report: still refused.
         Ledger::correction($kassier, -500, 'Ausgleich', $admin);
         Ledger::reportDeposit($kassier, 1000, 'cash');
-        $this->put("/backend/benutzer/{$kassier->id}/nur-verwaltung", ['admin_only' => 1])
+        $this->put("/admin/benutzer/{$kassier->id}/nur-verwaltung", ['admin_only' => 1])
             ->assertSessionHas('error', __('account.admin_only_settle_first'));
         $this->assertFalse($kassier->fresh()->admin_only);
 
@@ -164,7 +164,7 @@ class AdminOnlyTest extends TestCase
         $this->get('/konto')->assertRedirect(route('backend.dashboard'));
         $this->get('/konto/verlauf')->assertRedirect(route('backend.dashboard'))->assertSessionHas('warning');
         $this->get('/konto/verlassen')->assertRedirect(route('backend.dashboard'));
-        $this->get('/backend')->assertOk();
+        $this->get('/admin')->assertOk();
         $this->get('/konto/einstellungen')->assertOk();
         $this->get('/konto/feedback')->assertOk();
         $this->get('/konto/einladen')->assertOk();
@@ -197,9 +197,9 @@ class AdminOnlyTest extends TestCase
 
         // Backend bookings on the account are refused as well (no money stranded).
         $this->actingAs($admin);
-        $this->post("/backend/benutzer/{$kassier->id}/einzahlung", ['amount' => '10', 'method' => 'cash'])
+        $this->post("/admin/benutzer/{$kassier->id}/einzahlung", ['amount' => '10', 'method' => 'cash'])
             ->assertSessionHas('error', __('account.admin_only_blocked'));
-        $this->post("/backend/benutzer/{$kassier->id}/korrektur", ['amount' => '5', 'note' => 'x'])
+        $this->post("/admin/benutzer/{$kassier->id}/korrektur", ['amount' => '5', 'note' => 'x'])
             ->assertSessionHas('error', __('account.admin_only_blocked'));
         $this->assertSame(0, Transaction::query()->where('user_id', $kassier->id)->count());
 
@@ -211,12 +211,12 @@ class AdminOnlyTest extends TestCase
     {
         $this->actingAs($this->admin(['admin_only' => true]));
 
-        $this->get('/backend')->assertOk()
+        $this->get('/admin')->assertOk()
             ->assertDontSee('href="'.route('account.dashboard').'"', false)
             ->assertSee('class="brand" href="'.route('backend.dashboard').'"', false);
 
         $this->actingAs($this->admin());
-        $this->get('/backend')->assertOk()->assertSee('class="brand" href="'.route('account.dashboard').'"', false);
+        $this->get('/admin')->assertOk()->assertSee('class="brand" href="'.route('account.dashboard').'"', false);
     }
 
     public function test_nav_shows_invite_and_flyer_qr_for_admin_only(): void
@@ -226,7 +226,7 @@ class AdminOnlyTest extends TestCase
         ]);
         $admin = $this->admin(['admin_only' => true]);
         $this->actingAs($admin);
-        $this->get('/backend')->assertSee('href="'.route('account.invite').'"', false)->assertSee('Einladen');
+        $this->get('/admin')->assertSee('href="'.route('account.invite').'"', false)->assertSee('Einladen');
         // Invite mode: only one-time links, no reusable flyer QR.
         $this->get('/konto/einladen')->assertOk()->assertDontSee('Flyer-QR zeigen');
 
@@ -242,7 +242,7 @@ class AdminOnlyTest extends TestCase
         $this->get('/konto/einladen')->assertOk()->assertDontSee('Flyer-QR zeigen');
         Setting::putMany([AppSettings::REGISTRATION_MODE => AppSettings::MODE_CLOSED]);
         $this->actingAs($admin);
-        $this->get('/backend')->assertDontSee('href="'.route('account.invite').'"', false);
+        $this->get('/admin')->assertDontSee('href="'.route('account.invite').'"', false);
     }
 
     public function test_login_redirects_to_backend(): void
@@ -283,8 +283,8 @@ class AdminOnlyTest extends TestCase
         $this->assertNotContains($admin->id, array_column($stats['ranking'], 'user_id'));
 
         $this->actingAs($admin);
-        $this->get('/backend/benutzer')->assertOk()->assertSee(__('account.admin_only'))->assertSee('Ada Chef');
-        $this->get("/backend/benutzer/{$admin->id}")->assertOk()->assertSee('data-testid="admin-only-note"', false)
+        $this->get('/admin/benutzer')->assertOk()->assertSee(__('account.admin_only'))->assertSee('Ada Chef');
+        $this->get("/admin/benutzer/{$admin->id}")->assertOk()->assertSee('data-testid="admin-only-note"', false)
             ->assertDontSee(route('backend.users.deposit', $admin));
     }
 
@@ -294,7 +294,7 @@ class AdminOnlyTest extends TestCase
         $admin = $this->admin(['email' => 'chef@example.org', 'admin_only' => true]);
         $this->actingAs($admin);
 
-        foreach (['/backend', '/backend/benutzer', '/backend/einstellungen', '/backend/wartung', '/backend/feedback'] as $url) {
+        foreach (['/admin', '/admin/benutzer', '/admin/einstellungen', '/admin/wartung', '/admin/feedback'] as $url) {
             $this->get($url)->assertOk();
         }
 
@@ -302,7 +302,7 @@ class AdminOnlyTest extends TestCase
         Mail::assertSent(KassierNotice::class, fn ($m) => $m->hasTo('chef@example.org'));
 
         // Still counts as the last admin.
-        $this->put("/backend/benutzer/{$admin->id}/rolle", ['role' => 'user'])->assertSessionHas('error', __('users.last_admin'));
+        $this->put("/admin/benutzer/{$admin->id}/rolle", ['role' => 'user'])->assertSessionHas('error', __('users.last_admin'));
         $this->assertTrue($admin->fresh()->isAdminOnly());
     }
 }

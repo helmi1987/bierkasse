@@ -17,7 +17,7 @@
         <h2>{{ __('settings.codes_heading') }}</h2>
         <p class="hint">{{ __('settings.codes_intro') }}</p>
         @if ($admin)
-            <p><a class="btn small" href="{{ route('backend.qr-admin') }}">{{ __('qr.manage_link') }} →</a></p>
+            <p><a class="btn small" href="{{ route('backend.qr-codes.index').'#verwaltung' }}">{{ __('qr.manage_link') }} →</a></p>
         @endif
         @if ($codes->isEmpty())
             <p class="muted">{{ __('settings.codes_none') }}</p>

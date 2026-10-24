@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Backend\Users;
 use App\Mail\KassierNotice;
 use App\Models\Invitation;
 use App\Models\Setting;
@@ -10,6 +11,7 @@ use App\Support\AppSettings;
 use App\Support\Qr;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -329,17 +331,20 @@ class InviteTest extends TestCase
         $expired->forceFill(['expires_at' => now()->subDay()])->save();
 
         $this->actingAs($this->user());
-        $this->get('/backend/einladungen')->assertForbidden();
+        $this->get('/admin/benutzer?tab=einladungen')->assertForbidden();
 
         $this->actingAs($this->kassier());
-        $this->get('/backend/einladungen')->assertOk()
+        $this->get('/admin/einladungen')->assertRedirect(route('backend.users.index', ['tab' => 'einladungen']));
+        $this->get('/admin/benutzer?tab=einladungen')->assertOk()
             ->assertSee('Erstellt von ersteller')
             ->assertSee('Benutzt von neuling')
             ->assertSee('Abgelaufen')
             ->assertSee('Offen');
 
-        $this->delete('/backend/einladungen/'.$used->id)->assertSessionHas('error');
-        $this->delete('/backend/einladungen/'.$open->id)->assertSessionHas('status');
+        // Revoke through the Livewire component (Benutzer > Einladungen).
+        Livewire::withQueryParams(['tab' => 'einladungen'])->test(Users::class)
+            ->call('revokeInvitation', $used->id)->assertSee(__('account.invitation_already_used'))
+            ->call('revokeInvitation', $open->id)->assertSee(__('account.invitation_revoked'));
         $this->assertNull(Invitation::query()->find($open->id));
         $this->assertNotNull(Invitation::query()->find($used->id));
     }
@@ -350,12 +355,12 @@ class InviteTest extends TestCase
         $this->actingAs($this->admin());
 
         // Without a registration code there is nothing to show (no QR without a code).
-        $this->get('/backend/registrierung-qr')->assertOk()
+        $this->get('/admin/registrierung-qr')->assertOk()
             ->assertSee('Kein aktiver Registrierungscode')
             ->assertDontSee('code=durst')
             ->assertDontSee('Flyer-Code neu erzeugen')
             ->assertDontSee(Qr::dataUri(route('register'), 480), false);
-        $this->get('/backend/registrierung-qr?view=flyer')->assertOk()->assertDontSee('class="flyer-image"', false);
+        $this->get('/admin/registrierung-qr?view=flyer')->assertOk()->assertDontSee('class="flyer-image"', false);
     }
 
     // --- Settings ----------------------------------------------------------------------
@@ -363,17 +368,17 @@ class InviteTest extends TestCase
     public function test_admin_sets_registration_mode(): void
     {
         $this->actingAs($this->admin());
-        $this->get('/backend/einstellungen')->assertOk()
+        $this->get('/admin/einstellungen')->assertOk()
             ->assertSee('name="registration_mode" value="invite" checked', false)
             ->assertSee('Offen mit Registrierungspasswort');
 
-        $this->put('/backend/einstellungen', [
+        $this->put('/admin/einstellungen', [
             'beer_price' => '1.50', 'default_limit' => '0', 'mail_transport' => 'sendmail', 'registration_mode' => 'closed',
         ])->assertSessionHas('status');
         Setting::flushCache();
         $this->assertSame(AppSettings::MODE_CLOSED, AppSettings::registrationMode());
 
-        $this->put('/backend/einstellungen', [
+        $this->put('/admin/einstellungen', [
             'beer_price' => '1.50', 'default_limit' => '0', 'mail_transport' => 'sendmail', 'registration_mode' => 'offen',
         ])->assertSessionHasErrors('registration_mode');
     }

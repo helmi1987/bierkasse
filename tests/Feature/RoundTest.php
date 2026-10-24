@@ -102,8 +102,8 @@ class RoundTest extends TestCase
 
         $this->get('/konto/verlauf')->assertOk()->assertSee('Runde spendiert (4 Biere)')->assertSee('für Anna A, Beat B + 2 Gäste')
             ->assertSee('Prost zum Geburtstag!');
-        $this->actingAs($this->kassier())->get('/backend/runden')->assertOk()->assertSee('Gabi Geber')->assertSee('für Anna A, Beat B + 2 Gäste');
-        $this->get('/backend/benutzer/'.$this->giver->id)->assertOk()->assertSee('Spendiert: 4 Biere');
+        $this->actingAs($this->kassier())->get('/admin/buchungen')->assertOk()->assertSee('Gabi Geber')->assertSee('für Anna A, Beat B + 2 Gäste');
+        $this->get('/admin/benutzer/'.$this->giver->id)->assertOk()->assertSee('Spendiert: 4 Biere');
     }
 
     public function test_overdraft_limit_is_respected_like_consume(): void
@@ -153,16 +153,18 @@ class RoundTest extends TestCase
         $this->assertTrue(AppSettings::roundsAllowed());
         $colleague = $this->user();
 
-        // Kassiers switch it (like the guest switches); normal users cannot.
-        $this->actingAs($this->user())->get('/backend/runden')->assertForbidden();
-        $this->actingAs($this->kassier())->put('/backend/runden', [])->assertSessionHas('status');
+        // Admins switch it (Admin > Einstellungen > Funktionen, since 1.20.0); kassiers and users cannot.
+        $this->actingAs($this->user())->put('/admin/einstellungen/funktionen', $this->featureForm(['rounds_enabled' => '0']))->assertForbidden();
+        $this->actingAs($this->kassier())->put('/admin/einstellungen/funktionen', $this->featureForm(['rounds_enabled' => '0']))->assertForbidden();
+        $this->assertTrue(AppSettings::roundsAllowed());
+        $this->actingAs($this->admin())->put('/admin/einstellungen/funktionen', $this->featureForm(['rounds_enabled' => '0']))->assertSessionHas('status');
         $this->assertFalse(AppSettings::roundsAllowed());
 
         $this->actingAs($this->giver)->get('/konto')->assertOk()->assertDontSee('Runde spendieren');
         $this->post('/konto/runde', $this->round(['recipients' => [$colleague->id]]))->assertNotFound();
         $this->get('/konto/einstellungen')->assertOk()->assertDontSee('Mail bei spendiertem Bier');
 
-        $this->actingAs($this->admin())->put('/backend/runden', ['rounds_enabled' => '1']);
+        $this->actingAs($this->admin())->put('/admin/einstellungen/funktionen', $this->featureForm());
         $this->assertTrue(AppSettings::roundsAllowed());
     }
 

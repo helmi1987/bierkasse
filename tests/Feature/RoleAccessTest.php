@@ -19,11 +19,12 @@ class RoleAccessTest extends TestCase
         $other = $this->user();
         $this->actingAs($user);
 
-        foreach (['/backend', '/backend/kasse', '/backend/benutzer', "/backend/benutzer/{$other->id}", '/backend/statistik', '/backend/einstellungen', '/backend/sso', '/backend/registrierung-qr'] as $url) {
+        foreach (['/admin', '/admin/kasse', '/admin/benutzer', "/admin/benutzer/{$other->id}", '/admin/statistik', '/admin/einstellungen', '/admin/sso', '/admin/registrierung-qr',
+            '/admin/buchungen', '/admin/qr-codes', '/admin/protokoll', '/admin/kasse?tab=vorschlaege'] as $url) {
             $this->get($url)->assertForbidden();
         }
-        $this->post("/backend/benutzer/{$other->id}/einzahlung", ['amount' => '100', 'method' => 'cash'])->assertForbidden();
-        $this->put("/backend/benutzer/{$user->id}/rolle", ['role' => 'admin'])->assertForbidden();
+        $this->post("/admin/benutzer/{$other->id}/einzahlung", ['amount' => '100', 'method' => 'cash'])->assertForbidden();
+        $this->put("/admin/benutzer/{$user->id}/rolle", ['role' => 'admin'])->assertForbidden();
         $this->assertSame(0, $other->balance());
         $this->assertSame(User::ROLE_USER, $user->fresh()->role);
 
@@ -36,13 +37,17 @@ class RoleAccessTest extends TestCase
         $user = $this->user();
         $this->actingAs($kassier);
 
-        foreach (['/backend', '/backend/kasse', '/backend/benutzer', "/backend/benutzer/{$user->id}", '/backend/benutzer?status=left', '/backend/statistik', '/backend/runden', '/backend/registrierung-qr'] as $url) {
+        foreach (['/admin', '/admin/kasse', '/admin/kasse?tab=vorschlaege', '/admin/benutzer', "/admin/benutzer/{$user->id}", '/admin/benutzer?status=left',
+            '/admin/benutzer?tab=einladungen', '/admin/buchungen', '/admin/buchungen?tab=gaeste', '/admin/qr-codes', '/admin/qr-codes/kassen-qr',
+            '/admin/protokoll', '/admin/protokoll?tab=fassungen', '/admin/registrierung-qr'] as $url) {
             $this->get($url)->assertOk();
         }
-        foreach (['/backend/einstellungen', '/backend/sso', '/backend/sso/create'] as $url) {
+        foreach (['/admin/einstellungen', '/admin/sso', '/admin/sso/create', '/admin/navigation', '/admin/feedback', '/admin/wartung'] as $url) {
             $this->get($url)->assertForbidden();
         }
-        $this->put("/backend/benutzer/{$user->id}/rolle", ['role' => 'kassier'])->assertForbidden();
+        // Feature switches are admin-only since 1.20.0.
+        $this->put('/admin/einstellungen/funktionen', ['rounds_enabled' => '0'])->assertForbidden();
+        $this->put("/admin/benutzer/{$user->id}/rolle", ['role' => 'kassier'])->assertForbidden();
         $this->get('/konto')->assertOk()->assertSee(route('backend.dashboard'));
     }
 
@@ -51,9 +56,9 @@ class RoleAccessTest extends TestCase
         $admin = $this->admin();
         $this->actingAs($this->kassier());
 
-        $this->put("/backend/benutzer/{$admin->id}/passwort", ['password' => 'new-password', 'password_confirmation' => 'new-password'])->assertForbidden();
-        $this->post("/backend/benutzer/{$admin->id}/status", ['active' => 0])->assertForbidden();
-        $this->post("/backend/benutzer/{$admin->id}/totp-zuruecksetzen")->assertForbidden();
+        $this->put("/admin/benutzer/{$admin->id}/passwort", ['password' => 'new-password', 'password_confirmation' => 'new-password'])->assertForbidden();
+        $this->post("/admin/benutzer/{$admin->id}/status", ['active' => 0])->assertForbidden();
+        $this->post("/admin/benutzer/{$admin->id}/totp-zuruecksetzen")->assertForbidden();
         $this->assertTrue($admin->fresh()->isActive());
     }
 
@@ -63,14 +68,14 @@ class RoleAccessTest extends TestCase
         $user = $this->user();
         $this->actingAs($admin);
 
-        foreach (['/backend/einstellungen', '/backend/sso', '/backend/sso/create?type=github', '/backend/sso/create?type=microsoft', '/backend/registrierung-qr'] as $url) {
+        foreach (['/admin/einstellungen', '/admin/sso', '/admin/sso/create?type=github', '/admin/sso/create?type=microsoft', '/admin/registrierung-qr'] as $url) {
             $this->get($url)->assertOk();
         }
-        $this->put("/backend/benutzer/{$user->id}/rolle", ['role' => 'kassier'])->assertSessionHas('status');
+        $this->put("/admin/benutzer/{$user->id}/rolle", ['role' => 'kassier'])->assertSessionHas('status');
         $this->assertTrue($user->fresh()->isKassier());
 
         // The last admin keeps the role.
-        $this->put("/backend/benutzer/{$admin->id}/rolle", ['role' => 'user'])->assertSessionHas('error');
+        $this->put("/admin/benutzer/{$admin->id}/rolle", ['role' => 'user'])->assertSessionHas('error');
         $this->assertTrue($admin->fresh()->isAdmin());
     }
 
@@ -93,9 +98,9 @@ class RoleAccessTest extends TestCase
         $user = $this->withTotp($this->user(['username' => 'hans']));
         $this->actingAs($this->kassier());
 
-        $this->put("/backend/benutzer/{$user->id}/passwort", ['password' => 'temp-pass-1', 'password_confirmation' => 'temp-pass-1', 'must_change' => '1'])
+        $this->put("/admin/benutzer/{$user->id}/passwort", ['password' => 'temp-pass-1', 'password_confirmation' => 'temp-pass-1', 'must_change' => '1'])
             ->assertSessionHas('status');
-        $this->post("/backend/benutzer/{$user->id}/totp-zuruecksetzen")->assertSessionHas('status');
+        $this->post("/admin/benutzer/{$user->id}/totp-zuruecksetzen")->assertSessionHas('status');
 
         $user->refresh();
         $this->assertTrue($user->must_change_password);
@@ -110,9 +115,9 @@ class RoleAccessTest extends TestCase
         $user = $this->user();
         $this->actingAs($this->kassier());
 
-        $this->post("/backend/benutzer/{$user->id}/status", ['active' => 0])->assertSessionHas('status');
+        $this->post("/admin/benutzer/{$user->id}/status", ['active' => 0])->assertSessionHas('status');
         $this->assertFalse($user->fresh()->isActive());
-        $this->post("/backend/benutzer/{$user->id}/status", ['active' => 1])->assertSessionHas('status');
+        $this->post("/admin/benutzer/{$user->id}/status", ['active' => 1])->assertSessionHas('status');
         $this->assertTrue($user->fresh()->isActive());
     }
 
@@ -120,9 +125,9 @@ class RoleAccessTest extends TestCase
     {
         User::factory()->create(['role' => User::ROLE_KASSIER, 'first_name' => 'Phlipp', 'last_name' => 'Arnold']);
         $this->actingAs($this->admin());
-        $this->get('/backend/einstellungen')->assertOk()->assertSee('<option value="Phlipp Arnold">', false);
+        $this->get('/admin/einstellungen')->assertOk()->assertSee('<option value="Phlipp Arnold">', false);
 
-        $this->put('/backend/einstellungen', ['beer_price' => '1.50', 'default_limit' => '0', 'registration_mode' => 'invite',
+        $this->put('/admin/einstellungen', ['beer_price' => '1.50', 'default_limit' => '0', 'registration_mode' => 'invite',
             'mail_transport' => 'sendmail', 'twint_enabled' => '1', 'twint' => [['name' => '', 'phone' => '']]])
             ->assertSessionHasErrors('twint');
     }
@@ -130,12 +135,12 @@ class RoleAccessTest extends TestCase
     public function test_top_bar_kassier_and_backend(): void
     {
         $this->actingAs($this->admin());
-        $this->get('/backend')->assertOk()->assertSeeText('Kassier')->assertSee(route('backend.settings'))
+        $this->get('/admin')->assertOk()->assertSeeText('Kassier')->assertSee(route('backend.settings'))
             ->assertSee(route('backend.audit'))->assertDontSee(route('backend.maintenance'));
-        $this->get('/backend/einstellungen')->assertOk()->assertSee(route('backend.maintenance'))->assertDontSee(route('backend.cash'));
+        $this->get('/admin/einstellungen')->assertOk()->assertSee(route('backend.maintenance'))->assertDontSee(route('backend.cash'));
 
         $this->actingAs($this->kassier());
-        $this->get('/backend')->assertOk()->assertSeeText('Kassier')->assertSee(route('backend.audit'))
+        $this->get('/admin')->assertOk()->assertSeeText('Kassier')->assertSee(route('backend.audit'))
             ->assertDontSee(route('backend.settings'));
     }
 
@@ -143,7 +148,7 @@ class RoleAccessTest extends TestCase
     {
         $plain = $this->user(['email' => null]);
         $this->actingAs($this->admin());
-        $this->put("/backend/benutzer/{$plain->id}/rolle", ['role' => 'kassier'])->assertSessionHas('error');
+        $this->put("/admin/benutzer/{$plain->id}/rolle", ['role' => 'kassier'])->assertSessionHas('error');
         $this->assertSame(User::ROLE_USER, $plain->fresh()->role);
 
         $kassier = $this->kassier();
@@ -155,14 +160,14 @@ class RoleAccessTest extends TestCase
 
         // Existing kassier without e-mail: hint only, access stays.
         $this->actingAs($this->kassier(['email' => null]));
-        $this->get('/backend')->assertOk()->assertSee(__('account.email_missing'));
+        $this->get('/admin')->assertOk()->assertSee(__('account.email_missing'));
     }
 
     public function test_admin_saves_settings(): void
     {
         $this->actingAs($this->admin());
 
-        $this->put('/backend/einstellungen', [
+        $this->put('/admin/einstellungen', [
             'beer_price' => '2.00',
             'default_limit' => '10',
             'app_name' => 'Büro-Bier',
@@ -195,8 +200,8 @@ class RoleAccessTest extends TestCase
         }
 
         // Admin can view the registration password; an empty SMTP password keeps the stored one.
-        $this->get('/backend/einstellungen')->assertOk()->assertSee('value="prost"', false)->assertDontSee('smtp-secret');
-        $this->put('/backend/einstellungen', ['beer_price' => '2', 'default_limit' => '0', 'registration_mode' => 'password', 'mail_transport' => 'sendmail'])->assertSessionHas('status');
+        $this->get('/admin/einstellungen')->assertOk()->assertSee('value="prost"', false)->assertDontSee('smtp-secret');
+        $this->put('/admin/einstellungen', ['beer_price' => '2', 'default_limit' => '0', 'registration_mode' => 'password', 'mail_transport' => 'sendmail'])->assertSessionHas('status');
         Setting::flushCache();
         $this->assertSame('smtp-secret', AppSettings::mail()['smtp_password']);
     }

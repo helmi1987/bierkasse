@@ -151,11 +151,11 @@ class PersonalSsoTest extends TestCase
         $this->actingAs($this->user())->get('/konto/einstellungen')->assertOk()->assertDontSee('Geheimer-Anbieter');
 
         $admin = $this->admin();
-        $this->actingAs($admin)->get('/backend/sso')->assertOk()->assertDontSee('Geheimer-Anbieter');
-        $this->get("/backend/sso/{$p->id}/edit")->assertNotFound();
-        $this->put("/backend/sso/{$p->id}", ['type' => 'oidc', 'name' => 'x'])->assertNotFound();
-        $this->delete("/backend/sso/{$p->id}")->assertNotFound();
-        $this->get("/backend/benutzer/{$owner->id}")->assertOk()->assertSee('Geheimer-Anbieter');
+        $this->actingAs($admin)->get('/admin/sso')->assertOk()->assertDontSee('Geheimer-Anbieter');
+        $this->get("/admin/sso/{$p->id}/edit")->assertNotFound();
+        $this->put("/admin/sso/{$p->id}", ['type' => 'oidc', 'name' => 'x'])->assertNotFound();
+        $this->delete("/admin/sso/{$p->id}")->assertNotFound();
+        $this->get("/admin/benutzer/{$owner->id}")->assertOk()->assertSee('Geheimer-Anbieter');
         $this->assertDatabaseHas('sso_providers', ['id' => $p->id]);
     }
 

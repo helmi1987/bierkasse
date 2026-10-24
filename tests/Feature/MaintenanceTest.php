@@ -16,7 +16,7 @@ class MaintenanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ACTIONS = ['/backend/wartung/cache', '/backend/wartung/sperren', '/backend/wartung/optimierung', '/backend/wartung/migrieren'];
+    private const ACTIONS = ['/admin/wartung/cache', '/admin/wartung/sperren', '/admin/wartung/optimierung', '/admin/wartung/migrieren'];
 
     private function maintenanceOn(string $message = ''): void
     {
@@ -38,20 +38,20 @@ class MaintenanceTest extends TestCase
     {
         foreach ([$this->user(), $this->kassier()] as $who) {
             $this->actingAs($who);
-            $this->get('/backend/wartung')->assertForbidden();
+            $this->get('/admin/wartung')->assertForbidden();
             foreach (self::ACTIONS as $url) {
                 $this->post($url)->assertForbidden();
             }
-            $this->put('/backend/wartung/modus', ['maintenance' => 1])->assertForbidden();
+            $this->put('/admin/wartung/modus', ['maintenance' => 1])->assertForbidden();
         }
         $this->assertFalse(AppSettings::maintenanceMode());
 
         $this->actingAs($this->kassier());
-        $this->get('/backend')->assertOk()->assertDontSee(route('backend.maintenance'));
+        $this->get('/admin')->assertOk()->assertDontSee(route('backend.maintenance'));
 
         $this->actingAs($this->admin());
-        $this->get('/backend/einstellungen')->assertOk()->assertSee(route('backend.maintenance'));
-        $this->get('/backend/wartung')->assertOk()
+        $this->get('/admin/einstellungen')->assertOk()->assertSee(route('backend.maintenance'));
+        $this->get('/admin/wartung')->assertOk()
             ->assertSee('Cache leeren')
             ->assertSee('Setzt auch gesperrte Anmelde-/Registrierungsversuche zurück', false)
             ->assertSee(PHP_VERSION)
@@ -65,7 +65,7 @@ class MaintenanceTest extends TestCase
 
         $admin = $this->admin(['username' => 'chef']);
         $this->actingAs($admin);
-        $this->post('/backend/wartung/cache')->assertSessionHas('status');
+        $this->post('/admin/wartung/cache')->assertSessionHas('status');
 
         $this->assertFalse(RateLimiter::tooManyAttempts('register:127.0.0.1', 10));
         Log::shouldHaveReceived('info')->withArgs(fn ($msg, $ctx) => $msg === 'Maintenance: cache cleared' && $ctx['admin'] === 'chef');
@@ -77,7 +77,7 @@ class MaintenanceTest extends TestCase
         cache()->put('keep-me', 'yes', 600);
 
         $this->actingAs($this->admin());
-        $this->post('/backend/wartung/sperren')->assertSessionHas('status');
+        $this->post('/admin/wartung/sperren')->assertSessionHas('status');
 
         $this->assertFalse(RateLimiter::tooManyAttempts('register:127.0.0.1', 10));
         $this->assertSame('yes', cache()->get('keep-me'));
@@ -86,8 +86,8 @@ class MaintenanceTest extends TestCase
     public function test_optimize_clear_runs(): void
     {
         $this->actingAs($this->admin());
-        $this->post('/backend/wartung/optimierung')->assertSessionHas('status')->assertSessionHas('maintenance_output');
-        $this->get('/backend/wartung')->assertOk();
+        $this->post('/admin/wartung/optimierung')->assertSessionHas('status')->assertSessionHas('maintenance_output');
+        $this->get('/admin/wartung')->assertOk();
     }
 
     public function test_pending_migrations_are_shown_and_migrated(): void
@@ -114,23 +114,23 @@ PHP);
         app('migrator')->path($dir);
 
         $this->actingAs($this->admin());
-        $this->get('/backend/wartung')->assertOk()->assertSee('2099_01_01_000000_create_maintenance_probe_table');
+        $this->get('/admin/wartung')->assertOk()->assertSee('2099_01_01_000000_create_maintenance_probe_table');
         $this->assertSame(['2099_01_01_000000_create_maintenance_probe_table'], SystemInfo::pendingMigrations());
 
-        $this->post('/backend/wartung/migrieren')->assertSessionHas('status')->assertSessionHas('maintenance_output');
+        $this->post('/admin/wartung/migrieren')->assertSessionHas('status')->assertSessionHas('maintenance_output');
         $this->assertTrue(Schema::hasTable('maintenance_probe'));
         $this->assertSame([], SystemInfo::pendingMigrations());
-        $this->get('/backend/wartung')->assertOk()->assertSee('Keine ausstehenden Migrationen.');
+        $this->get('/admin/wartung')->assertOk()->assertSee('Keine ausstehenden Migrationen.');
     }
 
     public function test_admin_switches_maintenance_mode(): void
     {
         $this->actingAs($this->admin());
-        $this->put('/backend/wartung/modus', ['maintenance' => 1, 'maintenance_message' => 'Bis 14 Uhr'])->assertSessionHas('status');
+        $this->put('/admin/wartung/modus', ['maintenance' => 1, 'maintenance_message' => 'Bis 14 Uhr'])->assertSessionHas('status');
         $this->assertTrue(AppSettings::maintenanceMode());
         $this->assertSame('Bis 14 Uhr', AppSettings::maintenanceMessage());
 
-        $this->put('/backend/wartung/modus', ['maintenance_message' => ''])->assertSessionHas('status');
+        $this->put('/admin/wartung/modus', ['maintenance_message' => ''])->assertSessionHas('status');
         $this->assertFalse(AppSettings::maintenanceMode());
     }
 
@@ -151,7 +151,7 @@ PHP);
             $this->assertGuest();
         }
         $this->actingAs($this->kassier());
-        $this->get('/backend')->assertStatus(503);
+        $this->get('/admin')->assertStatus(503);
     }
 
     public function test_non_admin_login_gets_maintenance_page(): void
@@ -171,7 +171,7 @@ PHP);
 
         $this->post('/anmelden', ['username' => 'boss', 'password' => 'secret-password'])->assertRedirect(route('account.dashboard'));
         $this->get('/konto')->assertOk()->assertSee('Wartungsmodus aktiv');
-        $this->get('/backend')->assertOk()->assertSee('Wartungsmodus aktiv');
+        $this->get('/admin')->assertOk()->assertSee('Wartungsmodus aktiv');
         $this->assertAuthenticatedAs($admin);
     }
 
@@ -218,7 +218,7 @@ PHP);
         $this->assertNull(SystemInfo::appVersion($base));
         $this->assertNull(SystemInfo::appVersion($this->testStorage.'/nothing'));
 
-        $this->actingAs($this->admin())->get('/backend/wartung')->assertOk()
+        $this->actingAs($this->admin())->get('/admin/wartung')->assertOk()
             ->assertSee('<strong>'.trim((string) file_get_contents(base_path('VERSION'))).'</strong>', false);
     }
 }

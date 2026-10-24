@@ -6,35 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Services\Audit;
 use App\Support\AuditPresenter;
-use Illuminate\Database\Eloquent\Builder;
+use App\Support\AuditQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use Throwable;
 
 /**
- * Audit log "Protokoll" (admins only, read-only). Entries are never changed or deleted here.
+ * Audit log "Protokoll" (kassiers and admins, read-only): detail page, integrity check and CSV export; the list
+ * is the Livewire component App\Livewire\Backend\AuditLog. Entries are never changed or deleted here.
  */
 class AuditController extends Controller
 {
-    public function index(Request $request): View
+    /** Page shell of the Livewire component App\Livewire\Backend\AuditLog (tabs "Protokoll" and "Fassungen"). */
+    public function index(): View
     {
-        $filters = $this->filters($request);
-        $entries = $this->query($filters)->with('actor')->orderByDesc('id')->paginate(50)->withQueryString();
-
-        return view('backend.audit.index', [
-            'entries' => $entries,
-            // Subjects and referenced users of this page, loaded in batches (no query per row).
-            'presenter' => AuditPresenter::for($entries->items()),
-            'filters' => $filters,
-            'actors' => AuditLog::query()->whereNotNull('actor_ref')->select('actor_ref', DB::raw('MAX(actor_name) as actor_name'))
-                ->groupBy('actor_ref')->orderBy('actor_name')->get(),
-            'prefixes' => AuditLog::query()->distinct()->orderBy('action')->pluck('action')
-                ->map(fn ($a) => explode('.', $a)[0])->unique()->values(),
-        ]);
+        return view('backend.audit.index');
     }
 
     public function show(AuditLog $entry): View
@@ -57,7 +44,7 @@ class AuditController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $query = $this->query($this->filters($request))->orderBy('id');
+        $query = AuditQuery::query(AuditQuery::filters($request->query()))->orderBy('id');
 
         return response()->streamDownload(function () use ($query) {
             $out = fopen('php://output', 'w');
@@ -78,48 +65,5 @@ class AuditController extends Controller
         $value = (string) $value;
 
         return $value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true) ? "'".$value : $value;
-    }
-
-    /**
-     * @return array{actor: int|null, action: string, from: string, to: string, q: string}
-     */
-    private function filters(Request $request): array
-    {
-        $date = fn (string $key) => is_string($request->query($key)) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $request->query($key)) ? $request->query($key) : '';
-
-        return [
-            'actor' => is_numeric($request->query('actor')) ? (int) $request->query('actor') : null,
-            'action' => is_string($request->query('action')) ? mb_substr(trim($request->query('action')), 0, 64) : '',
-            'from' => $date('from'),
-            'to' => $date('to'),
-            'q' => is_string($request->query('q')) ? mb_substr(trim($request->query('q')), 0, 100) : '',
-        ];
-    }
-
-    /** @return Builder<AuditLog> */
-    private function query(array $f): Builder
-    {
-        $tz = (string) config('app.timezone');
-        $utc = function (string $date, bool $end) use ($tz): ?string {
-            try {
-                $d = Carbon::createFromFormat('Y-m-d', $date, $tz);
-            } catch (Throwable) {
-                return null;
-            }
-
-            return ($end ? $d->endOfDay() : $d->startOfDay())->utc()->format('Y-m-d H:i:s');
-        };
-
-        return AuditLog::query()
-            ->when($f['actor'] !== null, fn ($q) => $q->where('actor_ref', $f['actor']))
-            ->when($f['action'] !== '', fn ($q) => $q->where(fn ($w) => $w->where('action', $f['action'])->orWhere('action', 'like', addcslashes($f['action'], '%_\\').'.%')))
-            ->when($f['from'] !== '' && $utc($f['from'], false), fn ($q) => $q->where('created_at', '>=', $utc($f['from'], false)))
-            ->when($f['to'] !== '' && $utc($f['to'], true), fn ($q) => $q->where('created_at', '<=', $utc($f['to'], true)))
-            ->when($f['q'] !== '', function ($q) use ($f) {
-                $like = '%'.addcslashes($f['q'], '%_\\').'%';
-                $q->where(fn ($w) => $w->where('actor_name', 'like', $like)->orWhere('action', 'like', $like)
-                    ->orWhere('subject_type', 'like', $like)->orWhere('old_values', 'like', $like)
-                    ->orWhere('new_values', 'like', $like)->orWhere('ip', 'like', $like));
-            });
     }
 }

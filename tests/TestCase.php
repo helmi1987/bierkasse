@@ -53,6 +53,17 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
+     * Form of Admin > Einstellungen > Funktionen: rounds, gifts and guest booking by users on (defaults),
+     * public guest page and cashbox QR off, unless overridden ("0" = off).
+     */
+    protected function featureForm(array $values = []): array
+    {
+        $form = array_merge(['rounds_enabled' => '1', 'gifts_enabled' => '1', 'guest_user_booking' => '1'], $values);
+
+        return array_filter($form, fn ($v) => $v !== '0' && $v !== false && $v !== null);
+    }
+
+    /**
      * The registration form sends the revisions of the linked legal texts as hidden fields; tests that
      * post it without them get the current ones (as if the form had just been shown). Tests of the
      * check itself pass the fields explicitly.

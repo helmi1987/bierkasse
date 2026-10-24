@@ -3,52 +3,30 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\GuestSale;
 use App\Models\QrCode;
-use App\Models\Setting;
-use App\Services\GuestSales;
 use App\Support\AppSettings;
 use App\Support\CashboxQrSvg;
 use App\Support\Qr;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 /**
- * Guests (kassier and admin): booking by logged-in users on/off, guest sales with storno.
- * QR codes (public guest page, cashbox stickers cash / TWINT): view of the active codes only;
- * switches, guest password and codes are managed by admins (QrCodeController).
+ * Guest QR print pages (kassier and admin, under "QR-Codes"): public guest page and cashbox stickers
+ * (cash / TWINT), active codes only (deactivated cashbox images for admins). Guest sales are listed in
+ * "Buchungen" (Livewire\Backend\Bookings); the switches and the guest password are admin settings.
  */
 class GuestController extends Controller
 {
-    public function index(Request $request): View
+    /** Cashbox stickers (QR-Codes > Kassen-QR): preview, PNG/SVG and A4 sheets of the active codes. */
+    public function cashbox(Request $request): View
     {
-        return view('backend.guests', [
+        return view('backend.qr-cashbox', [
             'admin' => $request->user()->isAdmin(),
-            'userBooking' => AppSettings::guestUserBooking(),
-            'open' => AppSettings::guestOpen(),
             'cashboxEnabled' => (bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED, false),
             'twintEnabled' => AppSettings::twintEnabled(),
             'cashboxActive' => QrCode::query()->active()->whereIn('kind', [QrCode::KIND_CASH, QrCode::KIND_TWINT])->orderBy('id')->get(),
-            'sales' => GuestSale::query()->with('bookedBy')->latest('id')->paginate(30),
-            'total' => ['beers' => (int) GuestSale::query()->sum('beers'), 'amount' => (int) GuestSale::query()->sum('amount')],
         ]);
-    }
-
-    /** Booking by users on/off; the QR switches and the guest password are on the QR management page. */
-    public function update(Request $request): RedirectResponse
-    {
-        Setting::put(AppSettings::GUEST_USER_BOOKING, $request->boolean('guest_user_booking'));
-
-        return back()->with('status', __('settings.saved'));
-    }
-
-    public function destroy(GuestSale $sale): RedirectResponse
-    {
-        GuestSales::cancel($sale);
-
-        return back()->with('status', __('guest.cancelled'));
     }
 
     /**

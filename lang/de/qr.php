@@ -28,6 +28,7 @@ return [
     'manage_title' => 'QR-Codes verwalten',
     'manage_intro' => 'Neue Codes erstellen, benennen, deaktivieren und reaktivieren. Mehrere Codes pro Art können aktiv sein; nichts wird gelöscht. Kassiers sehen nur die aktiven Codes.',
     'manage_link' => 'QR-Codes verwalten',
+    'switches_moved' => 'Die Schalter «Kassen-QR aktiv», «Öffentliche Gäste-Seite» und das Gäste-Passwort stehen unter Admin > Einstellungen > Funktionen.',
     'settings' => 'Schalter',
     'view' => 'Ansehen / Drucken',
     'on' => 'eingeschaltet',

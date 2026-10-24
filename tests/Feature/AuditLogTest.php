@@ -54,8 +54,8 @@ class AuditLogTest extends TestCase
         $this->assertSame(2, AuditLog::query()->where('action', 'deposit.report')->count());
 
         $this->actingAs($kassier);
-        $this->post("/backend/einzahlungen/{$a->id}/bestaetigen")->assertSessionHas('status');
-        $this->post("/backend/einzahlungen/{$b->id}/ablehnen")->assertSessionHas('status');
+        $this->post("/admin/einzahlungen/{$a->id}/bestaetigen")->assertSessionHas('status');
+        $this->post("/admin/einzahlungen/{$b->id}/ablehnen")->assertSessionHas('status');
 
         $confirm = $this->last('deposit.confirm');
         $this->assertSame($kassier->username, $confirm->actor_name);
@@ -67,7 +67,7 @@ class AuditLogTest extends TestCase
     public function test_settings_change_masks_secrets(): void
     {
         $this->actingAs($this->admin());
-        $this->put('/backend/einstellungen', [
+        $this->put('/admin/einstellungen', [
             'beer_price' => '2.00',
             'default_limit' => '20',
             'registration_mode' => 'password',
@@ -100,12 +100,12 @@ class AuditLogTest extends TestCase
         $user = $this->user(['username' => 'hans']);
         $this->actingAs($admin);
 
-        $this->put("/backend/benutzer/{$user->id}/rolle", ['role' => 'kassier'])->assertSessionHas('status');
+        $this->put("/admin/benutzer/{$user->id}/rolle", ['role' => 'kassier'])->assertSessionHas('status');
         $role = $this->last('user.role');
         $this->assertSame(['role' => 'user'], $role->oldValues());
         $this->assertSame(['role' => 'kassier'], $role->newValues());
 
-        $this->put("/backend/benutzer/{$user->id}/passwort", ['password' => 'neues-passwort', 'password_confirmation' => 'neues-passwort'])->assertSessionHas('status');
+        $this->put("/admin/benutzer/{$user->id}/passwort", ['password' => 'neues-passwort', 'password_confirmation' => 'neues-passwort'])->assertSessionHas('status');
         $reset = $this->last('user.password_reset');
         $this->assertSame(Audit::MASK, $reset->newValues()['password']);
         $this->assertStringNotContainsString('neues-passwort', (string) $reset->new_values);
@@ -124,7 +124,7 @@ class AuditLogTest extends TestCase
     public function test_backup_download_is_logged(): void
     {
         $this->actingAs($this->admin());
-        $this->post('/backend/wartung/backup')->assertOk();
+        $this->post('/admin/wartung/backup')->assertOk();
 
         $this->assertMatchesRegularExpression('/^bierkasse-.*\.sql\.gz$/', $this->last('backup.download')->newValues()['file']);
     }
@@ -160,13 +160,13 @@ class AuditLogTest extends TestCase
         $this->assertNull(Audit::verify());
 
         $this->actingAs($admin);
-        $this->post('/backend/protokoll/pruefen')->assertSessionHas('status');
+        $this->post('/admin/protokoll/pruefen')->assertSessionHas('status');
 
         // Change a row behind the app's back.
         $id = AuditLog::query()->where('action', 'test.entry')->orderBy('id')->skip(1)->value('id');
         DB::table('audit_logs')->where('id', $id)->update(['new_values' => '{"n":99}']);
         $this->assertSame(['id' => $id, 'reason' => 'changed'], Audit::verify());
-        $this->post('/backend/protokoll/pruefen')->assertSessionHas('error', __('audit.verify_broken', ['id' => $id, 'reason' => __('audit.reason.changed')]));
+        $this->post('/admin/protokoll/pruefen')->assertSessionHas('error', __('audit.verify_broken', ['id' => $id, 'reason' => __('audit.reason.changed')]));
     }
 
     public function test_integrity_check_detects_deleted_rows(): void
@@ -218,32 +218,32 @@ class AuditLogTest extends TestCase
         Audit::log('user.role', null, ['role' => 'user'], ['role' => 'admin'], $other);
 
         $this->actingAs($this->user());
-        $this->get('/backend/protokoll')->assertForbidden();
-        $this->post('/backend/protokoll/pruefen')->assertForbidden();
-        $this->get('/backend/protokoll/export')->assertForbidden();
+        $this->get('/admin/protokoll')->assertForbidden();
+        $this->post('/admin/protokoll/pruefen')->assertForbidden();
+        $this->get('/admin/protokoll/export')->assertForbidden();
 
         $this->actingAs($other);
-        $this->get('/backend')->assertOk()->assertSee(route('backend.audit'));
-        $this->get('/backend/protokoll')->assertOk()->assertSee('user.role');
+        $this->get('/admin')->assertOk()->assertSee(route('backend.audit'));
+        $this->get('/admin/protokoll')->assertOk()->assertSee('user.role');
 
         $this->actingAs($admin);
-        $this->get('/backend/protokoll')->assertOk()->assertSee('deposit.confirm')->assertSee('user.role');
-        $this->get('/backend/protokoll?actor='.$other->id)->assertOk()->assertSee('user.role')->assertDontSee('<code>deposit.confirm</code>', false);
-        $this->get('/backend/protokoll?action=deposit')->assertOk()->assertSee('<code>deposit.confirm</code>', false)->assertDontSee('<code>user.role</code>', false);
-        $this->get('/backend/protokoll?q=kasse')->assertOk()->assertSee('<code>user.role</code>', false)->assertDontSee('<code>deposit.confirm</code>', false);
+        $this->get('/admin/protokoll')->assertOk()->assertSee('deposit.confirm')->assertSee('user.role');
+        $this->get('/admin/protokoll?actor='.$other->id)->assertOk()->assertSee('user.role')->assertDontSee('<code>deposit.confirm</code>', false);
+        $this->get('/admin/protokoll?action=deposit')->assertOk()->assertSee('<code>deposit.confirm</code>', false)->assertDontSee('<code>user.role</code>', false);
+        $this->get('/admin/protokoll?q=kasse')->assertOk()->assertSee('<code>user.role</code>', false)->assertDontSee('<code>deposit.confirm</code>', false);
         $today = now()->format('Y-m-d');
-        $this->get("/backend/protokoll?from={$today}&to={$today}")->assertOk()->assertSee('<code>user.role</code>', false);
-        $this->get('/backend/protokoll?to=2000-01-01')->assertOk()->assertSee(__('audit.none'));
+        $this->get("/admin/protokoll?from={$today}&to={$today}")->assertOk()->assertSee('<code>user.role</code>', false);
+        $this->get('/admin/protokoll?to=2000-01-01')->assertOk()->assertSee(__('audit.none'));
 
         $entry = AuditLog::query()->where('action', 'user.role')->sole();
-        $this->get("/backend/protokoll/{$entry->id}")->assertOk()->assertSee('<td>admin</td>', false)->assertSee($entry->hash);
+        $this->get("/admin/protokoll/{$entry->id}")->assertOk()->assertSee('<td>admin</td>', false)->assertSee($entry->hash);
 
-        $csv = $this->get('/backend/protokoll/export?action=user')->assertOk()->streamedContent();
+        $csv = $this->get('/admin/protokoll/export?action=user')->assertOk()->streamedContent();
         $this->assertStringContainsString('user.role', $csv);
         $this->assertStringNotContainsString('deposit.confirm', $csv);
 
         // No route changes or deletes entries.
-        $this->delete("/backend/protokoll/{$entry->id}")->assertStatus(405);
+        $this->delete("/admin/protokoll/{$entry->id}")->assertStatus(405);
     }
 
     public function test_list_shows_german_labels_subject_names_and_summary(): void
@@ -255,7 +255,7 @@ class AuditLogTest extends TestCase
         Audit::log('custom.unknown', null, [], ['foo' => 'bar'], $admin);
 
         $this->actingAs($admin);
-        $this->get('/backend/protokoll')->assertOk()
+        $this->get('/admin/protokoll')->assertOk()
             ->assertSee(__('audit.details'))
             ->assertSee('Rolle geändert')->assertSee('<code>user.role</code>', false)
             ->assertSee('Rolle: user → kassier')
@@ -281,7 +281,7 @@ class AuditLogTest extends TestCase
 
         $this->actingAs($admin);
         DB::enableQueryLog();
-        $this->get('/backend/protokoll')->assertOk();
+        $this->get('/admin/protokoll')->assertOk();
         $userQueries = array_filter(DB::getQueryLog(), fn ($q) => str_contains($q['query'], 'from "users" where "users"."id" in'));
         $this->assertGreaterThanOrEqual(1, count($userQueries));
         $this->assertLessThanOrEqual(2, count($userQueries));
@@ -297,8 +297,8 @@ class AuditLogTest extends TestCase
         $row = AuditLog::query()->latest('id')->first();
 
         $this->actingAs($admin);
-        $this->get('/backend/protokoll')->assertOk()->assertSee('Benutzer #'.$gone->id);
-        $this->get("/backend/protokoll/{$row->id}")->assertOk()
+        $this->get('/admin/protokoll')->assertOk()->assertSee('Benutzer #'.$gone->id);
+        $this->get("/admin/protokoll/{$row->id}")->assertOk()
             ->assertSee('Feedback gelöscht')
             ->assertSee('gelöschter Benutzer #999999');
     }
@@ -320,7 +320,7 @@ class AuditLogTest extends TestCase
         $deposit = AuditLog::query()->latest('id')->first();
 
         $this->actingAs($admin);
-        $this->get("/backend/protokoll/{$settings->id}")->assertOk()
+        $this->get("/admin/protokoll/{$settings->id}")->assertOk()
             ->assertSee('Einstellungen geändert')->assertSee('<code>settings.update</code>', false)
             ->assertSee('Bierpreis')->assertSee('<td>CHF 1.50</td>', false)->assertSee('<td>CHF 2.00</td>', false)
             ->assertSee('<td>nein</td>', false)->assertSee('<td>ja</td>', false)
@@ -329,7 +329,7 @@ class AuditLogTest extends TestCase
             ->assertSee(__('audit.masked'))->assertDontSee('geheim</td>', false)
             ->assertSee('name: Anna, phone: 079');
 
-        $this->get("/backend/protokoll/{$deposit->id}")->assertOk()
+        $this->get("/admin/protokoll/{$deposit->id}")->assertOk()
             ->assertSee('Bestätigt von')->assertSee('<td>chef</td>', false)
             ->assertSee('<td>hans</td>', false)
             // UTC 10:05 → Zurich 12:05 (summer time).

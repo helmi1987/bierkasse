@@ -86,11 +86,11 @@ class LedgerTest extends TestCase
     public function test_kassier_sets_individual_limit(): void
     {
         $user = $this->user();
-        $this->actingAs($this->kassier())->put("/backend/benutzer/{$user->id}/limit", ['overdraft_limit' => '20.00'])
+        $this->actingAs($this->kassier())->put("/admin/benutzer/{$user->id}/limit", ['overdraft_limit' => '20.00'])
             ->assertSessionHas('status');
         $this->assertSame(2000, $user->fresh()->overdraft_limit);
 
-        $this->put("/backend/benutzer/{$user->id}/limit", ['overdraft_limit' => ''])->assertSessionHas('status');
+        $this->put("/admin/benutzer/{$user->id}/limit", ['overdraft_limit' => ''])->assertSessionHas('status');
         $this->assertNull($user->fresh()->overdraft_limit);
     }
 
@@ -138,8 +138,8 @@ class LedgerTest extends TestCase
         $this->assertSame(2050, $tx->amount);
         $this->assertSame(0, $user->balance());
 
-        $this->actingAs($kassier)->get('/backend')->assertOk()->assertSee('CHF 20.50');
-        $this->post("/backend/einzahlungen/{$tx->id}/bestaetigen")->assertSessionHas('status');
+        $this->actingAs($kassier)->get('/admin')->assertOk()->assertSee('CHF 20.50');
+        $this->post("/admin/einzahlungen/{$tx->id}/bestaetigen")->assertSessionHas('status');
 
         $tx->refresh();
         $this->assertSame('confirmed', $tx->status);
@@ -148,7 +148,7 @@ class LedgerTest extends TestCase
         $this->assertSame(2050, $user->balance());
 
         // A confirmed deposit cannot be confirmed or rejected again.
-        $this->post("/backend/einzahlungen/{$tx->id}/ablehnen")->assertSessionHas('error');
+        $this->post("/admin/einzahlungen/{$tx->id}/ablehnen")->assertSessionHas('error');
     }
 
     public function test_rejected_deposit_does_not_count(): void
@@ -156,7 +156,7 @@ class LedgerTest extends TestCase
         $user = $this->user();
         $tx = Ledger::reportDeposit($user, 1000, 'cash');
 
-        $this->actingAs($this->kassier())->post("/backend/einzahlungen/{$tx->id}/ablehnen")->assertSessionHas('status');
+        $this->actingAs($this->kassier())->post("/admin/einzahlungen/{$tx->id}/ablehnen")->assertSessionHas('status');
         $this->assertSame('rejected', $tx->fresh()->status);
         $this->assertSame(0, $user->balance());
     }
@@ -175,9 +175,9 @@ class LedgerTest extends TestCase
         $user = $this->user();
         $this->actingAs($this->kassier());
 
-        $this->post("/backend/benutzer/{$user->id}/einzahlung", ['amount' => '50', 'method' => 'cash'])->assertSessionHas('status');
-        $this->post("/backend/benutzer/{$user->id}/korrektur", ['amount' => '-2.50', 'note' => ''])->assertSessionHasErrors('note');
-        $this->post("/backend/benutzer/{$user->id}/korrektur", ['amount' => '-2.50', 'note' => 'Glas kaputt'])->assertSessionHas('status');
+        $this->post("/admin/benutzer/{$user->id}/einzahlung", ['amount' => '50', 'method' => 'cash'])->assertSessionHas('status');
+        $this->post("/admin/benutzer/{$user->id}/korrektur", ['amount' => '-2.50', 'note' => ''])->assertSessionHasErrors('note');
+        $this->post("/admin/benutzer/{$user->id}/korrektur", ['amount' => '-2.50', 'note' => 'Glas kaputt'])->assertSessionHas('status');
 
         $this->assertSame(4750, $user->balance());
         $this->assertDatabaseHas('transactions', ['user_id' => $user->id, 'type' => 'correction', 'amount' => -250, 'note' => 'Glas kaputt']);

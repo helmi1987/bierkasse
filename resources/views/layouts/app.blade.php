@@ -31,7 +31,7 @@
     <script src="{{ asset('js/live.js') }}?v={{ @filemtime(public_path('js/live.js')) }}" nonce="{{ $nonce }}" defer></script>
     <script src="{{ asset('js/app.js') }}?v={{ @filemtime(public_path('js/app.js')) }}" nonce="{{ $nonce }}" defer></script>
 </head>
-<body class="@yield('body_class')" @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ \App\Support\LiveFingerprint::current() }}" @endif>
+<body class="@yield('body_class')" @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ app()->bound(\App\Http\Middleware\CaptureLiveFingerprint::KEY) ? app(\App\Http\Middleware\CaptureLiveFingerprint::KEY) : \App\Support\LiveFingerprint::current() }}" @endif>
 <a class="skip-link" href="#main">{{ __('site.skip_to_content') }}</a>
 @if ($authUser)
     <header class="topbar">

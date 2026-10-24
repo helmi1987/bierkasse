@@ -2,6 +2,11 @@
 
 @section('title', __('account.settings'))
 
+{{-- The TOTP setup secret is shown once: no live refresh while it is displayed. --}}
+@if ($secret)
+    @section('live_off', '1')
+@endif
+
 @section('content')
 <h1>{{ __('account.settings') }}</h1>
 

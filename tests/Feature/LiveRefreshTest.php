@@ -128,4 +128,51 @@ class LiveRefreshTest extends TestCase
         $this->assertFalse($sale->canBeUndoneBy($user));
         Carbon::setTestNow();
     }
+
+    public function test_live_refresh_is_off_while_totp_setup_secret_is_shown(): void
+    {
+        $user = $this->user();
+        $this->actingAs($user)->get('/konto/einstellungen')->assertOk()
+            ->assertSee('totp-setup', false)
+            ->assertDontSee('data-live="', false);
+
+        $this->actingAs($this->withTotp($this->user(['username' => 'anna'])))->get('/konto/einstellungen')->assertOk()
+            ->assertSee('data-live="', false);
+    }
+
+    public function test_live_refresh_is_off_on_sso_provider_form(): void
+    {
+        $this->actingAs($this->admin())->get('/backend/sso/create')->assertOk()
+            ->assertDontSee('data-live="', false);
+    }
+
+    public function test_fingerprint_is_taken_before_the_page_content(): void
+    {
+        $user = $this->user();
+        $this->actingAs($user);
+        $start = LiveFingerprint::current();
+
+        // A change while the page is being built must not be hidden by the rendered fingerprint.
+        \Illuminate\Support\Facades\View::composer('account.dashboard', function () use ($user) {
+            Ledger::reportDeposit($user, 500, 'cash');
+        });
+        $html = $this->get('/konto')->getContent();
+        preg_match('/data-live-fp="([^"]+)"/', $html, $m);
+        $this->assertSame($start, $m[1]);
+        $this->assertNotSame(LiveFingerprint::current(), $m[1]);
+    }
+
+    public function test_form_token_keeps_many_tokens_per_form(): void
+    {
+        $first = \App\Support\FormToken::issue('x');
+        for ($i = 0; $i < 40; $i++) {
+            \App\Support\FormToken::issue('x');
+        }
+        $this->assertContains($first, session('form_tokens.x'));
+        for ($i = 0; $i < 20; $i++) {
+            \App\Support\FormToken::issue('x');
+        }
+        $this->assertCount(50, session('form_tokens.x'));
+        $this->assertNotContains($first, session('form_tokens.x'));
+    }
 }

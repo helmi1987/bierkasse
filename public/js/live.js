@@ -10,7 +10,7 @@
  *    visible, the cheap fingerprint is fetched. Only when it differs from the shown page's
  *    (data-live-fp), or every 5 minutes, the current URL is fetched again (header X-Live-Refresh) and
  *    the changed direct children of <main> plus the top navigation (badges) are swapped in.
- *    A child is never swapped while a field in it has focus or was changed (dirty), while one of its
+ *    A child is never swapped while a field in it has focus or was changed by the user (dirty), while one of its
  *    forms is being sent or a sortable list has unsaved changes; the open state of <details> and the
  *    scroll position are kept. Flash messages (data-live-keep) stay as they are.
  */
@@ -92,8 +92,17 @@
 
     // Server HTML of each main child as last rendered (form tokens masked), to swap only what changed.
     // Captured before app.js runs (this script comes first), so it is still the server's markup.
-    function normalize(html) {
-        return html.replace(/(name="(?:form_token|_token)"[^>]*value=")[^"]*"/g, '$1"');
+    // Masking is done on a DOM clone, so it does not depend on the attribute order in the markup.
+    var TOKEN_SELECTOR = 'input[name="form_token"], input[name="_token"]';
+
+    function normalize(el, inner) {
+        var copy = el.cloneNode(true);
+        var inputs = Array.prototype.slice.call(copy.querySelectorAll(TOKEN_SELECTOR));
+        if (copy.matches && copy.matches(TOKEN_SELECTOR)) {
+            inputs.push(copy);
+        }
+        inputs.forEach(function (input) { input.setAttribute('value', ''); });
+        return inner ? copy.innerHTML : copy.outerHTML;
     }
 
     function isKeep(el) {
@@ -104,20 +113,30 @@
         return Array.prototype.filter.call(root.children, function (el) { return !isKeep(el); });
     }
 
-    var serverHtml = contentChildren(main).map(function (el) { return normalize(el.outerHTML); });
+    var serverHtml = contentChildren(main).map(function (el) { return normalize(el); });
 
-    function isDirty(field) {
+    // Dirty = the user typed/changed something (real input events only). Values that scripts put into
+    // fields (e.g. amount suggestions) do not count. Cleared when the form is sent or reset.
+    var FIELD_SELECTOR = 'input, textarea, select';
+
+    document.addEventListener('input', markDirty, true);
+    document.addEventListener('change', markDirty, true);
+    document.addEventListener('reset', function (e) {
+        if (e.target && e.target.querySelectorAll) {
+            e.target.querySelectorAll('[data-live-dirty]').forEach(function (f) { f.removeAttribute('data-live-dirty'); });
+        }
+    }, true);
+
+    function markDirty(e) {
+        var field = e.target;
+        if (!e.isTrusted || !field || !field.matches || !field.matches(FIELD_SELECTOR)) {
+            return;
+        }
         var type = (field.type || '').toLowerCase();
-        if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'reset' || type === 'file' && !field.value) {
-            return false;
+        if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'reset') {
+            return;
         }
-        if (type === 'checkbox' || type === 'radio') {
-            return field.checked !== field.defaultChecked;
-        }
-        if (field.tagName === 'SELECT') {
-            return Array.prototype.some.call(field.options, function (o) { return o.selected !== o.defaultSelected; });
-        }
-        return field.value !== field.defaultValue;
+        field.setAttribute('data-live-dirty', '');
     }
 
     function isBlocked(el) {
@@ -125,10 +144,7 @@
         if (active && active !== body && el.contains(active) && active.matches('input, textarea, select, [contenteditable]')) {
             return true;
         }
-        if (el.querySelector('form[data-submitted], [data-live-dirty]') || el.matches('[data-live-dirty]')) {
-            return true;
-        }
-        return Array.prototype.some.call(el.querySelectorAll('input, textarea, select'), isDirty);
+        return !!el.querySelector('form[data-submitted], [data-live-dirty]') || el.matches('[data-live-dirty]');
     }
 
     // Key of a <details>: its summary text (plus the n-th occurrence of that text).
@@ -144,18 +160,30 @@
         return keys;
     }
 
-    // Same number of forms: copy the fresh form tokens (and CSRF token) into a part that is not swapped,
-    // so its forms stay valid even when older single-use tokens drop out of the session.
+    // Copy the fresh form tokens (and CSRF token) into a part that is not swapped, so its forms stay valid
+    // even when older single-use tokens drop out of the session. Forms are matched by identity (method +
+    // action + n-th occurrence of that pair); a form without a counterpart is left untouched.
+    function formKeys(root) {
+        var forms = root.matches('form') ? [root] : Array.prototype.slice.call(root.querySelectorAll('form'));
+        var seen = {};
+        return forms.map(function (form) {
+            var base = (form.getAttribute('method') || 'get').toLowerCase() + '|' + (form.getAttribute('action') || '');
+            seen[base] = (seen[base] || 0) + 1;
+            return { form: form, key: base + '#' + seen[base] };
+        });
+    }
+
     function syncTokens(oldEl, newEl) {
-        var oldForms = oldEl.matches('form') ? [oldEl] : Array.prototype.slice.call(oldEl.querySelectorAll('form'));
-        var newForms = newEl.matches('form') ? [newEl] : Array.prototype.slice.call(newEl.querySelectorAll('form'));
-        if (oldForms.length !== newForms.length) {
-            return;
-        }
-        oldForms.forEach(function (form, i) {
+        var fresh = {};
+        formKeys(newEl).forEach(function (f) { fresh[f.key] = f.form; });
+        formKeys(oldEl).forEach(function (f) {
+            var other = fresh[f.key];
+            if (!other) {
+                return;
+            }
             ['form_token', '_token'].forEach(function (name) {
-                var a = form.querySelector('input[name="' + name + '"]');
-                var b = newForms[i].querySelector('input[name="' + name + '"]');
+                var a = f.form.querySelector('input[name="' + name + '"]');
+                var b = other.querySelector('input[name="' + name + '"]');
                 if (a && b) {
                     a.value = b.value;
                     a.defaultValue = b.value;
@@ -197,13 +225,13 @@
         // Top navigation (Kassier/Backend badges); it holds no user input.
         var oldNav = document.querySelector('.topbar nav');
         var newNav = doc.querySelector('.topbar nav');
-        if (oldNav && newNav && normalize(oldNav.innerHTML) !== normalize(newNav.innerHTML) && !isBlocked(oldNav)) {
+        if (oldNav && newNav && normalize(oldNav, true) !== normalize(newNav, true) && !isBlocked(oldNav)) {
             oldNav.parentNode.replaceChild(document.importNode(newNav, true), oldNav);
         }
 
         var oldKids = contentChildren(main);
         var newKids = contentChildren(newMain);
-        var newHtml = newKids.map(function (el) { return normalize(el.outerHTML); });
+        var newHtml = newKids.map(function (el) { return normalize(el); });
         var sameShape = oldKids.length === newKids.length && oldKids.every(function (el, i) {
             return el.tagName === newKids[i].tagName;
         });

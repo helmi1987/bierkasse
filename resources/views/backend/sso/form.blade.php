@@ -2,6 +2,9 @@
 
 @section('title', $provider->exists ? __('sso.edit_title', ['name' => $provider->name]) : __('sso.new'))
 
+{{-- Secret entry form: never re-rendered live. --}}
+@section('live_off', '1')
+
 @section('content')
 @include('partials.backend-nav')
 @php($type = old('type', $provider->type ?: 'oidc'))

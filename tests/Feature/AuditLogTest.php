@@ -9,6 +9,7 @@ use App\Services\Audit;
 use App\Services\DatabaseBackup;
 use App\Services\Ledger;
 use App\Support\AppSettings;
+use App\Support\AuditPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use LogicException;
@@ -235,7 +236,7 @@ class AuditLogTest extends TestCase
         $this->get('/backend/protokoll?to=2000-01-01')->assertOk()->assertSee(__('audit.none'));
 
         $entry = AuditLog::query()->where('action', 'user.role')->sole();
-        $this->get("/backend/protokoll/{$entry->id}")->assertOk()->assertSee('&quot;admin&quot;', false)->assertSee($entry->hash);
+        $this->get("/backend/protokoll/{$entry->id}")->assertOk()->assertSee('<td>admin</td>', false)->assertSee($entry->hash);
 
         $csv = $this->get('/backend/protokoll/export?action=user')->assertOk()->streamedContent();
         $this->assertStringContainsString('user.role', $csv);
@@ -243,5 +244,106 @@ class AuditLogTest extends TestCase
 
         // No route changes or deletes entries.
         $this->delete("/backend/protokoll/{$entry->id}")->assertStatus(405);
+    }
+
+    public function test_list_shows_german_labels_subject_names_and_summary(): void
+    {
+        $admin = $this->admin(['username' => 'chef']);
+        $target = $this->user(['username' => 'hans', 'first_name' => 'Hans', 'last_name' => 'Muster']);
+        Audit::log('user.role', $target, ['role' => 'user'], ['role' => 'kassier'], $admin);
+        $tx = Ledger::reportDeposit($target, 1250, 'cash');
+        Audit::log('custom.unknown', null, [], ['foo' => 'bar'], $admin);
+
+        $this->actingAs($admin);
+        $this->get('/backend/protokoll')->assertOk()
+            ->assertSee(__('audit.details'))
+            ->assertSee('Rolle geändert')->assertSee('<code>user.role</code>', false)
+            ->assertSee('Rolle: user → kassier')
+            ->assertSee('hans (Hans Muster)')
+            ->assertSee('Einzahlung gemeldet')
+            ->assertSee('Einzahlung CHF 12.50 · hans (Hans Muster)')
+            ->assertSee('CHF 12.50')
+            // Unknown code: raw code as label.
+            ->assertSee('<code>custom.unknown</code>', false)
+            // Filter dropdown: German label, the code stays the value.
+            ->assertSee('<option value="deposit" >Einzahlung</option>', false)
+            ->assertSee('<option value="user" >Benutzer</option>', false);
+        $this->assertNotNull($tx->id);
+    }
+
+    public function test_list_loads_subjects_in_batches(): void
+    {
+        $admin = $this->admin();
+        foreach (range(1, 20) as $i) {
+            $u = $this->user();
+            Audit::log('user.role', $u, ['role' => 'user'], ['role' => 'kassier'], $admin);
+        }
+
+        $this->actingAs($admin);
+        DB::enableQueryLog();
+        $this->get('/backend/protokoll')->assertOk();
+        $userQueries = array_filter(DB::getQueryLog(), fn ($q) => str_contains($q['query'], 'from "users" where "users"."id" in'));
+        $this->assertGreaterThanOrEqual(1, count($userQueries));
+        $this->assertLessThanOrEqual(2, count($userQueries));
+    }
+
+    public function test_unknown_subject_falls_back_to_type_and_id(): void
+    {
+        $admin = $this->admin();
+        $gone = $this->user();
+        Audit::log('user.status', $gone, ['status' => 'active'], ['status' => 'left'], $admin);
+        DB::table('users')->where('id', $gone->id)->delete();
+        Audit::log('feedback.delete', null, ['user_id' => 999999, 'type' => 'idea'], [], $admin);
+        $row = AuditLog::query()->latest('id')->first();
+
+        $this->actingAs($admin);
+        $this->get('/backend/protokoll')->assertOk()->assertSee('Benutzer #'.$gone->id);
+        $this->get("/backend/protokoll/{$row->id}")->assertOk()
+            ->assertSee('Feedback gelöscht')
+            ->assertSee('gelöschter Benutzer #999999');
+    }
+
+    public function test_detail_formats_values(): void
+    {
+        $admin = $this->admin(['username' => 'chef', 'first_name' => null, 'last_name' => null]);
+        $user = $this->user(['username' => 'hans', 'first_name' => null, 'last_name' => null]);
+        Audit::log('settings.update', null, [
+            'beer_price' => 150, 'gifts_enabled' => false, 'app_name' => null, 'deposit_suggestions' => [1000, 2000],
+        ], [
+            'beer_price' => 200, 'gifts_enabled' => true, 'app_name' => 'Kasse', 'deposit_suggestions' => [500],
+            'registration_password' => 'geheim', 'twint_recipients' => [['name' => 'Anna', 'phone' => '079']],
+        ], $admin);
+        $settings = AuditLog::query()->latest('id')->first();
+        Audit::log('deposit.confirm', null, ['status' => 'pending', 'confirmed_by' => null, 'user_id' => $user->id], [
+            'status' => 'confirmed', 'confirmed_by' => $admin->id, 'confirmed_at' => '2026-10-24T10:05:00.000000Z', 'user_id' => $user->id,
+        ], $admin);
+        $deposit = AuditLog::query()->latest('id')->first();
+
+        $this->actingAs($admin);
+        $this->get("/backend/protokoll/{$settings->id}")->assertOk()
+            ->assertSee('Einstellungen geändert')->assertSee('<code>settings.update</code>', false)
+            ->assertSee('Bierpreis')->assertSee('<td>CHF 1.50</td>', false)->assertSee('<td>CHF 2.00</td>', false)
+            ->assertSee('<td>nein</td>', false)->assertSee('<td>ja</td>', false)
+            ->assertSee('<td>–</td>', false)
+            ->assertSee('CHF 10.00, CHF 20.00')
+            ->assertSee(__('audit.masked'))->assertDontSee('geheim</td>', false)
+            ->assertSee('name: Anna, phone: 079');
+
+        $this->get("/backend/protokoll/{$deposit->id}")->assertOk()
+            ->assertSee('Bestätigt von')->assertSee('<td>chef</td>', false)
+            ->assertSee('<td>hans</td>', false)
+            // UTC 10:05 → Zurich 12:05 (summer time).
+            ->assertSee('24.10.2026 12:05');
+    }
+
+    public function test_presenter_summary_is_limited(): void
+    {
+        $admin = $this->admin();
+        Audit::log('settings.update', null, [], ['maintenance_message' => str_repeat('x', 200)], $admin);
+        $entry = AuditLog::query()->latest('id')->first();
+
+        $summary = AuditPresenter::for([$entry])->summary($entry);
+        $this->assertLessThanOrEqual(AuditPresenter::SUMMARY_MAX + 3, mb_strlen($summary));
+        $this->assertStringStartsWith('Wartungs-Mitteilung: xxx', $summary);
     }
 }

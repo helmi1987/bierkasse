@@ -33,8 +33,8 @@
                             {{ __('feedback.from', ['user' => __('feedback.deleted_user')]) }}
                         @endif
                         <span class="feedback-message">{{ $item->message }}</span>
-                        @if ($item->page)
-                            <small class="muted">{{ __('feedback.page', ['page' => $item->page]) }}</small>
+                        @if ($item->page || $item->app_version !== null)
+                            <small class="muted">@if ($item->page){{ __('feedback.page', ['page' => $item->page]) }}@endif @if ($item->page && $item->app_version !== null)·@endif @if ($item->app_version !== null){{ __('feedback.version', ['version' => $item->app_version]) }}@endif</small>
                         @endif
                     </span>
                     <span class="row-buttons feedback-actions">

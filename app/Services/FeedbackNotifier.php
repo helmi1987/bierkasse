@@ -68,6 +68,9 @@ class FeedbackNotifier
                 __('feedback.mail_wants_reply') => $feedback->wants_reply ? __('feedback.yes') : __('feedback.no'),
                 __('feedback.mail_time') => local_time($feedback->created_at),
             ];
+            if ($feedback->app_version !== null) {
+                $rows[__('feedback.mail_version')] = $feedback->app_version;
+            }
 
             MailSettings::apply();
         } catch (Throwable $e) {

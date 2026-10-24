@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Services\Audit;
+use App\Support\AuditPresenter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,9 +23,12 @@ class AuditController extends Controller
     public function index(Request $request): View
     {
         $filters = $this->filters($request);
+        $entries = $this->query($filters)->with('actor')->orderByDesc('id')->paginate(50)->withQueryString();
 
         return view('backend.audit.index', [
-            'entries' => $this->query($filters)->with('actor')->orderByDesc('id')->paginate(50)->withQueryString(),
+            'entries' => $entries,
+            // Subjects and referenced users of this page, loaded in batches (no query per row).
+            'presenter' => AuditPresenter::for($entries->items()),
             'filters' => $filters,
             'actors' => AuditLog::query()->whereNotNull('actor_ref')->select('actor_ref', DB::raw('MAX(actor_name) as actor_name'))
                 ->groupBy('actor_ref')->orderBy('actor_name')->get(),
@@ -35,7 +39,7 @@ class AuditController extends Controller
 
     public function show(AuditLog $entry): View
     {
-        return view('backend.audit.show', ['entry' => $entry->load('actor')]);
+        return view('backend.audit.show', ['entry' => $entry->load('actor'), 'presenter' => AuditPresenter::for([$entry])]);
     }
 
     /** Checks the whole hash chain and reports the first broken entry. */

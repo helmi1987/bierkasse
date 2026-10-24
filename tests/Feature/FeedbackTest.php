@@ -7,6 +7,7 @@ use App\Models\Feedback;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\AppSettings;
+use App\Support\SystemInfo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -295,5 +296,30 @@ class FeedbackTest extends TestCase
         // Mode "admins" needs no addresses.
         $this->put('/backend/feedback/empfaenger', ['recipient_mode' => 'admins', 'recipients' => ''])
             ->assertSessionHasNoErrors();
+    }
+
+    public function test_app_version_is_stored_shown_and_mailed(): void
+    {
+        Mail::fake();
+        $admin = $this->admin(['email' => 'a@example.org']);
+        $version = SystemInfo::appVersion()['version'];
+
+        $this->submit($this->user(), ['page' => '/konto'])->assertSessionHas('status');
+
+        $feedback = Feedback::query()->sole();
+        $this->assertSame($version, $feedback->app_version);
+        Mail::assertSent(KassierNotice::class, fn (KassierNotice $m) => $m->rows['App-Version'] === $version);
+
+        $this->actingAs($admin);
+        $this->get('/backend/feedback')->assertOk()->assertSee('Seite: /konto')->assertSee('Version: '.$version);
+    }
+
+    public function test_feedback_without_version_shows_no_version(): void
+    {
+        $admin = $this->admin();
+        Feedback::query()->create(['user_id' => $admin->id, 'type' => 'idea', 'message' => 'Alte Meldung ohne Version']);
+
+        $this->actingAs($admin);
+        $this->get('/backend/feedback')->assertOk()->assertSee('Alte Meldung ohne Version')->assertDontSee('Version: ');
     }
 }

@@ -17,6 +17,13 @@ class AppSettings
 
     public const APP_NAME = 'app_name';
 
+    /** Copyright text in the page footer; unset = DEFAULT_COPYRIGHT, empty = hidden. */
+    public const COPYRIGHT = 'copyright';
+
+    public const DEFAULT_COPYRIGHT = '© 2026 Stefan Diethelm';
+
+    public const COPYRIGHT_MAX = 100;
+
     /** Old single TWINT number/name, replaced by TWINT_RECIPIENTS (still read as fallback). */
     public const TWINT_PHONE = 'twint_phone';
 
@@ -141,6 +148,14 @@ class AppSettings
         $name = trim((string) self::get(self::APP_NAME, ''));
 
         return $name !== '' ? $name : (string) config('app.name', 'Bierkasse');
+    }
+
+    /** Footer copyright text; default when never saved, '' = hidden. */
+    public static function copyright(): string
+    {
+        $value = self::get(self::COPYRIGHT);
+
+        return $value === null ? self::DEFAULT_COPYRIGHT : trim((string) $value);
     }
 
     /**

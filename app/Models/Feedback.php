@@ -26,7 +26,7 @@ class Feedback extends Model
 
     protected $table = 'feedback';
 
-    protected $fillable = ['user_id', 'type', 'message', 'wants_reply', 'page', 'user_agent', 'read_at'];
+    protected $fillable = ['user_id', 'type', 'message', 'wants_reply', 'page', 'user_agent', 'app_version', 'read_at'];
 
     protected function casts(): array
     {

@@ -78,6 +78,8 @@ img { max-width: 100%; height: auto; }
 .main.narrow { max-width: 460px; }
 .muted { color: var(--muted); }
 .hint { color: var(--muted); font-size: .875rem; margin-top: .25rem; }
+/* Page footer (app name, version, copyright): small and muted, wraps on narrow screens. */
+.site-footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: -2rem; padding-bottom: 1rem; overflow-wrap: anywhere; }
 .center { text-align: center; }
 .lead { font-size: 1.1rem; }
 .inline { display: inline; }
@@ -344,7 +346,7 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .print-sheet .url { word-break: break-all; font-size: .9rem; color: #6b6152; }
 @media print {
     :root { color-scheme: light; }
-    .topbar, .no-print, .skip-link, .install-hint, .alert { display: none !important; }
+    .topbar, .no-print, .skip-link, .install-hint, .alert, .site-footer { display: none !important; }
     body { background: #fff; color: #1f1a14; }
     .print-sheet { border: 0; }
 }

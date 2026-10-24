@@ -382,7 +382,9 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   Bestätigung" darunter) und "Meine Buchungen & Statistik" (Kennzahlen, Diagramm, letzte Buchungen) sind je eine Karte.
 - Fusszeile auf allen Seiten (auch Anmeldung, Gäste-Seiten): "<App-Name> v<Version> · <Copyright> · Datenschutz ·
   Nutzungsbestimmungen" (Links). Version aus `VERSION`;
-  Copyright in den Einstellungen (max. 100 Zeichen, Text), Standard "© 2026 Stefan Diethelm", leer = ohne Copyright.
+  Copyright in den Einstellungen (max. 100 Zeichen, Text), Standard "© {jahr} Stefan Diethelm", leer = ohne Copyright.
+  Platzhalter: `{jahr}` = aktuelles Jahr, `{startjahr}` = Jahr der Installation (**Annahme**: Jahr des ersten Kontos, ohne Konto
+  aktuelles Jahr); "{startjahr}–{jahr}" zeigt bei gleichen Jahren nur ein Jahr. Gespeicherte Texte werden nicht migriert.
   Nicht im Druck.
 - Datenschutz und Nutzungsbestimmungen (Entscheid 2026-10-24): zwei getrennte Texte, öffentlich unter `/datenschutz` und
   `/nutzungsbestimmungen` (abgemeldet und angemeldet, auch im Wartungsmodus und ohne Zustimmung), oben "Stand: <Datum>".

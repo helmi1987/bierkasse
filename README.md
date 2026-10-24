@@ -381,7 +381,7 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     wenn das Datum vom Stand abweicht.
   - Update-Hinweis (`privacy_notice_at`/`terms_notice_at`, UTC; nur bei "Als Update anzeigen" und bei der automatischen
     Meldung, nicht bei "Erneut zustimmen"): angemeldete Benutzer sehen oben auf jeder Seite (unter der Kopfzeile, nicht im
-    Druck, nicht auf `/zustimmung`) "Die Nutzungsbestimmungen wurden am <Datum> aktualisiert. [Ansehen] [OK]". OK =
+    Druck, nicht auf `/zustimmung`, der Hinweis zu einem Text nicht auf dessen eigener Seite) "Die Nutzungsbestimmungen wurden am <Datum> aktualisiert. [Ansehen] [OK]". OK =
     `POST /rechtliches/{privacy|terms}/gelesen` (CSRF, ohne JS, kein Audit) setzt `users.privacy_notice_seen_at`/
     `terms_notice_seen_at`. Sichtbar, solange `seen_at` fehlt oder älter als der Hinweis ist. Registrierung und Zustimmung
     setzen beide `seen_at` auf jetzt (neue Konten sehen alte Hinweise nicht). Der Hinweis ist serverseitig im Layout

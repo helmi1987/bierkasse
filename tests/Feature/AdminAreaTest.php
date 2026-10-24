@@ -31,6 +31,9 @@ class AdminAreaTest extends TestCase
         $this->get('/backend')->assertStatus(301)->assertRedirect(url('/admin'));
         $this->get('/backend/kasse?tab=vorschlaege&x=1')->assertStatus(301)->assertRedirect(url('/admin/kasse').'?tab=vorschlaege&x=1');
         $this->get('/backend/benutzer/5')->assertStatus(301)->assertRedirect(url('/admin/benutzer/5'));
+        // Decoded control characters, "?" and "#" stay encoded in the target path.
+        $this->get('/backend/%0d%0aX')->assertStatus(301)->assertRedirect(url('/admin/%0D%0AX'));
+        $this->get('/backend/a%3Fb%23c?x=1')->assertStatus(301)->assertRedirect(url('/admin/a%3Fb%23c').'?x=1');
 
         $this->actingAs($this->kassier());
         $this->followingRedirects()->get('/backend/runden')->assertOk()->assertSee('data-testid="bookings-rounds"', false);

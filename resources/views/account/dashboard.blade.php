@@ -22,11 +22,17 @@
 </section>
 
 @foreach ($giftsReceived as $gift)
-    <div class="alert ok round-notice" data-testid="gift-notice">🎁 {{ trans_choice('gift.notice', $gift->quantity, ['count' => $gift->quantity, 'giver' => $gift->giftParent?->user?->displayName() ?? '?']) }}@if ($gift->note) – {{ $gift->note }}@endif</div>
+    <div class="alert ok round-notice" data-testid="gift-notice">
+        <span>🎁 {{ trans_choice('gift.notice', $gift->quantity, ['count' => $gift->quantity, 'giver' => $gift->giftParent?->user?->displayName() ?? '?']) }}@if ($gift->note) – {{ $gift->note }}@endif</span>
+        @include('account.notice-dismiss', ['transaction' => $gift])
+    </div>
 @endforeach
 @foreach ($roundsReceived as $round)
     {{-- A colleague paid the user a beer in the last days ("Runde spendieren"). --}}
-    <div class="alert ok round-notice" data-testid="round-notice">🍺 {{ __('round.notice', ['giver' => $round->user?->displayName() ?? '?']) }}@if ($round->note) – {{ $round->note }}@endif</div>
+    <div class="alert ok round-notice" data-testid="round-notice">
+        <span>🍺 {{ __('round.notice', ['giver' => $round->user?->displayName() ?? '?']) }}@if ($round->note) – {{ $round->note }}@endif</span>
+        @include('account.notice-dismiss', ['transaction' => $round])
+    </div>
 @endforeach
 
 @if ($pending->where('type', 'payout')->isNotEmpty())
@@ -78,6 +84,11 @@
     </section>
 @endif
 
+@if ($colleagues->isNotEmpty() && ($rounds || $gifts) && $pending->where('type', 'payout')->isEmpty())
+    {{-- Shared by the pin buttons of both colleague lists (form="favorites-form", formaction per colleague). --}}
+    <form method="post" action="{{ route('account.dashboard') }}" id="favorites-form" data-favorites>@csrf</form>
+@endif
+
 @if ($rounds && $pending->where('type', 'payout')->isEmpty())
     {{-- Round for colleagues (one beer each) and beers without a name, paid by the user. --}}
     {{-- Inline @php only: a @php block here would swallow the inline @php() above it. --}}
@@ -102,8 +113,9 @@
                         <input type="search" id="round-filter" placeholder="{{ __('round.filter') }}" autocomplete="off" data-round-filter hidden>
                         <ul class="round-list">
                             @foreach ($colleagues as $colleague)
-                                <li data-name="{{ mb_strtolower($colleague->displayName().' '.$colleague->username) }}">
+                                <li data-name="{{ mb_strtolower($colleague->displayName().' '.$colleague->username) }}" data-pos="{{ $colleague->sort_pos }}" data-user="{{ $colleague->id }}" @class(['is-fav' => $colleague->is_favorite])>
                                     <label class="check"><input type="checkbox" name="recipients[]" value="{{ $colleague->id }}" @checked(in_array($colleague->id, $roundOld, true))> <span>{{ $colleague->displayName() }}</span></label>
+                                    @include('account.pin-button', ['colleague' => $colleague])
                                 </li>
                             @endforeach
                         </ul>
@@ -172,8 +184,9 @@
                         <input type="search" id="gift-filter" placeholder="{{ __('gift.filter') }}" autocomplete="off" data-round-filter hidden>
                         <ul class="round-list">
                             @foreach ($colleagues as $colleague)
-                                <li data-name="{{ mb_strtolower($colleague->displayName().' '.$colleague->username) }}">
+                                <li data-name="{{ mb_strtolower($colleague->displayName().' '.$colleague->username) }}" data-pos="{{ $colleague->sort_pos }}" data-user="{{ $colleague->id }}" @class(['is-fav' => $colleague->is_favorite])>
                                     <label class="check"><input type="checkbox" name="gift_recipients[]" value="{{ $colleague->id }}" @checked(in_array($colleague->id, $giftOld, true))> <span>{{ $colleague->displayName() }}</span></label>
+                                    @include('account.pin-button', ['colleague' => $colleague])
                                 </li>
                             @endforeach
                         </ul>
@@ -275,110 +288,12 @@
     </section>
 @endif
 
-<div class="grid-2">
-    <section class="card">
-        <details @if ($errors->hasAny(['amount', 'method', 'note']) || old('amount')) open @endif>
-        <summary><h2>{{ __('account.deposit_heading') }}</h2></summary>
-        <p class="muted">{{ __('account.deposit_intro') }}</p>
-        <form method="post" action="{{ route('account.deposit') }}" class="stack">
-            @csrf
-            {!! \App\Support\FormToken::field('deposit') !!}
-            @if ($suggestions)
-                <div class="field">
-                    <span class="label">{{ __('account.suggestions') }}</span>
-                    <div class="suggestions">
-                        @foreach ($suggestions as $s)
-                            <button type="button" class="suggestion" data-fill="#amount" data-value="{{ \App\Support\Money::plain($s['amount']) }}">
-                                @include('partials.beer-amount', ['s' => $s])
-                            </button>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
-            <div class="field">
-                <label for="amount">{{ __('account.amount') }}</label>
-                <input type="text" id="amount" name="amount" inputmode="decimal" value="{{ old('amount', $suggested ? \App\Support\Money::plain($suggested['amount']) : '') }}" required
-                    data-beers="#amount-beers" data-price="{{ $price }}" data-debt="{{ max(0, -$balance) }}"
-                    data-text="{{ __('account.amount_beers') }}" data-text-debt="{{ __('account.amount_beers_debt') }}">
-                <small class="muted" id="amount-beers" aria-live="polite"></small>
-            </div>
-            <fieldset class="segmented">
-                <legend>{{ __('account.method') }}</legend>
-                @foreach (\App\Models\Transaction::METHODS as $method)
-                    <label><input type="radio" name="method" value="{{ $method }}" @checked(old('method', $twintEnabled ? 'twint' : 'cash') === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
-                @endforeach
-            </fieldset>
-            <div class="field">
-                <label for="note">{{ __('account.note') }}</label>
-                <input type="text" id="note" name="note" maxlength="200" value="{{ old('note') }}">
-            </div>
-            <button type="submit" class="btn">{{ __('account.deposit_submit') }}</button>
-        </form>
-        </details>
-        @if ($pending->isNotEmpty())
-            <h3>{{ __('account.pending_heading') }}</h3>
-            @if ($pending->where('type', \App\Models\Transaction::TYPE_DEPOSIT)->isNotEmpty())
-                <p class="hint">{{ __('account.pending_tap_hint') }}</p>
-            @endif
-            <ul class="list">
-                @foreach ($pending as $tx)
-                    @if ($tx->type === \App\Models\Transaction::TYPE_DEPOSIT)
-                        {{-- Tap to change or withdraw the own report while it is pending. --}}
-                        <li class="pending-edit">
-                            <details>
-                                <summary>
-                                    <span>{{ local_time($tx->created_at) }} · {{ __('ledger.type.'.$tx->type) }} · {{ __('ledger.method.'.$tx->method) }}@if ($tx->edited_at) · <span class="muted">{{ __('account.deposit_edited') }}</span>@endif</span>
-                                    <strong>{{ chf($tx->amount) }}</strong>
-                                </summary>
-                                <form method="post" action="{{ route('account.deposit.update', $tx) }}" class="stack">
-                                    @csrf
-                                    @method('PUT')
-                                    @if ($suggestions)
-                                        <div class="suggestions">
-                                            @foreach ($suggestions as $s)
-                                                <button type="button" class="suggestion" data-fill="#amount-{{ $tx->id }}" data-value="{{ \App\Support\Money::plain($s['amount']) }}">
-                                                    @include('partials.beer-amount', ['s' => $s])
-                                                </button>
-                                            @endforeach
-                                        </div>
-                                    @endif
-                                    <div class="field">
-                                        <label for="amount-{{ $tx->id }}">{{ __('account.amount') }}</label>
-                                        <input type="text" id="amount-{{ $tx->id }}" name="amount" inputmode="decimal" value="{{ \App\Support\Money::plain($tx->amount) }}" required
-                                            data-beers="#amount-beers-{{ $tx->id }}" data-price="{{ $price }}" data-debt="{{ max(0, -$balance) }}"
-                                            data-text="{{ __('account.amount_beers') }}" data-text-debt="{{ __('account.amount_beers_debt') }}">
-                                        <small class="muted" id="amount-beers-{{ $tx->id }}" aria-live="polite"></small>
-                                    </div>
-                                    <fieldset class="segmented">
-                                        <legend>{{ __('account.method') }}</legend>
-                                        @foreach (\App\Models\Transaction::METHODS as $method)
-                                            <label><input type="radio" name="method" value="{{ $method }}" @checked($tx->method === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
-                                        @endforeach
-                                    </fieldset>
-                                    <button type="submit" class="btn">{{ __('account.deposit_update') }}</button>
-                                </form>
-                                <form method="post" action="{{ route('account.deposit.cancel', $tx) }}" data-confirm="{{ __('account.deposit_cancel_confirm') }}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn ghost danger-text">{{ __('account.deposit_cancel') }}</button>
-                                </form>
-                            </details>
-                        </li>
-                    @else
-                        <li>
-                            <span>{{ local_time($tx->created_at) }} · {{ __('ledger.type.'.$tx->type) }}@if ($tx->method) · {{ __('ledger.method.'.$tx->method) }}@endif</span>
-                            <strong>{{ $tx->type === \App\Models\Transaction::TYPE_CARRYOVER ? chf($tx->amount) : chf(abs($tx->amount)) }}</strong>
-                        </li>
-                    @endif
-                @endforeach
-            </ul>
-        @endif
-    </section>
-
+<section class="card" data-testid="deposit">
+    <details @if ($errors->hasAny(['amount', 'method', 'note']) || old('amount')) open @endif>
+    <summary><h2>{{ __('account.deposit_heading') }}</h2></summary>
     @if ($twintEnabled)
-        <section class="card twint">
-            <details>
-            <summary><h2>{{ __('account.twint_heading') }}</h2></summary>
+        {{-- TWINT recipients and number: pay first, then report below. --}}
+        <div class="twint">
             @if ($suggested)
                 <p class="lead">{!! __('account.twint_send_amount', ['amount' => e(chf($suggested['amount'])), 'name' => $twintHtml]) !!}</p>
                 <p class="muted">{{ trans_choice('account.suggestion_beers', $suggested['beers'], ['count' => $suggested['beers']]) }}@if ($suggested['debt'] > 0) · {{ __('account.suggestion_debt') }}@endif · {{ __('account.twint_then_report') }}</p>
@@ -387,14 +302,107 @@
                 <p class="muted">{{ __('account.twint_then_report') }}</p>
             @endif
             @include('partials.twint-number')
-            </details>
-        </section>
+        </div>
     @endif
-</div>
+    <p class="muted">{{ __('account.deposit_intro') }}</p>
+    <form method="post" action="{{ route('account.deposit') }}" class="stack">
+        @csrf
+        {!! \App\Support\FormToken::field('deposit') !!}
+        @if ($suggestions)
+            <div class="field">
+                <span class="label">{{ __('account.suggestions') }}</span>
+                <div class="suggestions">
+                    @foreach ($suggestions as $s)
+                        <button type="button" class="suggestion" data-fill="#amount" data-value="{{ \App\Support\Money::plain($s['amount']) }}">
+                            @include('partials.beer-amount', ['s' => $s])
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+        <div class="field">
+            <label for="amount">{{ __('account.amount') }}</label>
+            <input type="text" id="amount" name="amount" inputmode="decimal" value="{{ old('amount', $suggested ? \App\Support\Money::plain($suggested['amount']) : '') }}" required
+                data-beers="#amount-beers" data-price="{{ $price }}" data-debt="{{ max(0, -$balance) }}"
+                data-text="{{ __('account.amount_beers') }}" data-text-debt="{{ __('account.amount_beers_debt') }}">
+            <small class="muted" id="amount-beers" aria-live="polite"></small>
+        </div>
+        <fieldset class="segmented">
+            <legend>{{ __('account.method') }}</legend>
+            @foreach (\App\Models\Transaction::METHODS as $method)
+                <label><input type="radio" name="method" value="{{ $method }}" @checked(old('method', $twintEnabled ? 'twint' : 'cash') === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
+            @endforeach
+        </fieldset>
+        <div class="field">
+            <label for="note">{{ __('account.note') }}</label>
+            <input type="text" id="note" name="note" maxlength="200" value="{{ old('note') }}">
+        </div>
+        <button type="submit" class="btn">{{ __('account.deposit_submit') }}</button>
+    </form>
+    </details>
+    @if ($pending->isNotEmpty())
+        <h3>{{ __('account.pending_heading') }}</h3>
+        @if ($pending->where('type', \App\Models\Transaction::TYPE_DEPOSIT)->isNotEmpty())
+            <p class="hint">{{ __('account.pending_tap_hint') }}</p>
+        @endif
+        <ul class="list">
+            @foreach ($pending as $tx)
+                @if ($tx->type === \App\Models\Transaction::TYPE_DEPOSIT)
+                    {{-- Tap to change or withdraw the own report while it is pending. --}}
+                    <li class="pending-edit">
+                        <details>
+                            <summary>
+                                <span>{{ local_time($tx->created_at) }} · {{ __('ledger.type.'.$tx->type) }} · {{ __('ledger.method.'.$tx->method) }}@if ($tx->edited_at) · <span class="muted">{{ __('account.deposit_edited') }}</span>@endif</span>
+                                <strong>{{ chf($tx->amount) }}</strong>
+                            </summary>
+                            <form method="post" action="{{ route('account.deposit.update', $tx) }}" class="stack">
+                                @csrf
+                                @method('PUT')
+                                @if ($suggestions)
+                                    <div class="suggestions">
+                                        @foreach ($suggestions as $s)
+                                            <button type="button" class="suggestion" data-fill="#amount-{{ $tx->id }}" data-value="{{ \App\Support\Money::plain($s['amount']) }}">
+                                                @include('partials.beer-amount', ['s' => $s])
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                <div class="field">
+                                    <label for="amount-{{ $tx->id }}">{{ __('account.amount') }}</label>
+                                    <input type="text" id="amount-{{ $tx->id }}" name="amount" inputmode="decimal" value="{{ \App\Support\Money::plain($tx->amount) }}" required
+                                        data-beers="#amount-beers-{{ $tx->id }}" data-price="{{ $price }}" data-debt="{{ max(0, -$balance) }}"
+                                        data-text="{{ __('account.amount_beers') }}" data-text-debt="{{ __('account.amount_beers_debt') }}">
+                                    <small class="muted" id="amount-beers-{{ $tx->id }}" aria-live="polite"></small>
+                                </div>
+                                <fieldset class="segmented">
+                                    <legend>{{ __('account.method') }}</legend>
+                                    @foreach (\App\Models\Transaction::METHODS as $method)
+                                        <label><input type="radio" name="method" value="{{ $method }}" @checked($tx->method === $method)> <span>{{ __('ledger.method.'.$method) }}</span></label>
+                                    @endforeach
+                                </fieldset>
+                                <button type="submit" class="btn">{{ __('account.deposit_update') }}</button>
+                            </form>
+                            <form method="post" action="{{ route('account.deposit.cancel', $tx) }}" data-confirm="{{ __('account.deposit_cancel_confirm') }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn ghost danger-text">{{ __('account.deposit_cancel') }}</button>
+                            </form>
+                        </details>
+                    </li>
+                @else
+                    <li>
+                        <span>{{ local_time($tx->created_at) }} · {{ __('ledger.type.'.$tx->type) }}@if ($tx->method) · {{ __('ledger.method.'.$tx->method) }}@endif</span>
+                        <strong>{{ $tx->type === \App\Models\Transaction::TYPE_CARRYOVER ? chf($tx->amount) : chf(abs($tx->amount)) }}</strong>
+                    </li>
+                @endif
+            @endforeach
+        </ul>
+    @endif
+</section>
 
-<section class="card">
+<section class="card" data-testid="bookings">
     <details>
-    <summary><h2>{{ __('account.my_stats') }}</h2></summary>
+    <summary><h2>{{ __('account.bookings_stats') }}</h2></summary>
     <div class="kpis">
         <div class="kpi"><span>{{ __('account.total_beers') }}</span><strong>{{ $stats['total_beers'] }}</strong></div>
         <div class="kpi"><span>{{ __('account.total_amount') }}</span><strong>{{ chf($stats['total_amount']) }}</strong></div>
@@ -410,14 +418,11 @@
         @endif
     </div>
     {!! $chart !!}
-    </details>
-</section>
-
-<section class="card">
-    <details>
-    <summary><h2>{{ __('account.recent') }}</h2></summary>
-    @include('account.tx-list', ['transactions' => $recent])
-    <p><a href="{{ route('account.history') }}">{{ __('account.history') }} →</a></p>
+    {{-- Latest bookings below the statistics (no own card since 1.14). --}}
+    <div class="card-sep">
+        @include('account.tx-list', ['transactions' => $recent])
+        <p><a href="{{ route('account.history') }}">{{ __('account.history') }} →</a></p>
+    </div>
     </details>
 </section>
 

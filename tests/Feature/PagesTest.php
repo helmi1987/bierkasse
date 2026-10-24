@@ -23,6 +23,15 @@ class PagesTest extends TestCase
         $this->assertSame([512, 512], array_slice(getimagesize(public_path('icon-512.png')), 0, 2));
     }
 
+    public function test_manifest_short_name_is_the_full_app_name(): void
+    {
+        config(['app.installed' => false, 'app.name' => 'Bierkasse LUKS']);
+
+        $this->get('/manifest.webmanifest')->assertOk()
+            ->assertJsonPath('name', 'Bierkasse LUKS')
+            ->assertJsonPath('short_name', 'Bierkasse LUKS');
+    }
+
     public function test_install_hint_is_on_login_and_account_pages(): void
     {
         $this->get('/')->assertOk()->assertSee('data-install-hint', false)->assertSee('als App installieren');

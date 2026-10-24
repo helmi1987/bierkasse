@@ -22,8 +22,8 @@ class Rounds
 
     public const MESSAGE_MAX = 140;
 
-    /** Recipients see rounds of the last days on their dashboard. */
-    public const NOTICE_DAYS = 7;
+    /** Recipients see rounds of the last day on their dashboard (until dismissed). */
+    public const NOTICE_DAYS = 1;
 
     public const NOTICE_MAX = 3;
 
@@ -53,7 +53,7 @@ class Rounds
     }
 
     /**
-     * Rounds the user got a beer from in the last NOTICE_DAYS days (newest first).
+     * Rounds the user got a beer from in the last NOTICE_DAYS days, not dismissed (newest first).
      *
      * @return Collection<int, Transaction>
      */
@@ -61,6 +61,7 @@ class Rounds
     {
         return Transaction::query()->with('user')->confirmed()->where('type', Transaction::TYPE_ROUND)
             ->where('created_at', '>', now()->subDays(self::NOTICE_DAYS))
+            ->whereNotIn('id', NoticeDismissals::query($user))
             ->where('user_id', '!=', $user->id) // own beer in an own round ("inkl. mir")
             ->whereHas('roundItems', fn ($q) => $q->where('user_id', $user->id))
             ->latest('id')->limit(self::NOTICE_MAX)->get();

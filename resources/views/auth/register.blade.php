@@ -67,7 +67,7 @@
             <label for="password_confirmation">{{ __('register.password_confirmation') }}</label>
             <input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password" minlength="8" required>
         </div>
-        <details class="carryover" @if (old('carryover_value') || $errors->has('carryover_value')) open @endif>
+        <details class="carryover" open>
             <summary>{{ __('register.carryover') }}</summary>
             <div class="stack">
                 <p class="hint">{{ __('register.carryover_intro') }}</p>

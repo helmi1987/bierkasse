@@ -19,13 +19,13 @@ class Gifts
 
     public const MESSAGE_MAX = 140;
 
-    /** Recipients see gifts of the last days on their dashboard. */
-    public const NOTICE_DAYS = 7;
+    /** Recipients see gifts of the last day on their dashboard (until dismissed). */
+    public const NOTICE_DAYS = 1;
 
     public const NOTICE_MAX = 3;
 
     /**
-     * Gifts the user received in the last NOTICE_DAYS days (recipient rows, newest first).
+     * Gifts the user received in the last NOTICE_DAYS days, not dismissed (recipient rows, newest first).
      *
      * @return Collection<int, Transaction>
      */
@@ -34,6 +34,7 @@ class Gifts
         return Transaction::query()->with('giftParent.user')->confirmed()->where('type', Transaction::TYPE_GIFT)
             ->where('user_id', $user->id)->whereNotNull('parent_id')
             ->where('created_at', '>', now()->subDays(self::NOTICE_DAYS))
+            ->whereNotIn('id', NoticeDismissals::query($user))
             ->latest('id')->limit(self::NOTICE_MAX)->get();
     }
 

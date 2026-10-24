@@ -70,6 +70,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/konto/gast/{sale}/rueckgaengig', [AccountController::class, 'undoGuest'])->whereNumber('sale')->name('account.guest.undo');
             Route::post('/konto/runde', [AccountController::class, 'round'])->middleware('throttle:20,1')->name('account.round');
             Route::post('/konto/verschenken', [AccountController::class, 'gift'])->middleware('throttle:20,1')->name('account.gift');
+            Route::post('/konto/hinweis/{transaction}', [AccountController::class, 'dismissNotice'])->whereNumber('transaction')->middleware('throttle:60,1')->name('account.notice.dismiss');
+            Route::post('/konto/favorit/{colleague}', [AccountController::class, 'toggleFavorite'])->whereNumber('colleague')->middleware('throttle:60,1')->name('account.favorite');
             Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
             Route::put('/konto/einzahlung/{transaction}', [AccountController::class, 'updateDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.update');
             Route::delete('/konto/einzahlung/{transaction}', [AccountController::class, 'cancelDeposit'])->whereNumber('transaction')->middleware('throttle:20,1')->name('account.deposit.cancel');

@@ -34,6 +34,8 @@ return [
     'required_if' => ':attribute muss ausgefüllt sein.',
     'date_format' => ':attribute hat ein ungültiges Format.',
 
+    'username_reserved' => 'Dieser Benutzername ist reserviert.',
+
     'attributes' => [
         'token' => 'Setup-Token',
         'registration_mode' => 'Registrierungsmodus',
@@ -81,6 +83,7 @@ return [
         'app_name' => 'App-Name',
         'twint.*.phone' => 'TWINT-Nummer',
         'twint.*.name' => 'TWINT-Name',
+        'twint_message' => 'TWINT-Mitteilung',
         'registration_password' => 'Registrierungspasswort',
         'mail_transport' => 'Versandart',
         'mail_from_address' => 'Absender-Adresse',

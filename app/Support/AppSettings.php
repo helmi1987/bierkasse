@@ -70,6 +70,13 @@ class AppSettings
     /** TWINT on/off; unset = on when a number is configured (installs before the switch). */
     public const TWINT_ENABLED = 'twint_enabled';
 
+    /** Text for the TWINT message field ("Mitteilung"); unset/empty = DEFAULT_TWINT_MESSAGE. */
+    public const TWINT_MESSAGE = 'twint_message';
+
+    public const DEFAULT_TWINT_MESSAGE = '{appname}: Einzahlung von Username: {username}';
+
+    public const TWINT_MESSAGE_MAX = 140;
+
     /** Old on/off switch, replaced by REGISTRATION_MODE (only read by the migration). */
     public const LEGACY_REGISTRATION_ENABLED = 'registration_enabled';
 
@@ -302,6 +309,20 @@ class AppSettings
         $last = array_pop($parts);
 
         return $parts === [] ? (string) $last : implode(', ', $parts).' '.__('account.twint_or').' '.$last;
+    }
+
+    /** TWINT message as stored ('' = default). */
+    public static function twintMessageTemplate(): string
+    {
+        return trim((string) self::get(self::TWINT_MESSAGE, ''));
+    }
+
+    /** TWINT message for a payment by $username: {appname} = app name, {username} = $username. */
+    public static function twintMessage(string $username): string
+    {
+        $template = self::twintMessageTemplate();
+
+        return str_replace(['{appname}', '{username}'], [self::appName(), $username], $template !== '' ? $template : self::DEFAULT_TWINT_MESSAGE);
     }
 
     public static function registrationPassword(): string

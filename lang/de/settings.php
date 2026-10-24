@@ -22,6 +22,8 @@ return [
     'twint_name' => 'Name Kassier',
     'twint_enabled' => 'TWINT aktiv',
     'twint_hint' => 'Ein Eintrag pro Kassier. Name aus der Liste (Kassiere und Admins) wählen oder frei eingeben. Ohne Nummer sehen Benutzer nur den Namen. Zum Entfernen Name und Nummer leeren.',
+    'twint_message' => 'TWINT-Mitteilung',
+    'twint_message_hint' => 'Text, den Benutzer und Gäste beim Bezahlen ins Feld «Mitteilung» der TWINT-App kopieren. Platzhalter: {appname} = App-Name, {username} = Benutzername (Gäste: gast). Leer = Standard: :default',
     'twint_missing' => 'Für TWINT mindestens einen Eintrag mit Name oder Nummer angeben.',
     'registration' => 'Registrierung',
     'registration_mode' => 'Registrierungsmodus',

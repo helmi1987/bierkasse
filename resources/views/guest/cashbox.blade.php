@@ -30,6 +30,7 @@
     @if ($method === 'twint')
         <p>{!! __('guest.twint_to', ['name' => $twintHtml]) !!}</p>
         @include('partials.twint-number')
+        @include('partials.twint-message', ['username' => \App\Support\UserRules::GUEST_USERNAME])
     @endif
     <button class="btn primary big" type="submit">{{ __('guest.cashbox_submit_'.$method) }}</button>
     {{-- Login page; logged-in users are redirected from there to their account. --}}

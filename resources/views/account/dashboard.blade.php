@@ -303,6 +303,7 @@
                 <p class="muted">{{ __('account.twint_then_report') }}</p>
             @endif
             @include('partials.twint-number')
+            @include('partials.twint-message', ['username' => auth()->user()->username])
         </div>
     @endif
     <p class="muted">{{ __('account.deposit_intro') }}</p>

@@ -46,6 +46,7 @@
     @if ($twintEnabled)
         <p>{!! __('guest.twint_to', ['name' => $twintHtml]) !!}</p>
         @include('partials.twint-number')
+        @include('partials.twint-message', ['username' => \App\Support\UserRules::GUEST_USERNAME])
         <p class="hint">{{ __('guest.twint_hint') }}</p>
     @endif
     <button class="btn primary big" type="submit">{{ __('guest.submit') }}</button>

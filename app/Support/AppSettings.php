@@ -22,7 +22,7 @@ class AppSettings
     /** Copyright text in the page footer; unset = DEFAULT_COPYRIGHT, empty = hidden. */
     public const COPYRIGHT = 'copyright';
 
-    public const DEFAULT_COPYRIGHT = '© {jahr} Stefan Diethelm';
+    public const DEFAULT_COPYRIGHT = '© {startjahr}–{jahr} Stefan Diethelm';
 
     public const COPYRIGHT_MAX = 100;
 

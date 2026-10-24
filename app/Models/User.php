@@ -61,6 +61,8 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'left_at' => 'datetime',
             'consent_accepted_at' => 'datetime',
+            'privacy_notice_seen_at' => 'datetime',
+            'terms_notice_seen_at' => 'datetime',
             'locked_at' => 'datetime',
             'totp_secret' => 'encrypted',
             'totp_confirmed_at' => 'datetime',

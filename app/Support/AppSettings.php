@@ -46,6 +46,15 @@ class AppSettings
 
     public const TERMS_VERSION = 'terms_version';
 
+    /** "Last changed" (UTC) and "update notice" (UTC, users see a dismissible banner) per legal text. */
+    public const PRIVACY_CHANGED = 'privacy_changed_at';
+
+    public const PRIVACY_NOTICE = 'privacy_notice_at';
+
+    public const TERMS_CHANGED = 'terms_changed_at';
+
+    public const TERMS_NOTICE = 'terms_notice_at';
+
     /** Old single TWINT number/name, replaced by TWINT_RECIPIENTS (still read as fallback). */
     public const TWINT_PHONE = 'twint_phone';
 

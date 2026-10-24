@@ -35,6 +35,24 @@ class LegalTexts
 
     private const VERSION_KEYS = [self::PRIVACY => AppSettings::PRIVACY_VERSION, self::TERMS => AppSettings::TERMS_VERSION];
 
+    /** How a change of a text is announced (settings form). AUTO = update notice if the text changed, else silent. */
+    public const MODE_AUTO = 'auto';
+
+    public const MODE_SILENT = 'silent';
+
+    public const MODE_UPDATE = 'update';
+
+    public const MODE_REACCEPT = 'reaccept';
+
+    public const MODES = [self::MODE_AUTO, self::MODE_SILENT, self::MODE_UPDATE, self::MODE_REACCEPT];
+
+    /** Placeholders that come from app settings (a change of the setting changes the text for users). */
+    public const SETTING_PLACEHOLDERS = ['{bierpreis}', '{limit}', '{undo_minuten}'];
+
+    private const CHANGED_KEYS = [self::PRIVACY => AppSettings::PRIVACY_CHANGED, self::TERMS => AppSettings::TERMS_CHANGED];
+
+    private const NOTICE_KEYS = [self::PRIVACY => AppSettings::PRIVACY_NOTICE, self::TERMS => AppSettings::TERMS_NOTICE];
+
     public static function textKey(string $kind): string
     {
         return self::TEXT_KEYS[$kind];
@@ -65,6 +83,98 @@ class LegalTexts
         $stored = AppSettings::get(self::VERSION_KEYS[$kind]);
 
         return is_string($stored) && $stored !== '' ? $stored : self::DEFAULT_VERSION;
+    }
+
+    public static function changedKey(string $kind): string
+    {
+        return self::CHANGED_KEYS[$kind];
+    }
+
+    public static function noticeKey(string $kind): string
+    {
+        return self::NOTICE_KEYS[$kind];
+    }
+
+    /** Users column with the time the notice of a text was dismissed. */
+    public static function seenColumn(string $kind): string
+    {
+        return $kind.'_notice_seen_at';
+    }
+
+    /** "Last changed" (UTC string) or null. */
+    public static function changedAt(string $kind): ?string
+    {
+        $v = AppSettings::get(self::CHANGED_KEYS[$kind]);
+
+        return is_string($v) && $v !== '' ? $v : null;
+    }
+
+    /** Time (UTC string) an update notice was published or null. */
+    public static function noticeAt(string $kind): ?string
+    {
+        $v = AppSettings::get(self::NOTICE_KEYS[$kind]);
+
+        return is_string($v) && $v !== '' ? $v : null;
+    }
+
+    /** The text uses a placeholder filled from app settings (price, limit, undo minutes). */
+    public static function usesSettingPlaceholders(string $kind): bool
+    {
+        $text = self::text($kind);
+        foreach (self::SETTING_PLACEHOLDERS as $placeholder) {
+            if (str_contains($text, $placeholder)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Settings to store when a setting used in the texts changed (price, limit, undo minutes):
+     * "last changed" and update notice of every text that uses such a placeholder.
+     *
+     * @return array<string, string>
+     */
+    public static function settingChangeValues(): array
+    {
+        $now = self::newVersion();
+        $values = [];
+        foreach (self::KINDS as $kind) {
+            if (self::usesSettingPlaceholders($kind)) {
+                $values[self::CHANGED_KEYS[$kind]] = $now;
+                $values[self::NOTICE_KEYS[$kind]] = $now;
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * Kinds with an update notice this user has not dismissed yet (with the notice date).
+     *
+     * @return array<string, string> kind => "d.m.Y"
+     */
+    public static function pendingNotices(User $user): array
+    {
+        $pending = [];
+        foreach (self::KINDS as $kind) {
+            $notice = self::noticeAt($kind);
+            if ($notice === null) {
+                continue;
+            }
+            try {
+                $at = Carbon::parse($notice, 'UTC');
+            } catch (Throwable) {
+                continue;
+            }
+            $seen = $user->{self::seenColumn($kind)};
+            if ($seen === null || $seen->getTimestamp() < $at->getTimestamp()) {
+                $pending[$kind] = self::versionDate($notice);
+            }
+        }
+
+        return $pending;
     }
 
     /** New version for a forced re-acceptance (now, UTC). */
@@ -176,7 +286,9 @@ class LegalTexts
     /**
      * Attributes that record the consent to both current versions now.
      *
-     * @return array{privacy_accepted_version: string, terms_accepted_version: string, consent_accepted_at: Carbon}
+     * Also marks both update notices as seen (the user just read the texts).
+     *
+     * @return array<string, mixed>
      */
     public static function consentAttributes(): array
     {
@@ -184,6 +296,8 @@ class LegalTexts
             'privacy_accepted_version' => self::version(self::PRIVACY),
             'terms_accepted_version' => self::version(self::TERMS),
             'consent_accepted_at' => now(),
+            self::seenColumn(self::PRIVACY) => now(),
+            self::seenColumn(self::TERMS) => now(),
         ];
     }
 

@@ -371,9 +371,25 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     (Standard-Limit, z. B. "CHF 0.00"), `{undo_minuten}` (Rückgängig-Minuten "Bier abstreichen").
   - Darstellung (`App\Support\LegalTexts`): reiner Text, alles wird escaped (kein HTML). Leerzeile = neuer Absatz,
     Zeilenumbruch bleibt, Zeilen mit "- " = Liste, Zeilen wie "1. Titel" = Überschrift, eine einzelne erste Zeile = Seitentitel.
-  - Version pro Text (`privacy_version`/`terms_version`, UTC, Standard `2026-10-24 00:00:00`). Beim Speichern pro Text
-    "Alle Benutzer müssen erneut zustimmen": angehakt = neuer Stand (jetzt), alle müssen erneut zustimmen; nicht
-    angehakt = redaktionelle Änderung, Stand bleibt (gilt auch für Name/E-Mail/Standort).
+  - Version pro Text (`privacy_version`/`terms_version`, UTC, Standard `2026-10-24 00:00:00`) = "Stand". Beim Speichern
+    pro Text eine Auswahl "Meldung an die Benutzer" (Entscheid 2026-10-24, v1.18.0): "Automatisch" (Standard: Update, wenn
+    der Text geändert wurde, sonst ohne Meldung; nur Name/E-Mail/Standort = ohne Meldung), "Ohne Meldung" (nur
+    "Zuletzt geändert"), "Als Update anzeigen" (Hinweis, kein Zwang), "Erneut zustimmen" (neuer Stand, Zustimmungs-Sperre).
+    Kein JS: die Vorwahl "Automatisch" wird serverseitig aufgelöst.
+  - "Zuletzt geändert" (`privacy_changed_at`/`terms_changed_at`, UTC): gesetzt bei jeder Textänderung, bei Update/Erneut
+    zustimmen und bei automatischer Meldung (unten). Öffentliche Seite: "Stand: <Datum>" plus " · Zuletzt geändert: <Datum>",
+    wenn das Datum vom Stand abweicht.
+  - Update-Hinweis (`privacy_notice_at`/`terms_notice_at`, UTC; nur bei "Als Update anzeigen" und bei der automatischen
+    Meldung, nicht bei "Erneut zustimmen"): angemeldete Benutzer sehen oben auf jeder Seite (unter der Kopfzeile, nicht im
+    Druck, nicht auf `/zustimmung`) "Die Nutzungsbestimmungen wurden am <Datum> aktualisiert. [Ansehen] [OK]". OK =
+    `POST /rechtliches/{privacy|terms}/gelesen` (CSRF, ohne JS, kein Audit) setzt `users.privacy_notice_seen_at`/
+    `terms_notice_seen_at`. Sichtbar, solange `seen_at` fehlt oder älter als der Hinweis ist. Registrierung und Zustimmung
+    setzen beide `seen_at` auf jetzt (neue Konten sehen alte Hinweise nicht). Der Hinweis ist serverseitig im Layout
+    (`main`), Live-Refresh ersetzt ihn mit der Seite.
+  - Automatische Meldung: Ändert ein Admin Bierpreis, Standard-Limit oder Rückgängig-Minuten "Bier abstreichen" (nur bei
+    echter Änderung), setzen alle Texte, die {bierpreis}/{limit}/{undo_minuten} enthalten (Standard: nur die
+    Nutzungsbestimmungen), "Zuletzt geändert" und den Update-Hinweis. Audit `legal.update` (Schlüssel) plus `legal.mode`
+    (gewählter Modus pro Text, nur wenn nicht "Ohne Meldung").
   - Registrierung: eine Pflicht-Checkbox "Ich akzeptiere die Nutzungsbestimmungen und die Datenschutzerklärung" (beide
     verlinkt, neuer Tab); ohne: "Bitte Nutzungsbestimmungen und Datenschutzerklärung akzeptieren", kein Konto (zählt
     wie andere Formularfehler fürs Rate-Limit). Gespeichert: `users.privacy_accepted_version`,

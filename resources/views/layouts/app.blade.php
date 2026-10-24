@@ -87,6 +87,18 @@
         </div>
     @endif
     @include('partials.install-hint')
+    @if ($authUser && ! request()->routeIs('consent.*'))
+        @foreach (\App\Support\LegalTexts::pendingNotices($authUser) as $noticeKind => $noticeDate)
+            <div class="alert ok legal-notice no-print" role="status" data-testid="legal-notice-{{ $noticeKind }}">
+                <span>{{ __('legal.notice_'.$noticeKind, ['date' => $noticeDate]) }}</span>
+                <a href="{{ route($noticeKind === 'privacy' ? 'legal.privacy' : 'legal.terms') }}">{{ __('legal.notice_view') }}</a>
+                <form method="post" action="{{ route('legal.notice.dismiss', $noticeKind) }}" class="inline">
+                    @csrf
+                    <button type="submit" class="btn small">{{ __('legal.notice_ok') }}</button>
+                </form>
+            </div>
+        @endforeach
+    @endif
     @if ($authUser?->isKassier() && (string) $authUser->email === '')
         <div class="alert warn" role="alert">{{ __('account.email_missing') }} <a href="{{ route('account.settings') }}">{{ __('account.email_missing_link') }}</a></div>
     @endif

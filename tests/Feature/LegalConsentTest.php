@@ -48,6 +48,8 @@ class LegalConsentTest extends TestCase
             'legal_location' => 'Schweiz',
             'privacy_text' => LegalTexts::defaultText(LegalTexts::PRIVACY),
             'terms_text' => LegalTexts::defaultText(LegalTexts::TERMS),
+            'privacy_mode' => 'auto',
+            'terms_mode' => 'auto',
         ], $overrides);
     }
 
@@ -216,7 +218,7 @@ class LegalConsentTest extends TestCase
 
         $this->put('/backend/einstellungen/rechtliches', $this->legalForm([
             'terms_text' => "Nutzungsbestimmungen\n\n1. Neu\nGanz neue Regeln.",
-            'terms_reaccept' => '1',
+            'terms_mode' => 'reaccept',
         ]))->assertSessionHasNoErrors()->assertSessionHas('status', __('legal.saved_reaccept'));
 
         $this->assertNotSame(LegalTexts::DEFAULT_VERSION, LegalTexts::version(LegalTexts::TERMS));
@@ -243,6 +245,7 @@ class LegalConsentTest extends TestCase
         $this->put('/backend/einstellungen/rechtliches', $this->legalForm([
             'legal_email' => 'kasse@example.org',
             'privacy_text' => "Datenschutzerklärung\n\nTippfehler korrigiert, {email}.",
+            'privacy_mode' => 'silent',
         ]))->assertSessionHasNoErrors()->assertSessionHas('status', __('legal.saved'));
 
         $this->assertSame(LegalTexts::DEFAULT_VERSION, LegalTexts::version(LegalTexts::PRIVACY));
@@ -256,7 +259,7 @@ class LegalConsentTest extends TestCase
     {
         $this->actingAs($this->admin());
         $this->put('/backend/einstellungen/rechtliches', $this->legalForm(['legal_email' => '']))->assertSessionHasErrors('legal_email');
-        $this->get('/backend/einstellungen')->assertOk()->assertSee(__('legal.reaccept'));
+        $this->get('/backend/einstellungen')->assertOk()->assertSee(__('legal.mode_reaccept'));
 
         $this->actingAs($this->kassier());
         $this->put('/backend/einstellungen/rechtliches', $this->legalForm())->assertForbidden();

@@ -39,6 +39,18 @@
         });
     });
 
+    // Selects the whole text of an element (manual copy fallback).
+    function selectText(el) {
+        var selection = window.getSelection();
+        if (!selection) {
+            return;
+        }
+        var range = document.createRange();
+        range.selectNodeContents(el);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+
     // Elements in root (root itself included) matching the selector.
     function all(root, selector) {
         var list = Array.prototype.slice.call(root.querySelectorAll(selector));
@@ -245,19 +257,30 @@
         });
 
         // Copy buttons: data-copy="#selector" (text of that element) or data-copy-text="value".
+        // Without clipboard access (or when writing fails) the source element is selected for manual copying.
         all(root, '[data-copy], [data-copy-text]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var source = btn.dataset.copy ? document.querySelector(btn.dataset.copy) : null;
                 var text = btn.dataset.copyText || (source ? source.textContent.trim() : '');
-                if (!text || !navigator.clipboard) {
+                var fallback = function () { if (source) { selectText(source); } };
+                if (!text) {
+                    return;
+                }
+                if (!navigator.clipboard) {
+                    fallback();
                     return;
                 }
                 navigator.clipboard.writeText(text).then(function () {
                     var label = btn.textContent;
                     btn.textContent = btn.dataset.copied || '✓';
                     window.setTimeout(function () { btn.textContent = label; }, 1500);
-                });
+                }, fallback);
             });
+        });
+
+        // Text that is selected completely on tap (e.g. the TWINT message), for manual copying.
+        all(root, '[data-select-all]').forEach(function (el) {
+            el.addEventListener('click', function () { selectText(el); });
         });
 
         // Share buttons: data-share="#selector" (URL as text content). Native share sheet where available,

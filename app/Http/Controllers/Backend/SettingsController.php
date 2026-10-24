@@ -39,6 +39,7 @@ class SettingsController extends Controller
             'undoMinutes' => array_map(fn (string $kind) => AppSettings::undoMinutes($kind), array_combine(array_keys(AppSettings::UNDO_DEFAULTS), array_keys(AppSettings::UNDO_DEFAULTS))),
             'twintRecipients' => AppSettings::twintRecipients(),
             'twintEnabled' => AppSettings::twintSwitch(),
+            'twintMessage' => AppSettings::twintMessageTemplate(),
             // Proposals for the name; free text stays possible (datalist).
             'twintNames' => User::query()->whereIn('role', [User::ROLE_ADMIN, User::ROLE_KASSIER])
                 ->where('status', User::STATUS_ACTIVE)->orderBy('first_name')->orderBy('last_name')->get()
@@ -178,6 +179,7 @@ class SettingsController extends Controller
             'twint' => ['nullable', 'array', 'max:'.AppSettings::TWINT_MAX],
             'twint.*.name' => ['nullable', 'string', 'max:100'],
             'twint.*.phone' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+ ()\/-]*$/'],
+            'twint_message' => ['nullable', 'string', 'max:'.AppSettings::TWINT_MESSAGE_MAX],
             'registration_mode' => ['required', Rule::in(AppSettings::REGISTRATION_MODES)],
             'registration_password' => ['nullable', 'string', 'min:4', 'max:100'],
             'mail_transport' => ['required', Rule::in(AppSettings::MAIL_TRANSPORTS)],
@@ -229,6 +231,7 @@ class SettingsController extends Controller
             AppSettings::UNDO_MINUTES => array_map(fn (string $kind) => (int) ($data['undo_minutes'][$kind] ?? AppSettings::undoMinutes($kind)), array_combine(array_keys(AppSettings::UNDO_DEFAULTS), array_keys(AppSettings::UNDO_DEFAULTS))),
             AppSettings::TWINT_RECIPIENTS => $twint,
             AppSettings::TWINT_ENABLED => $request->boolean('twint_enabled'),
+            AppSettings::TWINT_MESSAGE => trim((string) ($data['twint_message'] ?? '')),
             AppSettings::REGISTRATION_MODE => $data['registration_mode'],
             AppSettings::REGISTRATION_PASSWORD => (string) ($data['registration_password'] ?? ''),
             AppSettings::NOTIFY_KASSIER => $request->boolean('notify_kassier'),

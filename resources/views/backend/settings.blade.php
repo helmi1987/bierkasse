@@ -75,6 +75,11 @@
                 <option value="{{ $name }}">
             @endforeach
         </datalist>
+        <div class="field">
+            <label for="twint_message">{{ __('settings.twint_message') }}</label>
+            <input type="text" id="twint_message" name="twint_message" value="{{ old('twint_message', $twintMessage) }}" maxlength="{{ \App\Support\AppSettings::TWINT_MESSAGE_MAX }}" placeholder="{{ \App\Support\AppSettings::DEFAULT_TWINT_MESSAGE }}" autocomplete="off">
+            <div class="hint">{{ __('settings.twint_message_hint', ['default' => \App\Support\AppSettings::DEFAULT_TWINT_MESSAGE]) }}</div>
+        </div>
     </section>
 
     <section class="card stack">

@@ -284,6 +284,7 @@ return [
         'rounds_enabled' => 'Runde spendieren aktiv',
         'stock_minimum' => 'Mindestbestand',
         'twint_enabled' => 'TWINT aktiv',
+        'twint_message' => 'TWINT-Mitteilung',
         'twint_recipients' => 'TWINT-Empfänger',
         'undo_minutes.consume' => 'Rückgängig-Frist Bier (Min.)',
         'undo_minutes.gift' => 'Rückgängig-Frist Geschenk (Min.)',

@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Closure;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -13,12 +15,28 @@ class UserRules
 
     public const PASSWORD_MIN = 8;
 
+    /** Name used for guest payments (e.g. in the TWINT message); no account may take it. */
+    public const GUEST_USERNAME = 'gast';
+
+    /** User names no account may take (compared case-insensitively). */
+    public const RESERVED_USERNAMES = [self::GUEST_USERNAME];
+
     /**
      * @return list<mixed>
      */
     public static function username(?int $ignoreId = null): array
     {
-        return ['required', 'string', 'min:3', 'max:32', 'regex:'.self::USERNAME_PATTERN, Rule::unique('users', 'username')->ignore($ignoreId)];
+        return ['required', 'string', 'min:3', 'max:32', 'regex:'.self::USERNAME_PATTERN, self::notReserved(), Rule::unique('users', 'username')->ignore($ignoreId)];
+    }
+
+    /** Rejects the reserved user names (RESERVED_USERNAMES), regardless of case. */
+    public static function notReserved(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) {
+            if (in_array(Str::lower(trim((string) $value)), self::RESERVED_USERNAMES, true)) {
+                $fail(__('validation.username_reserved'));
+            }
+        };
     }
 
     /**

@@ -12,6 +12,7 @@
         @if ($twintEnabled)
             <p class="lead">{!! __('guest.thanks_twint', ['amount' => e(chf($sale['amount'])), 'phone' => $twintHtml]) !!}</p>
             @include('partials.twint-number')
+            @include('partials.twint-message', ['username' => \App\Support\UserRules::GUEST_USERNAME])
         @else
             <p class="lead">{{ __('guest.thanks_twint_noname', ['amount' => chf($sale['amount'])]) }}</p>
         @endif

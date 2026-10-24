@@ -46,6 +46,8 @@ return [
     'copy_number' => 'Nummer kopieren',
     'copy_number_of' => 'Nummer :name kopieren',
     'copied' => 'Kopiert',
+    'twint_message' => 'Mitteilung für TWINT',
+    'twint_message_hint' => 'Kopieren und in der TWINT-App ins Feld «Mitteilung» einfügen.',
     'invite_link' => 'Jemand Neues einladen',
     'invite_title' => 'Jemand Neues einladen',
     'invite_flyer_title' => 'Flyer-QR zeigen (mehrfach gültig)',

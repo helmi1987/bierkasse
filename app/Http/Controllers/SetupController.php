@@ -62,7 +62,7 @@ class SetupController extends Controller
             'database' => ['required', 'string', 'max:500'],
             'username' => [$server, 'nullable', 'string', 'max:255'],
             'password' => ['nullable', 'string', 'max:255'],
-            'admin_username' => ['required', 'string', 'regex:'.UserRules::USERNAME_PATTERN],
+            'admin_username' => ['required', 'string', 'regex:'.UserRules::USERNAME_PATTERN, UserRules::notReserved()],
             'admin_first_name' => ['nullable', 'string', 'max:100'],
             'admin_last_name' => ['nullable', 'string', 'max:100'],
             'admin_email' => ['required', 'email', 'max:255'],

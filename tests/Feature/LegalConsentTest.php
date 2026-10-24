@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
+use App\Models\Feedback;
 use App\Models\Setting;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Support\AppSettings;
 use App\Support\LegalTexts;
@@ -25,6 +27,16 @@ class LegalConsentTest extends TestCase
     {
         return array_merge([
             'code' => 'durst', 'username' => 'neu.user', 'password' => 'password-123', 'password_confirmation' => 'password-123',
+        ], $overrides);
+    }
+
+    /** Consent form as shown: checkbox plus the displayed versions. */
+    private function accept(array $overrides = []): array
+    {
+        return array_merge([
+            'consent' => '1',
+            'privacy_version' => LegalTexts::version(LegalTexts::PRIVACY),
+            'terms_version' => LegalTexts::version(LegalTexts::TERMS),
         ], $overrides);
     }
 
@@ -115,7 +127,13 @@ class LegalConsentTest extends TestCase
         $this->get('/konto')->assertRedirect(route('consent.show'));
         $this->get('/statistik')->assertRedirect(route('consent.show'));
         $this->post('/konto/bier', ['quantity' => 1])->assertRedirect(route('consent.show'));
+        $this->post('/konto/feedback', ['type' => 'feedback', 'message' => 'Hallo Welt'])->assertRedirect(route('consent.show'));
+        $this->assertSame(0, Feedback::query()->count());
+        $this->assertSame(0, Transaction::query()->count());
         $this->get('/live', ['X-Live-Refresh' => '1'])->assertRedirect(route('consent.show'));
+        $this->getJson('/live', ['X-Live-Refresh' => '1'])->assertRedirect(route('consent.show'));
+        // Live/POST requests do not become the page to return to (still the last page view).
+        $this->assertSame(route('stats'), session('url.intended'));
         // Public pages stay reachable.
         $this->get('/datenschutz')->assertOk();
         $this->get('/nutzungsbestimmungen')->assertOk();
@@ -127,13 +145,33 @@ class LegalConsentTest extends TestCase
         $this->assertTrue($user->fresh()->needsConsent());
 
         $this->get('/statistik');
-        $this->post('/zustimmung', ['consent' => '1'])->assertRedirect(route('stats'));
+        $this->post('/zustimmung', $this->accept())->assertRedirect(route('stats'));
         $fresh = $user->fresh();
         $this->assertFalse($fresh->needsConsent());
         $this->assertNotNull($fresh->consent_accepted_at);
         $this->assertTrue(AuditLog::query()->where('action', 'consent.accept')->where('subject_id', $user->id)->exists());
         $this->get('/konto')->assertOk();
         $this->get('/zustimmung')->assertRedirect(route('account.dashboard'));
+    }
+
+    public function test_accept_with_outdated_versions_is_refused(): void
+    {
+        $user = User::factory()->withoutConsent()->create();
+        $this->actingAs($user);
+        $this->get('/zustimmung')->assertOk()
+            ->assertSee('name="terms_version" value="'.LegalTexts::DEFAULT_VERSION.'"', false);
+
+        // An admin forces a new terms version while the page is open.
+        Setting::put(AppSettings::TERMS_VERSION, '2026-10-24 12:00:00');
+
+        $this->post('/zustimmung', $this->accept(['terms_version' => LegalTexts::DEFAULT_VERSION]))
+            ->assertRedirect(route('consent.show'))
+            ->assertSessionHas('warning', 'Die Texte wurden geändert, bitte erneut lesen.');
+        $this->assertNull($user->fresh()->consent_accepted_at);
+        $this->assertFalse(AuditLog::query()->where('action', 'consent.accept')->exists());
+
+        $this->post('/zustimmung', $this->accept())->assertRedirect();
+        $this->assertSame('2026-10-24 12:00:00', $user->fresh()->terms_accepted_version);
     }
 
     public function test_admin_and_admin_only_accounts_are_gated_too(): void
@@ -143,7 +181,7 @@ class LegalConsentTest extends TestCase
         $this->actingAs($admin);
 
         $this->get('/backend')->assertRedirect(route('consent.show'));
-        $this->post('/zustimmung', ['consent' => '1'])->assertRedirect(route('backend.dashboard'));
+        $this->post('/zustimmung', $this->accept())->assertRedirect(route('backend.dashboard'));
         $this->get('/backend')->assertOk();
     }
 
@@ -191,7 +229,7 @@ class LegalConsentTest extends TestCase
         $this->actingAs($user);
         $this->get('/konto')->assertRedirect(route('consent.show'));
         $this->get('/zustimmung')->assertOk()->assertSee(__('legal.consent_renewal'));
-        $this->post('/zustimmung', ['consent' => '1']);
+        $this->post('/zustimmung', $this->accept());
         $this->assertSame(LegalTexts::version(LegalTexts::TERMS), $user->fresh()->terms_accepted_version);
         $this->get('/konto')->assertOk();
     }

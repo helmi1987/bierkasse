@@ -99,29 +99,39 @@ class UserController extends Controller
     {
         $this->guardAdminTarget($request, $user);
         abort_if($user->id === $request->user()->id, 403);
-        // A locked account is unlocked (or deactivated after unlocking) via its own actions.
-        if ($user->isLocked()) {
-            return back()->with('error', __('users.status_locked'));
-        }
-
         $active = $request->boolean('active');
 
-        if (! $active) {
-            // Money first: an account with a balance or open items leaves via the leave flow
-            // or after a correction, never silently.
-            $pending = Transaction::query()->where('user_id', $user->id)->pending()->exists();
-            if ($user->balance() !== 0 || $pending) {
-                return back()->with('error', __('users.deactivate_blocked'));
+        $error = DB::transaction(function () use ($user, $active) {
+            // Active admins first (by id), then the target: two admins deactivating each other serialise here.
+            $activeAdmins = self::lockActiveAdmins();
+            $fresh = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            // A locked account is unlocked (or deactivated after unlocking) via its own actions.
+            if ($fresh->isLocked()) {
+                return __('users.status_locked');
             }
-            if ($user->isAdmin() && User::query()->where('role', User::ROLE_ADMIN)->where('status', User::STATUS_ACTIVE)->count() <= 1) {
-                return back()->with('error', __('users.last_admin_active'));
+            if (! $active) {
+                // Money first: an account with a balance or open items leaves via the leave flow
+                // or after a correction, never silently.
+                $pending = Transaction::query()->where('user_id', $fresh->id)->pending()->exists();
+                if ($fresh->balance() !== 0 || $pending) {
+                    return __('users.deactivate_blocked');
+                }
+                if ($fresh->isAdmin() && $fresh->isActive() && $activeAdmins <= 1) {
+                    return __('users.last_admin_active');
+                }
             }
-        }
 
-        Audit::save('user.status', $user->forceFill([
-            'status' => $active ? User::STATUS_ACTIVE : User::STATUS_LEFT,
-            'left_at' => $active ? null : now(),
-        ]));
+            Audit::save('user.status', $fresh->forceFill([
+                'status' => $active ? User::STATUS_ACTIVE : User::STATUS_LEFT,
+                'left_at' => $active ? null : now(),
+            ]));
+
+            return null;
+        });
+
+        if ($error !== null) {
+            return back()->with('error', $error);
+        }
 
         return back()->with('status', $active ? __('users.reactivated') : __('users.deactivated'));
     }
@@ -138,11 +148,13 @@ class UserController extends Controller
         $data = $request->validate(['reason' => ['required', 'string', 'max:500']], ['reason.required' => __('users.lock_reason_required')]);
 
         $error = DB::transaction(function () use ($user, $data, $request) {
+            // Active admins first (by id), then the target: two admins locking each other serialise here.
+            $activeAdmins = self::lockActiveAdmins();
             $fresh = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             if (! $fresh->isActive()) {
                 return __('users.lock_not_active');
             }
-            if ($fresh->isAdmin() && User::query()->where('role', User::ROLE_ADMIN)->where('status', User::STATUS_ACTIVE)->count() <= 1) {
+            if ($fresh->isAdmin() && $activeAdmins <= 1) {
                 return __('users.last_admin_lock');
             }
             Audit::save('user.lock', $fresh->forceFill([
@@ -162,18 +174,24 @@ class UserController extends Controller
     public function unlock(Request $request, User $user): RedirectResponse
     {
         $this->guardAdminTarget($request, $user);
-        if (! $user->isLocked()) {
-            return back()->with('error', __('users.unlock_not_locked'));
-        }
 
-        Audit::save('user.unlock', $user->forceFill([
-            'status' => User::STATUS_ACTIVE,
-            'locked_at' => null,
-            'locked_reason' => null,
-            'locked_by' => null,
-        ]));
+        $unlocked = DB::transaction(function () use ($user) {
+            // Re-read under lock: a parallel unlock or leave must not be overwritten.
+            $fresh = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if (! $fresh->isLocked()) {
+                return false;
+            }
+            Audit::save('user.unlock', $fresh->forceFill([
+                'status' => User::STATUS_ACTIVE,
+                'locked_at' => null,
+                'locked_reason' => null,
+                'locked_by' => null,
+            ]));
 
-        return back()->with('status', __('users.unlocked_done'));
+            return true;
+        });
+
+        return $unlocked ? back()->with('status', __('users.unlocked_done')) : back()->with('error', __('users.unlock_not_locked'));
     }
 
     /** Storno of a beer, round or given gift of this user (any time after the undo window, note required). */
@@ -265,6 +283,16 @@ class UserController extends Controller
         }
 
         return back()->with('status', __($on ? 'account.admin_only_on' : 'account.admin_only_off'));
+    }
+
+    /**
+     * Locks the rows of all active admins (ordered by id, inside a DB transaction) and returns their number,
+     * so the "last active admin" rule holds against parallel lock/deactivate requests.
+     */
+    private static function lockActiveAdmins(): int
+    {
+        return User::query()->where('role', User::ROLE_ADMIN)->where('status', User::STATUS_ACTIVE)
+            ->orderBy('id')->lockForUpdate()->get(['id'])->count();
     }
 
     /** Kassiers must not take over admin accounts (password, TOTP, status). */

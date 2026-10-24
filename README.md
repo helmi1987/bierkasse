@@ -221,7 +221,11 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 - Konto sperren (Entscheid 2026-10-24, Status `locked` neben `active`/`left`): Kassier und Admin in der Benutzer-Detailansicht,
   Grund Pflicht (max. 500 Zeichen, `users.locked_reason`, `locked_at`, `locked_by`; angezeigt in der Detailansicht,
   Audit `user.lock`/`user.unlock`). Anders als Deaktivieren auch mit Schulden oder offenen Posten. Kassiers können
-  keine Admins sperren, der letzte aktive Admin nicht; **Annahme:** niemand sperrt sich selbst (gegen Selbstaussperrung). Entsperren → `active`
+  keine Admins sperren, der letzte aktive Admin nicht; **Annahme:** niemand sperrt sich selbst (gegen Selbstaussperrung).
+  Gegen gleichzeitige Anfragen (zwei Admins sperren bzw. deaktivieren sich gegenseitig) sperren Sperren und Deaktivieren
+  in einer DB-Transaktion zuerst alle aktiven Admins (nach ID), dann das Zielkonto, und zählen danach; Entsperren liest
+  das Konto unter Sperre neu (kein Überschreiben eines parallelen Austritts). Wird ein gesperrtes Konto ausgetreten
+  (bestätigte Auszahlung), werden die Sperrdaten geleert. Entsperren → `active`
   (Sperrdaten werden geleert, das Protokoll behält sie). Ein gesperrtes Konto wird nicht über "Deaktivieren"
   geändert (zuerst entsperren).
   - Wirkung: keine Anmeldung (Passwort, SSO, eigener Anbieter, TOTP-Schritt), laufende Sitzungen enden bei der nächsten
@@ -376,7 +380,9 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
     `terms_accepted_version`, `consent_accepted_at`; die Versionen stehen im Audit `registration`.
   - Zustimmungs-Sperre (`EnsureActiveUser`, für alle Rollen inkl. Admin und "Nur Verwaltung"): stimmen die akzeptierten
     Versionen nicht mit den aktuellen überein, leitet jede Seite nach `/zustimmung` (beide Texte aufklappbar, Link zur
-    Einzelseite, eine Checkbox, "Weiter" und "Abmelden"). Erreichbar bleiben nur diese Seite, Abmelden und die zwei
+    Einzelseite, eine Checkbox, "Weiter" und "Abmelden"). Das Formular sendet die angezeigten Versionen mit; wurde ein
+    Text inzwischen mit neuem Stand gespeichert, wird nichts gespeichert und die Seite erscheint erneut mit "Die Texte
+    wurden geändert, bitte erneut lesen". Erreichbar bleiben nur diese Seite, Abmelden und die zwei
     öffentlichen Seiten. Reihenfolge: zuerst ein erzwungener Passwortwechsel, dann die Zustimmung. Danach zurück
     zur ursprünglich aufgerufenen Seite (nur GET-Seiten). Audit `consent.accept`. Live-Abfragen (`/live`,
     `X-Live-Refresh`) werden wie beim Passwortwechsel umgeleitet (`live.js` lädt bei Umleitung neu).

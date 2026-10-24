@@ -131,4 +131,49 @@ class AccountLockTest extends TestCase
         $this->expectException(LedgerException::class);
         Ledger::giveBeers($giver, [$locked->id], 1);
     }
+
+    public function test_unlock_does_not_reactivate_an_account_that_left(): void
+    {
+        $user = User::factory()->left()->create();
+        $this->actingAs($this->kassier());
+
+        $this->post(route('backend.users.unlock', $user))->assertSessionHas('error', __('users.unlock_not_locked'));
+        $this->assertSame(User::STATUS_LEFT, $user->fresh()->status);
+        $this->assertFalse(AuditLog::query()->where('action', 'user.unlock')->exists());
+    }
+
+    public function test_confirmed_payout_of_locked_user_clears_lock_data(): void
+    {
+        $kassier = $this->kassier();
+        $user = $this->user();
+        Ledger::bookDeposit($user, 500, 'cash', $kassier);
+        $payout = Ledger::requestPayout($user);
+        $user->forceFill(['status' => User::STATUS_LOCKED, 'locked_at' => now(), 'locked_reason' => 'Test', 'locked_by' => $kassier->id])->save();
+
+        Ledger::confirmPayout($payout, $kassier);
+
+        $fresh = $user->fresh();
+        $this->assertSame(User::STATUS_LEFT, $fresh->status);
+        $this->assertNull($fresh->locked_at);
+        $this->assertNull($fresh->locked_reason);
+        $this->assertNull($fresh->locked_by);
+    }
+
+    public function test_lock_and_deactivate_count_only_active_admins(): void
+    {
+        // The race itself (two admins locking each other) is serialised by row locks on all active admins;
+        // SQLite cannot show that, so this checks the counting: locked admins are not active admins.
+        $a = $this->admin();
+        $b = $this->admin();
+        $this->actingAs($a);
+        $this->post(route('backend.users.lock', $b), ['reason' => 'x'])->assertSessionHas('status');
+        $this->assertTrue($b->fresh()->isLocked());
+        $this->post(route('backend.users.status', $b), ['active' => 0])->assertSessionHas('error', __('users.status_locked'));
+
+        // A third admin may deactivate A (two active admins), afterwards C is the only active admin.
+        $c = $this->admin();
+        $this->actingAs($c);
+        $this->post(route('backend.users.status', $a), ['active' => 0])->assertSessionHas('status', __('users.deactivated'));
+        $this->assertSame(1, User::query()->where('role', User::ROLE_ADMIN)->where('status', User::STATUS_ACTIVE)->count());
+    }
 }

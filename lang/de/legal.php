@@ -24,6 +24,7 @@ return [
     'consent_submit' => 'Weiter',
     'consent_logout' => 'Abmelden',
     'consent_saved' => 'Danke, Zustimmung gespeichert.',
+    'consent_changed' => 'Die Texte wurden geändert, bitte erneut lesen.',
 
     'guest_hint' => 'Hinweise:',
 

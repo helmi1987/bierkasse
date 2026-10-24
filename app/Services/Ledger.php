@@ -782,7 +782,8 @@ class Ledger
 
     private static function markLeft(User $user): void
     {
-        $user->forceFill(['status' => User::STATUS_LEFT, 'left_at' => now()])->save();
+        // A left account is no longer locked (e.g. payout of a locked account confirmed): clear the lock data.
+        $user->forceFill(['status' => User::STATUS_LEFT, 'left_at' => now(), 'locked_at' => null, 'locked_reason' => null, 'locked_by' => null])->save();
     }
 
     private static function assertActive(User $user): void

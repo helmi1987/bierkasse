@@ -9,6 +9,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\BeerStock;
 use App\Services\Ledger;
+use App\Services\Rounds;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -87,6 +88,27 @@ class StornoTest extends TestCase
         $this->assertSame(0, RoundItem::query()->count());
         $old = json_decode(AuditLog::query()->where('action', 'round.storno')->firstOrFail()->old_values, true);
         $this->assertSame([$colleague->id, null], $old['recipients']);
+    }
+
+    public function test_round_storno_with_givers_own_beer(): void
+    {
+        $giver = $this->user();
+        $colleague = $this->user();
+        $tx = Ledger::giveRound($giver, [$colleague->id], 0, 'Prost', true);
+        $this->assertSame(2, $tx->quantity);
+        $this->assertSame(-300, $giver->balance());
+        $this->assertSame(28, BeerStock::current());
+        $this->assertSame(1, RoundItem::query()->where('user_id', $giver->id)->count());
+
+        $this->actingAs($this->kassier());
+        $this->storno($giver, $tx)->assertSessionHas('status');
+
+        $this->assertSame(0, $giver->balance());
+        $this->assertSame(30, BeerStock::current());
+        $this->assertSame(0, RoundItem::query()->count());
+        $this->assertSame(0, Rounds::ownBeers($giver));
+        $old = json_decode(AuditLog::query()->where('action', 'round.storno')->firstOrFail()->old_values, true);
+        $this->assertEqualsCanonicalizing([$colleague->id, $giver->id], $old['recipients']);
     }
 
     public function test_gift_storno_reverses_recipients(): void

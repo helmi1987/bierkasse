@@ -36,13 +36,24 @@ class LegalController extends Controller
             'texts' => array_map(fn (string $kind) => $this->text($kind), array_combine(LegalTexts::KINDS, LegalTexts::KINDS)),
             // Someone who accepted before sees that the texts changed.
             'renewal' => $user->consent_accepted_at !== null,
+            'versions' => array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalTexts::version($kind), LegalTexts::KINDS)),
         ]);
     }
 
     public function accept(Request $request): RedirectResponse
     {
-        $request->validate(['consent' => ['accepted']], ['consent.accepted' => __('legal.consent_required')]);
+        $request->validate([
+            'consent' => ['accepted'],
+            'privacy_version' => ['nullable', 'string', 'max:32'],
+            'terms_version' => ['nullable', 'string', 'max:32'],
+        ], ['consent.accepted' => __('legal.consent_required')]);
         $user = $request->user();
+
+        // Only the versions the user has seen are accepted: changed meanwhile = read again.
+        if ($request->input('privacy_version') !== LegalTexts::version(LegalTexts::PRIVACY)
+            || $request->input('terms_version') !== LegalTexts::version(LegalTexts::TERMS)) {
+            return redirect()->route('consent.show')->with('warning', __('legal.consent_changed'));
+        }
 
         if ($user->needsConsent()) {
             Audit::save('consent.accept', $user->forceFill(LegalTexts::consentAttributes()));

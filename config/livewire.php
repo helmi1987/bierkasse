@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Livewire (introduced in 1.20.0 for rebuilt admin pages, see README "Livewire").
+ * Livewire (introduced in 1.20.0 for rebuilt admin pages, see docs/entwicklung.md "Livewire").
  * Only the values that differ from the package defaults are set here.
  */
 return [

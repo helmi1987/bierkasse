@@ -17,6 +17,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 - Bier für einen Gast buchen
 - Runde spendieren
 - Bier verschenken
+- Übertrag von der alten Strichliste bei der Registrierung (ein-/ausschaltbar)
 - Storno von Buchungen durch Kassier und Admin
 - Konto sperren, mit Pflichtgrund
 - Interner Hinweis pro Benutzer, nur für Kassier und Admin sichtbar
@@ -47,6 +48,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.25.0 | Neue Funktion | Übertrag von der alten Strichliste in den Funktionen ein-/ausschaltbar |
 | 1.24.1 | Verbesserung | Zustimmung kompakter: "Fassung ansehen" statt Datum, "Alle Fassungen" unten |
 | 1.24.0 | Neue Funktion | Darstellung pro Benutzer (Automatisch/Hell/Dunkel); Zustimmung als Karte in der Benutzeransicht |
 | 1.23.3 | Doku | README gekürzt, Details nach docs/ verschoben, Releases-Liste |

@@ -182,6 +182,8 @@
         <div class="hint">{{ __('gift.allowed_hint') }}</div>
         <label class="switch"><input type="checkbox" name="guest_user_booking" value="1" @checked(old('guest_user_booking', $features['guest_user_booking']))> <span>{{ __('guest.user_booking') }}</span></label>
         <div class="hint">{{ __('guest.user_booking_hint') }}</div>
+        <label class="switch"><input type="checkbox" name="carryover_enabled" value="1" @checked(old('carryover_enabled', $features['carryover_enabled']))> <span>{{ __('register.carryover_allowed') }}</span></label>
+        <div class="hint">{{ __('register.carryover_allowed_hint') }}</div>
         <label class="switch"><input type="checkbox" name="guest_enabled" value="1" @checked(old('guest_enabled', $features['guest_enabled']))> <span>{{ __('guest.enabled') }}</span></label>
         <div class="field">
             <label for="guest_password">{{ __('guest.password') }}</label>

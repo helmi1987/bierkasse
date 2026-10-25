@@ -170,4 +170,19 @@ class CarryoverTest extends TestCase
         $this->expectException(LedgerException::class);
         Ledger::assertCanLeave($user);
     }
+
+    public function test_admin_switch_hides_and_ignores_carryover(): void
+    {
+        $this->get('/registrieren?code=durst')->assertOk()->assertSee('name="carryover_value"', false);
+
+        $this->actingAs($this->kassier())->put('/admin/einstellungen/funktionen', $this->featureForm(['carryover_enabled' => '0']))->assertForbidden();
+        $this->assertTrue(AppSettings::carryoverAllowed());
+        $this->actingAs($this->admin())->put('/admin/einstellungen/funktionen', $this->featureForm(['carryover_enabled' => '0']))->assertSessionHas('status');
+        $this->assertFalse(AppSettings::carryoverAllowed());
+        auth()->logout();
+
+        $this->get('/registrieren?code=durst')->assertOk()->assertDontSee('name="carryover_value"', false);
+        $user = $this->register(['carryover_direction' => 'debt', 'carryover_unit' => 'beers', 'carryover_value' => '12']);
+        $this->assertNull($this->carryover($user));
+    }
 }

@@ -152,6 +152,7 @@
     Übertrag-Biere ändern weder Lager noch Statistik (vor der App getrunken); bestätigte Übertrag-Schulden in
     Bieren erscheinen unter "Offen" als Biere. **Annahme:** der Übertrag ändert den Kassenstand nicht, aber das
     Guthaben aller Benutzer und damit den Überschuss.
+    Admin-Schalter unter Einstellungen > Funktionen (Setting `carryover_enabled`, Standard an): aus = Feld in der Registrierung ausgeblendet, Server ignoriert die Eingabe, offene Überträge bleiben bestätigbar/ablehnbar.
 - Kasse (`/admin/kasse`): Kassenstand = bestätigte Einzahlungen − Auszahlungen − Ausgaben + Einnahmen ±
   Korrekturen, getrennt nach Bar und TWINT. Überschuss = Kassenstand − Guthaben aller Benutzer.
   Reiter "Kassenbuch" | "Einzahlungsvorschläge" (`?tab=vorschlaege`, Livewire, siehe unten).

@@ -126,7 +126,8 @@
 
     <section class="card" data-testid="consent-info">
         <h2>{{ __('legal.user_consent') }}</h2>
-        <p class="muted">@if ($user->consent_accepted_at){{ local_time($user->consent_accepted_at) }}: @include('legal.accepted')@if ($user->needsConsent()) ({{ __('legal.user_consent_open') }})@endif @else{{ __('legal.user_consent_open') }}@endif · <a href="{{ route('backend.audit', ['tab' => 'fassungen']) }}">{{ __('legal.all_revisions') }}</a></p>
+        <p class="muted">@if ($user->consent_accepted_at){{ __('legal.account_consent', ['date' => local_time($user->consent_accepted_at)]) }}@if ($user->needsConsent()) ({{ __('legal.user_consent_open') }})@endif<br>@include('legal.accepted')@else{{ __('legal.user_consent_open') }}@endif</p>
+        <p><a href="{{ route('backend.audit', ['tab' => 'fassungen']) }}">{{ __('legal.all_revisions') }}</a></p>
     </section>
 </div>
 

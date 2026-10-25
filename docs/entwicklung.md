@@ -248,9 +248,10 @@
     `X-Live-Refresh`) werden wie beim Passwortwechsel umgeleitet (`live.js` lädt bei Umleitung neu).
     Bestehende Konten haben nach dem Update noch keine Zustimmung und sehen die Seite bei der nächsten Anfrage.
   - **Annahme:** Der Admin aus dem Setup-Wizard gilt als zugestimmt (er betreibt die Installation und veröffentlicht die Texte).
-  - Benutzer-Detailansicht im Admin-Bereich (Karte "Zustimmung", `data-testid="consent-info"`): "<Datum>: Datenschutzerklärung (Fassung vom …, Stand X),
-    Nutzungsbestimmungen (Fassung vom …, Stand Y)" mit Links auf die akzeptierten Fassungen (Zustimmungen vor 1.19.0
-    ohne Fassung: nur Stand) bzw. "noch offen"; Link "Alle Fassungen".
+  - Benutzer-Detailansicht im Admin-Bereich (Karte "Zustimmung", `data-testid="consent-info"`, Entscheid 2026-10-25, v1.24.1): "Akzeptiert am <Datum>"
+    (+ "(noch offen)" bei neuer Fassung), darunter pro Text eine Zeile "Datenschutzerklärung · Fassung ansehen" mit Link auf die
+    akzeptierte Fassung (Datum der Fassung steht dort; Zustimmungen vor 1.19.0 ohne Fassung: "· Stand X") bzw. "noch offen";
+    Link "Alle Fassungen" als letzte Zeile. Partial `legal/accepted.blade.php`, auch in Konto > Einstellungen.
   - Fassungen-Archiv (Entscheid 2026-10-24, v1.19.0): Tabelle `legal_revisions` (Art, Stand, Text, sha256, Anlass,
     erstellt von/am). Gespeichert wird der gerenderte Quelltext (Platzhalter eingesetzt, kein HTML); angezeigt mit
     demselben sicheren Renderer, ohne erneutes Einsetzen von Platzhaltern. Unveränderlich: keine Route ändert oder
@@ -282,7 +283,7 @@
       Protokoll > Reiter "Fassungen" (`/admin/protokoll?tab=fassungen`, seit 1.20.0; `/admin/rechtliches/fassungen` leitet
       um; Kassier und Admin, nur lesen, 25 pro Seite, Filter nach Text; Link in der
       Karte "Datenschutz und Nutzungsbestimmungen" und in der Benutzer-Detailansicht). Konto > Einstellungen:
-      "Akzeptiert am <Datum>: …" mit Links auf die eigenen akzeptierten Fassungen.
+      "Akzeptiert am <Datum>", darunter pro Text "· Fassung ansehen" (Link auf die eigene akzeptierte Fassung).
     - Test-Factory: Benutzer haben die aktuellen Stände akzeptiert, aber keine Fassungs-IDs (die Sperre hängt nur am Stand).
   - Gäste ohne Konto (`/gast`, `/kasse/<code>`) sehen Links auf beide Texte, ohne Checkbox.
 - PWA-Name: `short_name` im Manifest = voller App-Name (Home-Bildschirm-Vorschlag z. B. "Bierkasse LUKS").

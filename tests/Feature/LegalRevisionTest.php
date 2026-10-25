@@ -316,11 +316,13 @@ class LegalRevisionTest extends TestCase
         $this->actingAs($this->kassier());
         $this->get(route('backend.users.show', $user))->assertOk()
             ->assertSee('data-testid="accepted-privacy"', false)
-            ->assertSee(route('legal.revision', $revisions['terms']));
+            ->assertSee(route('legal.revision', $revisions['terms']))
+            ->assertSee(__('legal.view_revision'))->assertSee(__('legal.all_revisions'))
+            ->assertDontSee('Fassung vom');
         // Consent before 1.19.0 (no revision id): "Stand" only.
         $this->get(route('backend.users.show', $old))->assertOk()
             ->assertDontSee('data-testid="accepted-privacy"', false)
-            ->assertSee('Datenschutzerklärung (Stand 24.10.2026)');
+            ->assertSee('Datenschutzerklärung · Stand 24.10.2026');
     }
 
     public function test_revisions_are_immutable(): void

@@ -30,7 +30,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 - Datenbank-Backup und Wiederherstellung
 - Live-Aktualisierung der Seiten
 - Anpassbare Reihenfolge der Reiter
-- Installierbar als App (PWA), Light/Dark-Mode
+- Installierbar als App (PWA), Light/Dark-Mode (pro Benutzer: Automatisch/Hell/Dunkel)
 
 ## Voraussetzungen
 
@@ -47,6 +47,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.24.0 | Neue Funktion | Darstellung pro Benutzer (Automatisch/Hell/Dunkel); Zustimmung als Karte in der Benutzeransicht |
 | 1.23.3 | Doku | README gekürzt, Details nach docs/ verschoben, Releases-Liste |
 | 1.23.2 | Verbesserung | Interner Hinweis wird automatisch aus Vor- und Nachname gefüllt |
 | 1.23.1 | Verbesserung | Interner Hinweis bei offenen TWINT-Einzahlungen in der Kassier-Übersicht |

@@ -34,6 +34,10 @@
   Kassiers können Admin-Konten nicht ändern (Passwort, TOTP, Status).
   Deaktivieren geht nur mit Saldo 0 und ohne offene Posten (sonst "Haus verlassen" oder Korrektur);
   der letzte aktive Admin kann nicht deaktiviert werden. Auf ausgetretene Konten wird nichts mehr gebucht.
+- Darstellung pro Benutzer (Entscheid 2026-10-25, v1.24.0): `users.theme` (null = automatisch, `light`, `dark`), Konto > Einstellungen,
+  Karte "Profil" (Optionen Automatisch/Hell/Dunkel). Fix gewählt: `data-theme` auf `<html>` (Layout `app`) und eine einzelne
+  `theme-color`-Meta; automatisch: wie bisher `prefers-color-scheme`. Anmelde-/Registrierungsseiten und Gast-Seiten bleiben
+  automatisch (kein Benutzer). Kein Audit-Eintrag (nur Anzeigeeinstellung, wird getrennt vom Profil gespeichert). Mails unverändert.
 - Konto sperren (Entscheid 2026-10-24, Status `locked` neben `active`/`left`): Kassier und Admin in der Benutzer-Detailansicht,
   Grund Pflicht (max. 500 Zeichen, `users.locked_reason`, `locked_at`, `locked_by`; angezeigt in der Detailansicht,
   Audit `user.lock`/`user.unlock`). Anders als Deaktivieren auch mit Schulden oder offenen Posten. Kassiers können
@@ -244,7 +248,7 @@
     `X-Live-Refresh`) werden wie beim Passwortwechsel umgeleitet (`live.js` lädt bei Umleitung neu).
     Bestehende Konten haben nach dem Update noch keine Zustimmung und sehen die Seite bei der nächsten Anfrage.
   - **Annahme:** Der Admin aus dem Setup-Wizard gilt als zugestimmt (er betreibt die Installation und veröffentlicht die Texte).
-  - Benutzer-Detailansicht im Admin-Bereich: "Zustimmung: <Datum>: Datenschutzerklärung (Fassung vom …, Stand X),
+  - Benutzer-Detailansicht im Admin-Bereich (Karte "Zustimmung", `data-testid="consent-info"`): "<Datum>: Datenschutzerklärung (Fassung vom …, Stand X),
     Nutzungsbestimmungen (Fassung vom …, Stand Y)" mit Links auf die akzeptierten Fassungen (Zustimmungen vor 1.19.0
     ohne Fassung: nur Stand) bzw. "noch offen"; Link "Alle Fassungen".
   - Fassungen-Archiv (Entscheid 2026-10-24, v1.19.0): Tabelle `legal_revisions` (Art, Stand, Text, sha256, Anlass,

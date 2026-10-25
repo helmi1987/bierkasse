@@ -363,7 +363,7 @@
 @if ($user->consent_accepted_at)
     <section class="card">
         <h2>{{ __('legal.account_consent_heading') }}</h2>
-        <p class="muted" data-testid="account-consent">{{ __('legal.account_consent', ['date' => local_time($user->consent_accepted_at)]) }}: @include('legal.accepted')</p>
+        <p class="muted" data-testid="account-consent">{{ __('legal.account_consent', ['date' => local_time($user->consent_accepted_at)]) }}<br>@include('legal.accepted')</p>
     </section>
 @endif
 

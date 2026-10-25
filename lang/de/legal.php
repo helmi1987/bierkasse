@@ -59,7 +59,7 @@ return [
     // Backend user detail
     'user_consent' => 'Zustimmung',
     'user_consent_open' => 'noch offen',
-    'user_consent_revision' => 'Fassung vom :date',
+    'view_revision' => 'Fassung ansehen',
     'all_revisions' => 'Alle Fassungen',
 
     // Archived revisions ("Fassungen")

@@ -47,6 +47,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.24.1 | Verbesserung | Zustimmung kompakter: "Fassung ansehen" statt Datum, "Alle Fassungen" unten |
 | 1.24.0 | Neue Funktion | Darstellung pro Benutzer (Automatisch/Hell/Dunkel); Zustimmung als Karte in der Benutzeransicht |
 | 1.23.3 | Doku | README gekürzt, Details nach docs/ verschoben, Releases-Liste |
 | 1.23.2 | Verbesserung | Interner Hinweis wird automatisch aus Vor- und Nachname gefüllt |

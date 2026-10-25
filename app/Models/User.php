@@ -49,6 +49,12 @@ class User extends Authenticatable
         'admin_only' => false,
     ];
 
+    /** Fixed colour theme ("light"/"dark") or null for automatic (follows the device). */
+    public function fixedTheme(): ?string
+    {
+        return in_array($this->theme, ['light', 'dark'], true) ? $this->theme : null;
+    }
+
     protected function casts(): array
     {
         return [

@@ -23,8 +23,32 @@
     color-scheme: light dark;
 }
 
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* Dark variables: fixed choice (data-theme) or automatic. Block is repeated once for the media query. */
+:root[data-theme="dark"] {
+    --bg: #14110e;
+    --surface: #1f1a15;
+    --surface-2: #29221b;
+    --text: #f5ede0;
+    --muted: #b3a690;
+    --border: #3a3027;
+    --accent: #f59e0b;
+    --accent-strong: #fbbf24;
+    --accent-contrast: #1f1a14;
+    --accent-soft: #3b2a10;
+    --ok: #4ade80;
+    --ok-soft: #12301d;
+    --warn: #facc15;
+    --warn-soft: #332a0b;
+    --bad: #f87171;
+    --bad-soft: #3a1515;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+}
+
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         --bg: #14110e;
         --surface: #1f1a15;
         --surface-2: #29221b;
@@ -201,11 +225,15 @@ details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: 
 .btn.sso-microsoft:hover { border-color: #8c8c8c; }
 .btn.sso-facebook { background: #1877F2; border-color: #1877F2; color: #ffffff; }
 .btn.sso-facebook:hover { border-color: #1877F2; filter: brightness(.92); }
+:root[data-theme="dark"] .btn.sso-github, :root[data-theme="dark"] .btn.sso-github:hover { border-color: #6e7681; }
+:root[data-theme="dark"] .btn.sso-google, :root[data-theme="dark"] .btn.sso-google:hover { background: #131314; border-color: #8e918f; color: #e3e3e3; }
+:root[data-theme="dark"] .btn.sso-microsoft, :root[data-theme="dark"] .btn.sso-microsoft:hover { background: #2f2f2f; border-color: #6e6e6e; color: #ffffff; }
+:root[data-theme="dark"] .btn.sso-google:hover, :root[data-theme="dark"] .btn.sso-microsoft:hover { filter: brightness(1.25); }
 @media (prefers-color-scheme: dark) {
-    .btn.sso-github, .btn.sso-github:hover { border-color: #6e7681; }
-    .btn.sso-google, .btn.sso-google:hover { background: #131314; border-color: #8e918f; color: #e3e3e3; }
-    .btn.sso-microsoft, .btn.sso-microsoft:hover { background: #2f2f2f; border-color: #6e6e6e; color: #ffffff; }
-    .btn.sso-google:hover, .btn.sso-microsoft:hover { filter: brightness(1.25); }
+    :root:not([data-theme="light"]) .btn.sso-github, :root:not([data-theme="light"]) .btn.sso-github:hover { border-color: #6e7681; }
+    :root:not([data-theme="light"]) .btn.sso-google, :root:not([data-theme="light"]) .btn.sso-google:hover { background: #131314; border-color: #8e918f; color: #e3e3e3; }
+    :root:not([data-theme="light"]) .btn.sso-microsoft, :root:not([data-theme="light"]) .btn.sso-microsoft:hover { background: #2f2f2f; border-color: #6e6e6e; color: #ffffff; }
+    :root:not([data-theme="light"]) .btn.sso-google:hover, :root:not([data-theme="light"]) .btn.sso-microsoft:hover { filter: brightness(1.25); }
 }
 .btn.big { min-height: 54px; font-size: 1.05rem; width: 100%; }
 .btn.huge { min-height: 72px; font-size: 1.3rem; width: 100%; border-radius: var(--radius); }

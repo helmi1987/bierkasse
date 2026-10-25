@@ -3,6 +3,7 @@
     $appName ??= \App\Support\AppSettings::appName();
     $openItems ??= 0;
     $authUser = auth()->user();
+    $theme = $authUser?->fixedTheme();
     // Live refresh (public/js/live.js) only for logged-in GET pages without one-time content: after a
     // POST render, validation errors/old input or flashed secrets the page must stay as rendered.
     // Pages with Livewire components (@section('livewire')) refresh their data parts with wire:poll instead.
@@ -12,7 +13,7 @@
         && ! session()->has('totp.recovery_codes') && ! session()->has('maintenance_output');
 @endphp
 <!DOCTYPE html>
-<html lang="de-CH">
+<html lang="de-CH"@if ($theme) data-theme="{{ $theme }}"@endif>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -22,8 +23,12 @@
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="32x32">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ route('manifest') }}">
-    <meta name="theme-color" content="#d97706" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#1c1917" media="(prefers-color-scheme: dark)">
+    @if ($theme)
+        <meta name="theme-color" content="{{ $theme === 'dark' ? '#1c1917' : '#d97706' }}">
+    @else
+        <meta name="theme-color" content="#d97706" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#1c1917" media="(prefers-color-scheme: dark)">
+    @endif
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="{{ $appName }}">

@@ -35,6 +35,13 @@
                 <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" autocomplete="email" @required($user->isKassier())>
                 <div class="hint">{{ __('account.email_hint') }}</div>
             </div>
+            @php($themeNow = old('theme', $user->theme ?? 'auto'))
+            <fieldset class="field">
+                <legend>{{ __('account.theme') }}</legend>
+                @foreach (['auto', 'light', 'dark'] as $opt)
+                    <label class="check"><input type="radio" name="theme" value="{{ $opt }}" @checked($themeNow === $opt)> {{ __('account.theme_'.$opt) }}</label>
+                @endforeach
+            </fieldset>
             <button type="submit" class="btn">{{ __('account.save') }}</button>
         </form>
     </section>

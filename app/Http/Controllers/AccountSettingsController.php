@@ -70,8 +70,14 @@ class AccountSettingsController extends Controller
     public function profile(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $data = $request->validate(UserRules::profile($user->id, $user->isKassier()));
+        $data = $request->validate(UserRules::profile($user->id, $user->isKassier()) + ['theme' => ['nullable', 'in:auto,light,dark']]);
+        $theme = in_array($data['theme'] ?? null, ['light', 'dark'], true) ? $data['theme'] : null;
+        unset($data['theme']);
         Audit::save('user.profile', $user->fill($data));
+        // Display preference only: saved without an audit entry (not a data change worth logging).
+        if ($user->theme !== $theme) {
+            $user->forceFill(['theme' => $theme])->save();
+        }
 
         return back()->with('status', __('account.profile_saved'));
     }

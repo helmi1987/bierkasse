@@ -16,8 +16,6 @@
 @endif
 <p class="muted">{{ $user->username }}@if ($user->email) · {{ $user->email }}@endif · {{ __('users.totp') }}: {{ $user->hasTotp() ? __('account.totp_active') : '–' }}@if ($user->stats_opt_out) · {{ __('users.stats_opt_out') }}@endif · {{ __('users.last_login') }}: {{ local_time($user->last_login_at) }}@if ($personalSso) · {{ __('users.personal_sso', ['name' => $personalSso->name, 'host' => parse_url((string) $personalSso->authorize_url, PHP_URL_HOST) ?: '–']) }} ({{ $personalSso->identities_count > 0 ? __('sso.personal.connected') : __('sso.personal.not_connected') }})@endif</p>
 
-<p class="muted" data-testid="consent-info">{{ __('legal.user_consent') }}: @if ($user->consent_accepted_at){{ local_time($user->consent_accepted_at) }}: @include('legal.accepted')@if ($user->needsConsent()) ({{ __('legal.user_consent_open') }})@endif @else{{ __('legal.user_consent_open') }}@endif · <a href="{{ route('backend.audit', ['tab' => 'fassungen']) }}">{{ __('legal.all_revisions') }}</a></p>
-
 @if ($roundsGiven > 0)
     <p class="muted" data-testid="round-given">{{ __('round.given_kpi') }}: {{ trans_choice('round.beers', $roundsGiven, ['count' => $roundsGiven]) }}</p>
 @endif
@@ -125,6 +123,11 @@
             </form>
         </section>
     @endunless
+
+    <section class="card" data-testid="consent-info">
+        <h2>{{ __('legal.user_consent') }}</h2>
+        <p class="muted">@if ($user->consent_accepted_at){{ local_time($user->consent_accepted_at) }}: @include('legal.accepted')@if ($user->needsConsent()) ({{ __('legal.user_consent_open') }})@endif @else{{ __('legal.user_consent_open') }}@endif · <a href="{{ route('backend.audit', ['tab' => 'fassungen']) }}">{{ __('legal.all_revisions') }}</a></p>
+    </section>
 </div>
 
 <section class="card">

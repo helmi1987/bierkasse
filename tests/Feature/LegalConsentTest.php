@@ -275,6 +275,6 @@ class LegalConsentTest extends TestCase
 
         $this->get(route('backend.users.show', $done))->assertOk()
             ->assertSee('Datenschutzerklärung (Stand '.LegalTexts::versionDate(LegalTexts::DEFAULT_VERSION));
-        $this->get(route('backend.users.show', $open))->assertOk()->assertSee('Zustimmung: noch offen');
+        $this->get(route('backend.users.show', $open))->assertOk()->assertSee('data-testid="consent-info"', false)->assertSee('noch offen');
     }
 }

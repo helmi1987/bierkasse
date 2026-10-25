@@ -109,6 +109,7 @@ class RegisterController extends Controller
             'regCode' => $regCode ? $this->regCode($request) : '',
             'code' => (string) $request->query('code', ''),
             'price' => AppSettings::beerPrice(),
+            'carryover' => AppSettings::carryoverAllowed(),
             // Revisions of the linked texts at the time the form is shown (hidden fields, checked on submit).
             'revisions' => array_map(fn (LegalRevision $revision) => $revision->id, array_combine(LegalTexts::KINDS, array_map(fn (string $kind) => LegalArchive::forDisplay($kind), LegalTexts::KINDS))),
         ]);
@@ -294,7 +295,7 @@ class RegisterController extends Controller
 
     /**
      * Optional carry-over from the old paper tally list: direction (debt/credit), unit (beers/chf)
-     * and value. Empty value = none. Beers are converted at the current beer price.
+     * and value. Empty value or switched off in the admin settings = none. Beers are converted at the current beer price.
      *
      * @return array{0:int, 1:?int, 2:?int}|null [signed amount in Rappen, quantity, unit price]
      *
@@ -303,7 +304,7 @@ class RegisterController extends Controller
     private function carryover(Request $request): ?array
     {
         $value = trim((string) $request->input('carryover_value', ''));
-        if ($value === '') {
+        if ($value === '' || ! AppSettings::carryoverAllowed()) {
             return null;
         }
 

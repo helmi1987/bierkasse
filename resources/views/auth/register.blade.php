@@ -67,6 +67,7 @@
             <label for="password_confirmation">{{ __('register.password_confirmation') }}</label>
             <input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password" minlength="8" required>
         </div>
+        @if ($carryover)
         <details class="carryover" open>
             <summary>{{ __('register.carryover') }}</summary>
             <div class="stack">
@@ -92,6 +93,7 @@
                 </div>
             </div>
         </details>
+        @endif
         {{-- Revisions of the linked texts; registering fails when a text changed meanwhile. --}}
         <input type="hidden" name="privacy_revision" value="{{ $revisions['privacy'] }}">
         <input type="hidden" name="terms_revision" value="{{ $revisions['terms'] }}">

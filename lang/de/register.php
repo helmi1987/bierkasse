@@ -19,6 +19,8 @@ return [
     'password' => 'Passwort (min. 8 Zeichen)',
     'password_confirmation' => 'Passwort wiederholen',
     'carryover' => 'Übertrag von der alten Strichliste (optional)',
+    'carryover_allowed' => 'Übertrag von der alten Strichliste bei der Registrierung',
+    'carryover_allowed_hint' => 'Aus: das Feld in der Registrierung ist ausgeblendet. Offene Überträge können weiterhin bestätigt oder abgelehnt werden.',
     'carryover_intro' => 'Noch Striche oder Guthaben auf dem Papier? Hier eintragen – der Kassier prüft und bestätigt. Leer lassen, wenn nichts offen ist.',
     'carryover_direction' => 'Richtung',
     'carryover_debt' => 'Ich schulde noch',

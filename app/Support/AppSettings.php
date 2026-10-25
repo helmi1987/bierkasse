@@ -119,6 +119,9 @@ class AppSettings
     /** Users may pay a round for colleagues/guests ("Runde spendieren"). Planned to move to the tenant settings. */
     public const ROUNDS_ENABLED = 'rounds_enabled';
 
+    /** "Übertrag von der alten Strichliste" on the registration form on/off (default on). */
+    public const CARRYOVER_ENABLED = 'carryover_enabled';
+
     /** "Bier verschenken" on/off. */
     public const GIFTS_ENABLED = 'gifts_enabled';
 
@@ -416,6 +419,12 @@ class AppSettings
     public static function giftsAllowed(): bool
     {
         return (bool) self::get(self::GIFTS_ENABLED, true);
+    }
+
+    /** Carryover from the old tally sheet can be reported when registering (default on). */
+    public static function carryoverAllowed(): bool
+    {
+        return (bool) self::get(self::CARRYOVER_ENABLED, true);
     }
 
     /** Undo window of a booking kind (key of UNDO_DEFAULTS) in minutes, 0–UNDO_MAX; 0 = no undo. */

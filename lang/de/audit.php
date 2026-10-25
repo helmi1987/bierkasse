@@ -265,6 +265,7 @@ return [
         'deposit_suggestions' => 'Einzahlungsvorschläge',
         'feedback_recipient_mode' => 'Feedback-Empfänger',
         'feedback_recipients' => 'Feedback-Adressen',
+        'carryover_enabled' => 'Übertrag bei Registrierung aktiv',
         'gifts_enabled' => 'Bier verschenken aktiv',
         'guest_enabled' => 'Gäste-Seite aktiv',
         'guest_password' => 'Gäste-Passwort',

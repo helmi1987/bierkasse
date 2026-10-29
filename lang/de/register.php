@@ -11,7 +11,7 @@ return [
     'closed' => 'Die Registrierung ist zurzeit geschlossen. Bitte beim Kassier melden.',
     'code' => 'Registrierungspasswort',
     'username' => 'Benutzername',
-    'username_hint' => '3–32 Zeichen: Kleinbuchstaben, Ziffern, Punkt, Bindestrich, Unterstrich.',
+    'username_hint' => '3–32 Zeichen: Buchstaben, Ziffern, Punkt, Bindestrich, Unterstrich. Wird in Kleinbuchstaben gespeichert.',
     'first_name' => 'Vorname (optional)',
     'last_name' => 'Nachname (optional)',
     'email' => 'E-Mail (optional)',

@@ -58,7 +58,7 @@
     <div class="grid-2">
         <div class="field">
             <label for="admin_username">{{ __('setup.admin_username') }}</label>
-            <input type="text" id="admin_username" name="admin_username" value="{{ old('admin_username', 'admin') }}" pattern="[a-z0-9._\-]{3,32}" required>
+            <input type="text" id="admin_username" name="admin_username" value="{{ old('admin_username', 'admin') }}" pattern="[A-Za-z0-9._\-]{3,32}" required>
             <div class="hint">{{ __('setup.username_hint') }}</div>
         </div>
         <div class="field">

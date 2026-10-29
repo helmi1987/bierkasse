@@ -48,6 +48,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.25.1 | Bugfix | Benutzername bei Registrierung/Einrichtung auch mit Grossbuchstaben eingebbar (wird klein gespeichert) |
 | 1.25.0 | Neue Funktion | Übertrag von der alten Strichliste in den Funktionen ein-/ausschaltbar |
 | 1.24.1 | Verbesserung | Zustimmung kompakter: "Fassung ansehen" statt Datum, "Alle Fassungen" unten |
 | 1.24.0 | Neue Funktion | Darstellung pro Benutzer (Automatisch/Hell/Dunkel); Zustimmung als Karte in der Benutzeransicht |

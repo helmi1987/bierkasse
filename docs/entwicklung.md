@@ -379,6 +379,7 @@
   TWINT). Platzhalter `{appname}`, `{username}` (Gäste: `gast`); leer = `{appname}: Einzahlung von Username: {username}`.
   Ohne Zwischenablage-Zugriff wird der Text markiert (Antippen markiert ihn ebenfalls). Der Benutzername `gast`
   ist reserviert (Registrierung und Setup, Gross-/Kleinschreibung egal; `UserRules::RESERVED_USERNAMES`).
+  Benutzername-Eingabe bei Registrierung/Setup ist gross-/kleinschreibungsunabhängig, gespeichert wird klein.
 - Live-Aktualisierung (Entscheid 2026-10-23): alle Seiten für angemeldete Benutzer (Konto, Kassier, Admin,
   Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Keine Websockets:
   `public/js/live.js` fragt alle 10 Sekunden `/live` ab (JSON `fp`, `App\Support\LiveFingerprint`: eine Abfrage mit

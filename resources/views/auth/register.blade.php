@@ -41,7 +41,7 @@
         @endif
         <div class="field">
             <label for="username">{{ __('register.username') }}</label>
-            <input type="text" id="username" name="username" value="{{ old('username') }}" autocomplete="username" autocapitalize="none" spellcheck="false" pattern="[a-z0-9._\-]{3,32}" minlength="3" maxlength="32" required>
+            <input type="text" id="username" name="username" value="{{ old('username') }}" autocomplete="username" autocapitalize="none" spellcheck="false" pattern="[A-Za-z0-9._\-]{3,32}" minlength="3" maxlength="32" required>
             <div class="hint">{{ __('register.username_hint') }}</div>
         </div>
         <div class="grid-2">

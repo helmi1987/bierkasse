@@ -84,6 +84,16 @@ class RegistrationTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_uppercase_username_is_accepted_and_stored_lowercase(): void
+    {
+        $this->open();
+
+        $this->post('/registrieren', $this->data(['username' => 'Stefan']))->assertRedirect(route('account.dashboard'));
+
+        $this->assertNotNull(User::query()->where('username', 'stefan')->first());
+        $this->assertSame(1, User::query()->count());
+    }
+
     public function test_username_rules(): void
     {
         $this->open();

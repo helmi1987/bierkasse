@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
@@ -52,6 +53,8 @@ class SetupController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $server = Rule::requiredIf(fn () => $request->input('driver') !== 'sqlite');
+
+        $request->merge(['admin_username' => Str::lower(trim((string) $request->input('admin_username')))]);
 
         $data = $request->validate([
             'token' => ['required', 'string', 'max:255'],

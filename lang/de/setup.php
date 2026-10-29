@@ -23,7 +23,7 @@ return [
     'admin_first_name' => 'Vorname (optional)',
     'admin_last_name' => 'Nachname (optional)',
     'admin_email' => 'E-Mail (Pflicht, für Benachrichtigungen und Passwort-Reset)',
-    'username_hint' => '3–32 Zeichen: Kleinbuchstaben, Ziffern, Punkt, Bindestrich, Unterstrich.',
+    'username_hint' => '3–32 Zeichen: Buchstaben, Ziffern, Punkt, Bindestrich, Unterstrich. Wird in Kleinbuchstaben gespeichert.',
     'admin_password' => 'Passwort (min. 12 Zeichen)',
     'admin_password_confirmation' => 'Passwort wiederholen',
     'totp_hint' => 'Danach in den Einstellungen Bierpreis, TWINT und Registrierungspasswort setzen. TOTP empfohlen (Konto > Einstellungen).',

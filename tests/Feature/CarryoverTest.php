@@ -104,6 +104,22 @@ class CarryoverTest extends TestCase
         $this->assertSame(0, User::query()->count());
     }
 
+    public function test_beers_over_max_amount_are_rejected_with_field_error(): void
+    {
+        // 334 beers at CHF 1.50 = CHF 501.00 > CHF 500.00 (within the beer count limit).
+        foreach (['334', '400', '500'] as $value) {
+            $this->post('/registrieren', [
+                'code' => 'durst', 'username' => 'neu.user', 'password' => 'password-123', 'password_confirmation' => 'password-123', 'consent' => '1',
+                'carryover_direction' => 'credit', 'carryover_unit' => 'beers', 'carryover_value' => $value,
+            ])->assertRedirect()->assertSessionHasErrors(['carryover_value' => 'Übertrag höchstens CHF 500.00 (bei CHF 1.50 pro Bier max. 333 Biere).']);
+            RateLimiter::clear('register:127.0.0.1');
+        }
+        $this->assertSame(0, User::query()->count());
+
+        $user = $this->register(['carryover_direction' => 'credit', 'carryover_unit' => 'beers', 'carryover_value' => '333']);
+        $this->assertSame(49950, $this->carryover($user)->amount);
+    }
+
     public function test_confirm_counts_in_balance_and_badge_but_not_stock_or_stats(): void
     {
         $kassier = $this->kassier();

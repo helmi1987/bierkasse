@@ -31,6 +31,7 @@ return [
     'carryover_value' => 'Anzahl Biere bzw. Betrag in CHF',
     'carryover_value_hint' => 'Biere werden zum aktuellen Preis von :price umgerechnet.',
     'carryover_beers_invalid' => 'Anzahl Biere: ganze Zahl von 1 bis :max.',
+    'carryover_beers_amount_invalid' => 'Übertrag höchstens :max (bei :price pro Bier max. :beers Biere).',
     'carryover_chf_invalid' => 'Betrag: grösser als 0 und höchstens :max.',
     'submit' => 'Konto erstellen',
     'back' => 'Zurück zur Anmeldung',

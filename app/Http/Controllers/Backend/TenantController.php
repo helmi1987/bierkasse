@@ -48,15 +48,15 @@ class TenantController extends Controller
     {
         $data = $request->validate(['mode' => ['required', Rule::in(Tenancy::MODES)]]);
         $me = $request->user();
+        $toMulti = $data['mode'] === Tenancy::MODE_MULTI;
+        abort_if($toMulti === Tenancy::isMulti(), 404);
+        abort_if(! $toMulti && ! $me->isSuperadmin(), 403);
 
         try {
-            if ($data['mode'] === Tenancy::MODE_MULTI) {
-                abort_if(Tenancy::isMulti(), 404);
+            if ($toMulti) {
                 Tenancy::enableMulti($me);
                 $message = __('tenants.multi_enabled');
             } else {
-                abort_unless(Tenancy::isMulti(), 404);
-                abort_unless($me->isSuperadmin(), 403);
                 Tenancy::disableMulti($me);
                 $message = __('tenants.single_enabled');
             }

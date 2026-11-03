@@ -12,6 +12,7 @@ use App\Support\AppSettings;
 use App\Support\Totp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -143,9 +144,9 @@ class LoginController extends Controller
     /**
      * Users of a pending tenant choice (with their tenants), null when none or expired.
      *
-     * @return \Illuminate\Support\Collection<int, User>|null
+     * @return Collection<int, User>|null
      */
-    private function pendingTenantUsers(Request $request): ?\Illuminate\Support\Collection
+    private function pendingTenantUsers(Request $request): ?Collection
     {
         $pending = $request->session()->get(self::PENDING_TENANT);
         if (! is_array($pending) || ($pending['expires'] ?? 0) < time() || ! Tenancy::isMulti()) {
@@ -158,7 +159,6 @@ class LoginController extends Controller
 
         return $users->count() > 1 ? $users : null;
     }
-
 
     public function totpForm(Request $request): View|RedirectResponse
     {
@@ -372,9 +372,9 @@ class LoginController extends Controller
      * input contains "@" (only if unambiguous within a tenant). Within the current tenant; without tenant
      * context (multi mode, base host) across all tenants: the password then decides, see login().
      *
-     * @return \Illuminate\Support\Collection<int, User>
+     * @return Collection<int, User>
      */
-    private function findLoginUsers(string $login): \Illuminate\Support\Collection
+    private function findLoginUsers(string $login): Collection
     {
         $query = (Tenancy::current() === null ? User::withoutTenant() : User::query())
             ->whereIn('status', [User::STATUS_ACTIVE, User::STATUS_LOCKED]);

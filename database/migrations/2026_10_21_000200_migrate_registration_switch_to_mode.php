@@ -2,6 +2,7 @@
 
 use App\Support\AppSettings;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -37,7 +38,7 @@ return new class extends Migration
     }
 
     /** Settings rows; of the oldest tenant once the table has tenant_id (1.26.0, e.g. when run again in tests). */
-    private function rows(): \Illuminate\Database\Query\Builder
+    private function rows(): Builder
     {
         $query = DB::table('settings');
         if (Schema::hasColumn('settings', 'tenant_id')) {

@@ -27,6 +27,10 @@ return [
     'admin_password' => 'Passwort (min. 12 Zeichen)',
     'admin_password_confirmation' => 'Passwort wiederholen',
     'totp_hint' => 'Danach in den Einstellungen Bierpreis, TWINT und Registrierungspasswort setzen. TOTP empfohlen (Konto > Einstellungen).',
+    'tenancy_heading' => 'Betriebsart',
+    'tenancy_single' => 'Einzelbetrieb',
+    'tenancy_multi' => 'Mandantenbetrieb (mehrere unabhängige Bierkassen in dieser Installation)',
+    'tenancy_hint' => 'Kann später unter Admin > Mandanten geändert werden.',
     'submit' => 'Installieren',
     'done' => 'Installation abgeschlossen. Jetzt die Einstellungen prüfen.',
 

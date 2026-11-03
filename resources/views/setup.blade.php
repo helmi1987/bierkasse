@@ -84,6 +84,14 @@
     </div>
     <p class="hint">{{ __('setup.totp_hint') }}</p>
 
+    <h2>{{ __('setup.tenancy_heading') }}</h2>
+    <fieldset class="stack">
+        <legend class="sr-only">{{ __('setup.tenancy_heading') }}</legend>
+        <label class="check"><input type="radio" name="tenancy" value="single" @checked(old('tenancy', 'single') !== 'multi')> {{ __('setup.tenancy_single') }}</label>
+        <label class="check"><input type="radio" name="tenancy" value="multi" @checked(old('tenancy') === 'multi')> {{ __('setup.tenancy_multi') }}</label>
+    </fieldset>
+    <p class="hint">{{ __('setup.tenancy_hint') }}</p>
+
     <button class="btn primary big" type="submit">{{ __('setup.submit') }}</button>
 </form>
 @endsection

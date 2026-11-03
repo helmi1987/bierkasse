@@ -18,7 +18,7 @@ $findUser = function (string $username, ?string $tenant): ?User {
     }
     $users = $query->with('tenant')->get();
     if ($users->count() > 1) {
-        $this->error("User {$username} exists in several tenants (".$users->map(fn (User $u) => $u->tenant?->slug)->implode(', ')."): use --tenant=<slug>.");
+        $this->error("User {$username} exists in several tenants (".$users->map(fn (User $u) => $u->tenant?->slug)->implode(', ').'): use --tenant=<slug>.');
 
         return null;
     }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\AppSettings;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -103,7 +104,7 @@ return new class extends Migration
         });
         foreach (DB::table('settings_old')->orderBy('key')->get() as $row) {
             DB::table('settings')->insert([
-                'tenant_id' => in_array($row->key, \App\Support\AppSettings::GLOBAL_KEYS, true) ? null : $tenantId,
+                'tenant_id' => in_array($row->key, AppSettings::GLOBAL_KEYS, true) ? null : $tenantId,
                 'key' => $row->key,
                 'value' => $row->value,
                 'created_at' => $row->created_at,
@@ -116,6 +117,7 @@ return new class extends Migration
     public function down(): void
     {
         // Back to the single-tenant schema: all rows of all tenants are kept (tenant columns dropped).
+        // Only possible while every user name is unique across the tenants (the global unique index comes back).
         Schema::rename('settings', 'settings_multi');
         Schema::create('settings', function (Blueprint $table) {
             $table->string('key', 191)->primary();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\QrCode;
+use App\Services\Tenancy;
 use App\Support\AppSettings;
 use App\Support\CashboxQrSvg;
 use App\Support\Qr;
@@ -37,7 +38,7 @@ class GuestController extends Controller
     {
         $active = QrCode::query()->with('creator')->active()->where('kind', QrCode::KIND_GUEST)->orderBy('id')->get();
         $selected = $request->query('qr') === '0' ? null : ($active->firstWhere('id', (int) $request->query('qr')) ?? $active->first());
-        $url = $selected?->url() ?? route('guest');
+        $url = $selected?->url() ?? route('guest', Tenancy::linkParams());
 
         return view('backend.guests-qr', [
             'admin' => $request->user()->isAdmin(),

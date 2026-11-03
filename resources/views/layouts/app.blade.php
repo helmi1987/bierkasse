@@ -76,6 +76,9 @@
                         @endif
                     </a>
                 @endif
+                @if (\App\Services\Tenancy::isMulti() && $authUser->isSuperadmin())
+                    <a href="{{ route('backend.tenants') }}" @class(['active' => request()->routeIs('backend.tenants*')])>{{ __('tenants.topbar', ['name' => \App\Services\Tenancy::current()?->name]) }}</a>
+                @endif
                 <a href="{{ route('account.settings') }}" @class(['active' => request()->routeIs('account.settings', 'account.leave')]) aria-label="{{ __('site.nav.settings') }}" title="{{ __('site.nav.settings') }}">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg>
                     <span class="nav-user">{{ $authUser->username }}</span>
@@ -96,6 +99,9 @@
             <strong>{{ __('maintenance.banner') }}</strong> {{ __('maintenance.banner_text') }}
             <a href="{{ route('backend.maintenance') }}">{{ __('maintenance.banner_link') }}</a>
         </div>
+    @endif
+    @if ($authUser?->isInForeignTenant())
+        <div class="alert warn" role="status" data-testid="foreign-tenant">{{ __('tenants.foreign_notice', ['name' => \App\Services\Tenancy::current()?->name]) }}</div>
     @endif
     @include('partials.install-hint')
     @if ($authUser && ! request()->routeIs('consent.*'))

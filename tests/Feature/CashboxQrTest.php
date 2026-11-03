@@ -9,11 +9,11 @@ use App\Models\QrCode;
 use App\Models\Setting;
 use App\Services\BeerStock;
 use App\Services\CashBook;
+use App\Services\Tenancy;
 use App\Support\AppSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Mail;
-use App\Services\Tenancy;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 

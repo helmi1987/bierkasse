@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Auth\TenantPasswordBrokerManager;
 use App\Auth\TenantUserProvider;
 use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\RequireRole;
@@ -26,6 +27,8 @@ class AppServiceProvider extends ServiceProvider
         require_once app_path('helpers.php');
         // Newest legal text revisions, cached per request.
         $this->app->scoped(LegalArchive::class);
+        // Password reset tokens per tenant and e-mail.
+        $this->app->extend('auth.password', fn ($manager, $app) => new TenantPasswordBrokerManager($app));
     }
 
     public function boot(): void

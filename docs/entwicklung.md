@@ -8,6 +8,141 @@
   "Allow GitHub Actions to create and approve pull requests".
 - Manuell: Actions > "Promote to main" > Run workflow (unter "Use workflow from" den `claude/...`-Branch wählen). Legt `main` an, falls es fehlt, sonst Merge per PR.
   Danach einmalig Settings > General > Default branch = `main`.
+- Die Mandantenfähigkeit (1.26.0) entstand auf `claude-wip/mandanten`: ausserhalb von `claude/**`, also kein
+  Auto-Merge. Tests über Actions > "Tests" > Run workflow (Branch wählen), Übernahme nach `main` über "Promote to main".
+
+## Mandanten (Multi-Tenancy)
+
+Entscheid 2026-11-03 (v1.26.0, Auftrag des Projektinhabers): mehrere unabhängige Bierkassen (eigene Benutzer,
+Buchungen, Kasse, Lager, Einstellungen, Rechtstexte, QR-Codes, Protokoll) in einer Installation. Gemeinsame Datenbank
+mit `tenant_id` und Global Scope (keine Datenbank pro Mandant). Oberfläche: Admin > Mandanten (`/admin/mandanten`,
+Texte in `lang/de/tenants.php`).
+
+- Datenmodell (Migration `2026_11_03_000100_create_tenants`):
+  - Tabelle `tenants`: `name` (max. 100 Zeichen), `slug` = Kürzel (eindeutig, `Tenant::SLUG_PATTERN`: Kleinbuchstaben,
+    Ziffern, Bindestrich, 1–32 Zeichen, kein Bindestrich am Anfang/Ende). Das Kürzel steht in Links (`?mandant=<kürzel>`)
+    und in der Subdomain (`<kürzel>.<APP_URL-Host>`).
+  - `tenant_id` (NOT NULL, Fremdschlüssel mit `ON DELETE CASCADE`) auf `users`, `transactions`, `cash_entries`,
+    `stock_corrections`, `guest_sales`, `invitations`, `feedback`, `registration_codes`, `qr_codes`, `legal_revisions`.
+    Nullable (null = global) auf `settings`, `audit_logs` und `audit_chains`. Ohne eigene Spalte, weil sie an einem
+    Benutzer bzw. einer Buchung hängen: `round_items`, `user_identities`, `user_favorites`, `notice_dismissals`.
+    Global: `sso_providers` (auch die eigenen Anbieter der Benutzer), `sessions`, `password_reset_tokens`, Cache.
+  - Benutzername eindeutig pro Mandant (`unique(tenant_id, username)`, vorher global); `users.superadmin` (boolean).
+  - `settings`: bisher `key` als Primärschlüssel, neu `id` + `unique(tenant_id, key)`.
+  - `audit_chain` (ein Kopf) wird zu `audit_chains` (ein Kopf pro Mandant plus einer mit `tenant_id` null).
+  - Bestehende Daten kommen in den Mandanten «Standard» (Kürzel `standard`), auch Protokoll und Kopf der Hash-Kette;
+    die globalen Einstellungen (siehe unten) bekommen `tenant_id` null. `down()` entfernt die Mandantenspalten und
+    behält alle Zeilen.
+- Code:
+  - Trait `App\Models\Concerns\BelongsToTenant` auf allen mandanteneigenen Models: Global Scope
+    `App\Models\Scopes\TenantScope` (nur Zeilen des aktuellen Mandanten; ohne aktuellen Mandanten passt nichts),
+    neue Zeilen bekommen die `tenant_id` des aktuellen Mandanten (ohne Mandanten: `TenantRequiredException`).
+    `tenant_id` ist nie mass assignable. Bewusst mandantenübergreifend: `Model::withoutTenant()` bzw.
+    `Model::forTenant($tenant)` (Anmeldung, Codes, Mandantenverwaltung, CLI).
+  - `App\Services\Tenancy`: Betriebsart, aktueller Mandant (`current()`, `set()`, `runAs()` für einen Block),
+    Auflösung aus Host, Kürzel und Codes, Umschalten, Anlegen, Umbenennen, Löschen. `Tenancy::flush()` leert die
+    statischen Caches (auch den von `Setting`).
+  - `App\Http\Middleware\ResolveTenant` (Web-Gruppe, nach der Session, vor Wartungsmodus und Live-Fingerabdruck)
+    setzt den Mandanten jeder Anfrage.
+  - `App\Auth\TenantUserProvider` (Guard-Provider `tenant-eloquent`): Session und «Angemeldet bleiben» finden das Konto
+    per ID ohne Mandanten-Scope (der Mandant folgt aus dem Konto, nicht umgekehrt); Anmeldedaten werden im Mandanten
+    gesucht.
+- Betriebsart (globales Setting `tenancy_mode`, `single` oder `multi`): Das Datenmodell ist immer mandantenfähig; die
+  Betriebsart entscheidet nur, wie der Mandant gefunden wird und ob die Mandanten-Funktionen sichtbar sind.
+  - Einzelbetrieb (Standard): genau ein Mandant, er ist der Mandant jeder Anfrage; keine Subdomains, kein
+    `?mandant=`, Verhalten wie vor 1.26.0. Admin > Mandanten zeigt nur den Schalter «Mandantenbetrieb einschalten».
+  - Mandantenbetrieb: Mandant aus dem Konto bzw. aus Subdomain, Link oder Code (siehe unten).
+  - Umschalten in beide Richtungen ohne Datenverlust (die Daten werden nicht angefasst). Einzel → Mandanten: jeder
+    Admin; der schaltende Admin wird Superadmin. Mandanten → Einzel: nur Superadmin und nur mit genau einem Mandanten
+    (zuerst alle anderen löschen); alle Superadmin-Flags werden gelöscht. Vor jedem Umschalten automatisch ein Backup
+    (`db:backup` nach `storage/app/backups`, in der Wartung herunterladbar); scheitert es, wird nicht umgeschaltet.
+    Audit `tenancy.multi` bzw. `tenancy.single` mit dem Namen der Backup-Datei.
+  - Setup-Wizard: Wahl «Betriebsart» (Einzelbetrieb Standard, Mandantenbetrieb). Mit Mandantenbetrieb wird der erste
+    Admin Superadmin (ohne Backup, die Datenbank ist noch leer).
+- Konten (Entscheid 2026-11-03): ein Benutzer-Datensatz = ein Konto in genau einem Mandanten. Dieselbe Person kann in
+  mehreren Mandanten je ein Konto haben (Benutzername und E-Mail eindeutig pro Mandant, `UserRules`). **Abweichung** von der Idee vom
+  2026-10-21 (ein Konto mit einer Rolle pro Mandant): So bleiben Rollen, Status, Limit, Saldo und Einstellungen pro
+  Konto unverändert. Passwörter (auch TOTP und SSO-Verknüpfungen) werden nicht zwischen Mandanten synchronisiert.
+- Superadmin (Entscheid 2026-11-03, `users.superadmin`, `User::isSuperadmin()`): nur im Mandantenbetrieb wirksam.
+  - Verwaltet die Mandanten, die Wartung (Backups der ganzen Datenbank, Wartungsmodus, Migrationen, Cache) und die
+    SSO-Anbieter (Routen unter `role:superadmin`, Reiter `BackendNav::SUPERADMIN_TABS`; im Einzelbetrieb gilt
+    `role:superadmin` wie `role:admin`).
+  - Ist in jedem Mandanten Admin (`isAdmin()`, `isKassier()`), in fremden Mandanten ohne Bierkonto («Nur Verwaltung»,
+    `isInForeignTenant()`; Hinweis oben auf jeder Seite). Kopfzeile: Link «Mandant: <Name>» auf Admin > Mandanten.
+  - Wechseln: Admin > Mandanten > «Wechseln» speichert den Mandanten in der Session (`tenant.id`) bis zum nächsten
+    Wechsel oder zum Abmelden; danach Kassier-Übersicht dieses Mandanten.
+  - Ernennen/Absetzen: Benutzer-Detailansicht, Kasten «Superadmin» (`PUT /admin/benutzer/{user}/superadmin`; nur
+    Superadmins, nur für Admins, nie der letzte Superadmin; Audit `user.superadmin`). Eine Rolle ≠ Admin entfernt das
+    Flag. Admin > Mandanten listet alle Superadmins.
+- Mandanten verwalten (Admin > Mandanten): Der Superadmin sieht alle Mandanten (Name, Kürzel, Anzahl Benutzer,
+  «aktuell», «mein Mandant», Link), der Mandanten-Admin nur den eigenen.
+  - Anlegen (Superadmin): Name, Kürzel und erster Admin (Benutzername, E-Mail, Startpasswort min. 12 Zeichen). Der Admin
+    muss das Passwort bei der ersten Anmeldung ändern und die Nutzungsbestimmungen akzeptieren. Der neue Mandant
+    startet mit den Standardeinstellungen. Audit `tenant.create`.
+  - Umbenennen (Entscheid 2026-11-03): Der Mandanten-Admin darf den Namen des eigenen Mandanten ändern; das Kürzel ändert
+    nur der Superadmin (jeden Mandanten). Audit `tenant.update`. Ein neues Kürzel macht Links mit dem alten
+    `?mandant=` und die alte Subdomain ungültig; gedruckte QR-Codes bleiben gültig (der Code bestimmt den Mandanten).
+  - Löschen (Entscheid 2026-11-03, **Abweichung**: Löschen durch den Mandanten-Admin wäre Selbstlöschung): nur
+    Superadmin, nie der eigene Mandant (der des Kontos), nie der letzte; Bestätigung durch Eintippen des Kürzels. Vorher
+    automatisch ein Backup. Gelöscht werden alle Daten des Mandanten, auch sein Protokoll und seine Hash-Kette (einzige
+    Ausnahme zu «Protokoll wird nie gelöscht», die Einträge bleiben im Backup). Audit `tenant.delete` (Name, Kürzel,
+    Anzahl Benutzer, Backup).
+- Mandant einer Anfrage (`ResolveTenant`, Mandantenbetrieb):
+  - Angemeldet: der Mandant des Kontos, beim Superadmin der in der Session gewählte.
+  - Nicht angemeldet, in dieser Reihenfolge: Subdomain `<kürzel>.<APP_URL-Host>`, Parameter `?mandant=<kürzel>`, ein
+    Code in der Anfrage (Einladung `?einladung=`, Registrierungscode bzw. Gäste-QR `?zugang=`, Flyer `?flyer=`,
+    Kassen-QR `/kasse/<code>`; nur Suche über den Hash, geprüft wird der Code erst von der Seite), sonst der in der
+    Session gemerkte Mandant (`tenant.guest_id`, bis zur Anmeldung).
+  - Subdomains nur, wenn DNS und Webserver sie kennen. TrustHosts (`bootstrap/app.php`) erlaubt im Mandantenbetrieb
+    automatisch direkte Subdomains des `APP_URL`-Hosts (unbekanntes Kürzel = kein Mandant). Auf einer
+    Mandanten-Subdomain bleiben alle Links auf dieser Subdomain (`URL::forceRootUrl` im `AppServiceProvider`), sonst
+    gilt `APP_URL`.
+  - Links auf öffentliche Seiten (Registrierung) bekommen im Mandantenbetrieb `?mandant=<kürzel>`
+    (`Tenancy::linkParams()`); Einladungen, Registrierungscodes, Gäste-QR, Flyer und Kassen-QR bestimmen den Mandanten
+    über ihren Code.
+  - Ohne Mandant (Hauptadresse ohne Parameter und Code): Registrierung zeigt einen Hinweis (Zustand `no_tenant`,
+    Absenden 404), Gäste-Seite 404, Datenschutz und Nutzungsbestimmungen zeigen die Standardtexte (nichts wird
+    archiviert), die Anmeldung findet Konten über alle Mandanten.
+- Anmeldung im Mandantenbetrieb:
+  - Mit Mandant (Subdomain, `?mandant=`, gemerkt): nur Konten dieses Mandanten. Ohne Mandant: alle Konten mit diesem
+    Benutzernamen bzw. dieser E-Mail (E-Mail nur, wenn im jeweiligen Mandanten eindeutig); jedes wird mit dem Passwort
+    geprüft. Passt das Passwort in mehreren Mandanten (gleicher Benutzername + Passwort): Mandantenwahl unter
+    `/anmelden/mandant` (5 Minuten gültig), danach wie gewohnt Sperr-Prüfung und TOTP.
+  - Nach der Anmeldung gilt der Mandant des Kontos; der gemerkte Gäste-Mandant wird vergessen.
+  - SSO: die Verknüpfung (Anbieter + Subjekt) bestimmt das Konto, unabhängig vom Host. Ein Subjekt lässt sich pro
+    Anbieter nur mit einem Konto verknüpfen, also nur in einem Mandanten. Eigener Anbieter (`/login/eigener`): ohne
+    Mandant muss der Benutzername über alle Mandanten eindeutig sein.
+  - Passwort vergessen: mit Mandant nur dessen Konten; an der Hauptadresse ohne Mandant bekommt jedes passende Konto
+    eine eigene Mail. Der Link enthält `?mandant=<kürzel>`. Die Reset-Tokens sind pro Mandant und E-Mail gespeichert
+    (`App\Auth\TenantTokenRepository`, Schlüssel `<tenant id>|<e-mail>` in `password_reset_tokens.email`), damit
+    dieselbe Adresse in zwei Mandanten zwei unabhängige Links bekommt.
+  - CLI: `user:password`, `user:totp-reset` und `user:admin` nehmen `--tenant=<kürzel>`, nötig nur wenn der
+    Benutzername in mehreren Mandanten vorkommt (sonst Abbruch mit der Liste der Kürzel).
+- Einstellungen pro Mandant (Admin > Einstellungen inkl. Funktionen, Navigation, Rechtstexte, TWINT, Bierpreis usw.).
+  Global (`AppSettings::GLOBAL_KEYS`, `tenant_id` null): Mail, Wartungsmodus (+ Mitteilung), «Eigene Anbieter für
+  User erlauben» (wird auf der Anmeldeseite ohne Mandant gebraucht) und die Betriebsart. Die SSO-Anbieter (Tabelle
+  `sso_providers`) sind global. Mail und «Eigene Anbieter» stellt im Mandantenbetrieb nur der Superadmin ein
+  (Admin > Einstellungen; Mandanten-Admins sehen die beiden Kästen nicht, der Server ignoriert ihre Werte). Ohne
+  aktuellen Mandanten lesen sich Mandanten-Einstellungen als nicht gesetzt (Standardwerte) und lassen sich nicht
+  speichern.
+- Protokoll: eine Hash-Kette pro Mandant (`audit_chains`) plus eine globale Kette (`tenant_id` null) für Einträge ohne
+  Mandant: Betriebsart (`tenancy.multi`/`tenancy.single`), Mandanten anlegen/ändern/löschen (`tenant.*`) und z. B. eine
+  fehlgeschlagene Anmeldung an der Hauptadresse. Sichtbar sind die Einträge des aktuellen
+  Mandanten; die globalen im Einzelbetrieb für alle Berechtigten, im Mandantenbetrieb nur für Superadmins. Siehe
+  "Protokoll (Audit-Log)".
+- Live-Aktualisierung pro Mandant (`App\Support\LiveFingerprint`): Änderungen in einem anderen Mandanten laden die
+  offenen Seiten nicht neu (bei `settings` zählen die eigenen und die globalen).
+- Tests: `Tests\TestCase::setUp()` ruft `Tenancy::flush()` (statische Caches von Betriebsart, Mandant und Settings).
+  Die Factories setzen keine `tenant_id`; `BelongsToTenant` nimmt den aktuellen Mandanten (im Einzelbetrieb «Standard»
+  aus der Migration). Mandantenbetrieb in Tests: `Tenancy::enableMulti($admin, backup: false)`,
+  `Tenancy::create(...)` und `Tenancy::runAs($tenant, fn () => ...)`.
+- Offen (noch nicht gebaut):
+  - Backup pro Mandant: heute nur die ganze Datenbank, deshalb ist die Wartung im Mandantenbetrieb nur für Superadmins
+    (Entscheid 2026-10-21 «Backup pro Mandant» bleibt offen).
+  - Import eines Mandanten-Backups (heute stellt `db:restore` die ganze Installation wieder her).
+  - Audit-Einträge ohne Mandant (globale Kette) sind im Protokoll des Mandanten-Admins nicht sichtbar.
+  - Session-Cookie gilt pro Host: eine Anmeldung auf der Subdomain gilt nicht an der Hauptadresse und umgekehrt.
+  - Erledigt: `rounds_enabled` und die übrigen Schalter der Funktionen sind bereits Mandanten-Einstellungen.
 
 ## Funktionen
 
@@ -269,7 +404,7 @@
       Fassung; kann das Archiv nicht geschrieben werden (z. B. Migration ausstehend), zeigen sie den aktuellen Text
       und loggen den Fehler. Registrierung und Zustimmung schlagen dann mit Fehler fehl (fail-closed, keine
       Zustimmung ohne archivierte Fassung).
-    - Sicher bei Parallelzugriff: Transaktion, Sperre auf den Audit-Kettenkopf (`audit_chain`), erneute Prüfung.
+    - Sicher bei Parallelzugriff: Transaktion, Sperre auf den Audit-Kettenkopf des Mandanten (`audit_chains`), erneute Prüfung.
       Pro Anfrage gecacht: bei unverändertem Text eine Abfrage (SELECT) pro Art und Anfrage, danach nur noch die
       Hash-Berechnung; gecacht wird erst nach dem Commit (kein Rest nach Rollback). Audit `legal.revision`
       (Art, Stand, Hash, Anlass; ohne Text). `legal.update` bleibt.
@@ -318,8 +453,8 @@
   - Admin-Bereich: Liste der Runden unter Buchungen > Runden (Kassier und Admin); Schalter "Runde spendieren erlauben"
     unter Einstellungen > Funktionen (nur Admin, seit 1.20.0; Standard an; aus: Karte ausgeblendet, `/konto/runde` 404,
     bestehende Runden bleiben).
-    Der Schalter ist eine eigene Einstellung (`rounds_enabled`) und soll mit der Mandantenfähigkeit in die
-    Mandanten-Einstellungen wandern.
+    Der Schalter ist eine eigene Einstellung (`rounds_enabled`); seit 1.26.0 wie alle Mandanten-Einstellungen pro
+    Mandant (siehe "Mandanten (Multi-Tenancy)").
     **Annahme:** Wird ein Empfänger gelöscht (nicht deaktiviert), zählt sein Bier danach als "Gäste (eingeladen)".
 - Bier verschenken (Entscheid 2026-10-22): Dashboard-Karte "Bier verschenken" (nach "Runde spendieren"). Ein oder
   mehrere aktive Kollegen anhaken (Suchfeld wie bei der Runde), "Biere pro Person" 1–10 (alle bekommen gleich viele),
@@ -446,7 +581,8 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
   Ausnahmen ohne Transaktion (Anmeldung, Abmeldung, Wartungsaktionen): Fehler beim Protokollieren werden gemeldet,
   brechen die Aktion aber nicht ab.
 - Hash-Kette: `hash = sha256(JSON aus prev_hash und allen Feldern)`. Der Kopf der Kette (letzter Hash, Anzahl)
-  steht in `audit_chain` und wird beim Anhängen gesperrt (keine Verzweigung bei gleichzeitigen Schreibern).
+  steht in `audit_chains` (seit 1.26.0 eine Zeile pro Mandant) und wird beim Anhängen gesperrt (keine Verzweigung
+  bei gleichzeitigen Schreibern).
   Das Modell `AuditLog` verweigert Ändern und Löschen (auch Massen-Updates über Eloquent). Wer direkten
   Datenbankzugriff hat, kann Zeilen trotzdem ändern oder löschen; die Prüfung zeigt das an.
   **Annahme:** `actor_id` ist nicht Teil des Hashs (der Fremdschlüssel setzt ihn beim Löschen eines Benutzers auf
@@ -461,11 +597,17 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
   Feldnamen (`fields`, unbekannt = Schlüssel), Beträge als CHF, ja/nein, "–", Datum lokal, Benutzer-IDs als Namen.
   **Annahme:** Zeiten ohne Zeitzone in den Werten stammen von Laravel in `APP_TIMEZONE`. Neue Aktionen/Felder in
   `lang/de/audit.php` ergänzen.
-- Backups (`db:backup`, Download in der Wartung) enthalten `audit_logs` und `audit_chain`; `db:restore` stellt beide
+- Backups (`db:backup`, Download in der Wartung) enthalten `audit_logs` und `audit_chains` (bis 1.25 `audit_chain`); `db:restore` stellt beide
   wieder her und hängt danach `backup.restore` an. Einträge nach dem Backup-Zeitpunkt sind nach einer
   Wiederherstellung weg (nur im neueren Backup).
-- Mandantenfähigkeit (später): `audit_logs` bekommt `tenant_id`; Mandanten-Admins sehen nur ihren Mandanten,
-  der Superadmin alle. Die Hash-Kette bleibt eine Kette über die ganze Installation.
+- Mandanten (Entscheid 2026-11-03, v1.26.0; ersetzt die frühere Planung "eine Kette über die ganze Installation"):
+  `audit_logs.tenant_id`, eine Hash-Kette pro Mandant (`audit_chains`, ersetzt `audit_chain`) plus eine globale Kette
+  (`tenant_id` null) für Einträge ohne Mandanten-Kontext (z. B. fehlgeschlagene Anmeldung an der Hauptadresse).
+  Das Protokoll zeigt die Einträge des aktuellen Mandanten, die globalen im Einzelbetrieb für alle Berechtigten, im
+  Mandantenbetrieb nur für Superadmins (ein Superadmin sieht nach "Wechseln" den gewählten Mandanten). "Integrität
+  prüfen" prüft die Kette des aktuellen Mandanten. `tenant_id` ist nicht Teil des Hashs (bestehende Hashes bleiben
+  nach der Migration gültig). Beim Löschen eines Mandanten werden seine Einträge und seine Kette mitgelöscht (vorher
+  automatisches Backup), siehe "Mandanten (Multi-Tenancy)".
 
 ## Tests
 

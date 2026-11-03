@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Services\Tenancy;
 use Closure;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ class UserRules
      */
     public static function username(?int $ignoreId = null): array
     {
-        return ['required', 'string', 'min:3', 'max:32', 'regex:'.self::USERNAME_PATTERN, self::notReserved(), Rule::unique('users', 'username')->ignore($ignoreId)];
+        return ['required', 'string', 'min:3', 'max:32', 'regex:'.self::USERNAME_PATTERN, self::notReserved(), Rule::unique('users', 'username')->where('tenant_id', Tenancy::currentId())->ignore($ignoreId)];
     }
 
     /** Rejects the reserved user names (RESERVED_USERNAMES), regardless of case. */
@@ -56,8 +57,8 @@ class UserRules
         return [
             'first_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['nullable', 'string', 'max:100'],
-            // Unique, because the password reset identifies the account by its address.
-            'email' => [$emailRequired ? 'required' : 'nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($ignoreId)],
+            // Unique per tenant, because the password reset identifies the account by its address.
+            'email' => [$emailRequired ? 'required' : 'nullable', 'email', 'max:255', Rule::unique('users', 'email')->where('tenant_id', Tenancy::currentId())->ignore($ignoreId)],
         ];
     }
 }

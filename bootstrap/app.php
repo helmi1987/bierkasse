@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CaptureLiveFingerprint;
 use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\EnsureBeerAccount;
 use App\Http\Middleware\EnsureInstalled;
@@ -7,11 +8,13 @@ use App\Http\Middleware\MaintenanceMode;
 use App\Http\Middleware\RequireRole;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SecurityHeaders;
+use App\Services\Tenancy;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -34,15 +37,19 @@ return Application::configure(basePath: dirname(__DIR__))
                 return [];
             }
 
-            return \App\Services\Tenancy::isMulti() ? ['^([a-z0-9-]+\.)?'.preg_quote($host).'$'] : ['^'.preg_quote($host).'$'];
+            return Tenancy::isMulti() ? ['^([a-z0-9-]+\.)?'.preg_quote($host).'$'] : ['^'.preg_quote($host).'$'];
         }, subdomains: false);
         $middleware->append(SecurityHeaders::class);
-        // Current tenant (after the session, before anything reads tenant data).
+        // Current tenant (after the session, before route model binding and anything else reads tenant data).
         $middleware->appendToGroup('web', ResolveTenant::class);
+        $middleware->prependToPriorityList(
+            before: SubstituteBindings::class,
+            prepend: ResolveTenant::class,
+        );
         // Maintenance mode for users (backend setting): after the session, so admins are recognized.
         $middleware->appendToGroup('web', MaintenanceMode::class);
         // Live refresh fingerprint, taken before the page content is built.
-        $middleware->appendToGroup('web', \App\Http\Middleware\CaptureLiveFingerprint::class);
+        $middleware->appendToGroup('web', CaptureLiveFingerprint::class);
         $middleware->alias([
             'active' => EnsureActiveUser::class,
             'beer' => EnsureBeerAccount::class,

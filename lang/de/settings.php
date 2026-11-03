@@ -3,6 +3,7 @@
 return [
     'title' => 'Einstellungen',
     'saved' => 'Gespeichert.',
+    'global_superadmin_hint' => 'Mail-Versand und «Eigener Anmelde-Anbieter» gelten für die ganze Installation und werden vom Superadmin eingestellt.',
     'save' => 'Speichern',
     'general' => 'Allgemein',
     'features' => 'Funktionen',

@@ -10,6 +10,7 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Services\Audit;
 use App\Services\LegalArchive;
+use App\Services\Tenancy;
 use App\Support\AppSettings;
 use App\Support\FlyerSvg;
 use App\Support\LegalTexts;
@@ -32,7 +33,7 @@ class SettingsController extends Controller
     /** Cards of the main settings form; anchor ids are "settings-<name>". */
     private const SECTIONS = ['general', 'undo', 'twint', 'registration', 'login', 'notify', 'mail'];
 
-    public function edit(): View
+    public function edit(Request $request): View
     {
         return view('backend.settings', [
             'beerPrice' => Money::plain(AppSettings::beerPrice()),
@@ -52,6 +53,8 @@ class SettingsController extends Controller
             'notifyKassier' => AppSettings::notifyKassier(),
             'personalSso' => AppSettings::personalSsoAllowed(),
             'mail' => AppSettings::mail(),
+            // Installation-wide settings (mail, personal SSO): in multi mode superadmins only.
+            'globalEditable' => self::globalEditable($request->user()),
             'features' => [
                 'rounds_enabled' => AppSettings::roundsAllowed(),
                 'gifts_enabled' => AppSettings::giftsAllowed(),
@@ -172,8 +175,15 @@ class SettingsController extends Controller
         return redirect()->to(route('backend.settings').'#rechtliches')->with('status', __($reaccept ? 'legal.saved_reaccept' : ($update ? 'legal.saved_update' : 'legal.saved')));
     }
 
+    /** Global settings (mail, personal SSO) are saved by every admin in single mode, by superadmins in multi mode. */
+    private static function globalEditable(?User $user): bool
+    {
+        return ! Tenancy::isMulti() || (bool) $user?->isSuperadmin();
+    }
+
     public function update(Request $request): RedirectResponse
     {
+        $global = self::globalEditable($request->user());
         $data = $request->validate([
             'beer_price' => ['required', 'string', 'max:10'],
             'default_limit' => ['required', 'string', 'max:10'],
@@ -187,7 +197,7 @@ class SettingsController extends Controller
             'twint_message' => ['nullable', 'string', 'max:'.AppSettings::TWINT_MESSAGE_MAX],
             'registration_mode' => ['required', Rule::in(AppSettings::REGISTRATION_MODES)],
             'registration_password' => ['nullable', 'string', 'min:4', 'max:100'],
-            'mail_transport' => ['required', Rule::in(AppSettings::MAIL_TRANSPORTS)],
+            'mail_transport' => [Rule::requiredIf($global), 'nullable', Rule::in(AppSettings::MAIL_TRANSPORTS)],
             'mail_from_address' => ['nullable', 'email', 'max:255'],
             'mail_from_name' => ['nullable', 'string', 'max:100'],
             'smtp_host' => ['nullable', 'required_if:mail_transport,smtp', 'string', 'max:255'],
@@ -242,7 +252,7 @@ class SettingsController extends Controller
             AppSettings::NOTIFY_KASSIER => $request->boolean('notify_kassier'),
             AppSettings::PERSONAL_SSO => $request->boolean('personal_sso'),
             AppSettings::MAIL => [
-                'transport' => $data['mail_transport'],
+                'transport' => (string) ($data['mail_transport'] ?? 'sendmail'),
                 'from_address' => (string) ($data['mail_from_address'] ?? ''),
                 'from_name' => (string) ($data['mail_from_name'] ?? ''),
                 'smtp_host' => (string) ($data['smtp_host'] ?? ''),
@@ -252,6 +262,9 @@ class SettingsController extends Controller
                 'smtp_encryption' => (string) ($data['smtp_encryption'] ?? ''),
             ],
         ];
+        if (! $global) {
+            unset($settings[AppSettings::PERSONAL_SSO], $settings[AppSettings::MAIL]);
+        }
         DB::transaction(function () use ($settings, $legalChanged) {
             Setting::putMany($settings);
             if ($legalChanged) {
@@ -322,7 +335,7 @@ class SettingsController extends Controller
             // The URL with the flyer code is not printed (only the plain registration URL).
             foreach (QrCode::query()->active()->where('kind', QrCode::KIND_FLYER)->orderBy('id')->get() as $code) {
                 $targets[] = ['key' => 'flyer-'.$code->id, 'label' => __('settings.flyer_code_label').' · '.$code->displayName(),
-                    'url' => $code->url(), 'printed_url' => route('register'), 'flyer' => true];
+                    'url' => $code->url(), 'printed_url' => route('register', Tenancy::linkParams()), 'flyer' => true];
             }
         }
         $selected = (string) $request->query('qr', '');

@@ -102,12 +102,14 @@
         <button type="submit" class="btn primary" name="section" value="registration">{{ __('settings.save') }}</button>
     </section>
 
+    @if ($globalEditable)
     <section class="card stack" id="settings-login">
         <h2>{{ __('settings.login') }}</h2>
         <label class="switch"><input type="checkbox" name="personal_sso" value="1" @checked(old('personal_sso', $personalSso))> <span>{{ __('settings.personal_sso') }}</span></label>
         <p class="hint">{{ __('settings.personal_sso_hint') }}</p>
         <button type="submit" class="btn primary" name="section" value="login">{{ __('settings.save') }}</button>
     </section>
+    @endif
 
     <section class="card stack" id="settings-notify">
         <h2>{{ __('settings.notify') }}</h2>
@@ -116,6 +118,7 @@
         <button type="submit" class="btn primary" name="section" value="notify">{{ __('settings.save') }}</button>
     </section>
 
+    @if ($globalEditable)
     <section class="card stack" id="settings-mail">
         <h2>{{ __('settings.mail') }}</h2>
         <div class="grid-2">
@@ -166,6 +169,9 @@
         </div>
         <button type="submit" class="btn primary" name="section" value="mail">{{ __('settings.save') }}</button>
     </section>
+    @else
+    <p class="hint">{{ __('settings.global_superadmin_hint') }}</p>
+    @endif
 
 </form>
 

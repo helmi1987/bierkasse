@@ -190,6 +190,15 @@
                 <button type="submit" class="btn small" @disabled(! $adminOnlySettled)>{{ __('users.admin_only_save') }}</button>
             </form>
         @endif
+        @if (\App\Services\Tenancy::isMulti() && $me->isSuperadmin() && $user->role === \App\Models\User::ROLE_ADMIN)
+            <form method="post" action="{{ route('backend.users.superadmin', $user) }}" class="stack" id="superadmin">
+                @csrf
+                @method('PUT')
+                <label class="check"><input type="checkbox" name="superadmin" value="1" @checked($user->superadmin)> {{ __('tenants.superadmin') }}</label>
+                <p class="hint">{{ __('tenants.superadmin_hint') }}</p>
+                <button type="submit" class="btn small">{{ __('settings.save') }}</button>
+            </form>
+        @endif
     @endif
 </section>
 

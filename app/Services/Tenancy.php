@@ -10,6 +10,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Support\AppSettings;
 use Closure;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -252,12 +253,15 @@ class Tenancy
             return;
         }
         $file = $backup ? self::backup() : null;
+        $current = self::current();
         DB::transaction(function () use ($actor, $file) {
             Setting::put(AppSettings::TENANCY_MODE, self::MODE_MULTI, 'tenancy.mode');
             $actor->forceFill(['superadmin' => true])->save();
-            Audit::log('tenancy.multi', $actor, [], ['mode' => self::MODE_MULTI, 'superadmin' => $actor->username, 'backup' => $file], $actor);
+            self::logGlobal('tenancy.multi', $actor, [], ['mode' => self::MODE_MULTI, 'superadmin' => $actor->username, 'backup' => $file], $actor);
         });
         self::flush();
+        // The rest of this request keeps its tenant (multi mode no longer resolves it by itself).
+        self::set($current);
     }
 
     /**
@@ -276,7 +280,7 @@ class Tenancy
         DB::transaction(function () use ($actor, $file) {
             Setting::put(AppSettings::TENANCY_MODE, self::MODE_SINGLE, 'tenancy.mode');
             User::withoutTenant()->where('superadmin', true)->update(['superadmin' => false]);
-            Audit::log('tenancy.single', $actor, [], ['mode' => self::MODE_SINGLE, 'backup' => $file], $actor);
+            self::logGlobal('tenancy.single', $actor, [], ['mode' => self::MODE_SINGLE, 'backup' => $file], $actor);
         });
         self::flush();
     }
@@ -304,7 +308,7 @@ class Tenancy
                 ]);
                 $user->save();
             });
-            Audit::log('tenant.create', $tenant, [], ['name' => $tenant->name, 'slug' => $tenant->slug, 'admin' => Str::lower(trim($admin['username']))], $actor);
+            self::logGlobal('tenant.create', $tenant, [], ['name' => $tenant->name, 'slug' => $tenant->slug, 'admin' => Str::lower(trim($admin['username']))], $actor);
 
             return $tenant;
         });
@@ -316,7 +320,13 @@ class Tenancy
         if ($slug !== null) {
             $tenant->slug = Str::lower(trim($slug));
         }
-        Audit::save('tenant.update', $tenant);
+        [$old, $new] = Audit::dirty($tenant);
+        DB::transaction(function () use ($tenant, $old, $new, $actor) {
+            $tenant->save();
+            if ($new !== []) {
+                self::logGlobal('tenant.update', $tenant, $old, $new, $actor);
+            }
+        });
     }
 
     /**
@@ -339,11 +349,24 @@ class Tenancy
                 DB::table($table)->where('tenant_id', $tenant->id)->delete();
             }
             $tenant->delete();
-            Audit::log('tenant.delete', null, ['name' => $tenant->name, 'slug' => $tenant->slug] + $counts, ['backup' => $file], $actor);
+            self::logGlobal('tenant.delete', null, ['name' => $tenant->name, 'slug' => $tenant->slug] + $counts, ['backup' => $file], $actor);
         });
-        if (self::currentId() === (int) $tenant->id) {
-            self::clear();
-        }
         self::$defaultLoaded = false;
+        if (self::currentId() === (int) $tenant->id) {
+            // The superadmin had switched into the deleted tenant: back to the own one.
+            self::set(Tenant::query()->find((int) $actor->tenant_id));
+        }
+    }
+
+    /**
+     * Tenant management and mode changes are logged in the global chain (no tenant), visible to superadmins
+     * and in single mode; not in the log of the tenant the superadmin happens to work in.
+     *
+     * @param  array<string, mixed>  $old
+     * @param  array<string, mixed>  $new
+     */
+    private static function logGlobal(string $action, ?Model $subject, array $old, array $new, ?User $actor): void
+    {
+        self::runAs(null, fn () => Audit::log($action, $subject, $old, $new, $actor));
     }
 }

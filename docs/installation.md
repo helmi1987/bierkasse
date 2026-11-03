@@ -49,6 +49,8 @@
      (Schutz gegen Host-Header-Injection). Domain später wechseln: `APP_URL` in `.env` anpassen. Der Wizard schreibt die
      DB-Daten in `.env`, führt die Migrationen aus, legt den Admin an, setzt `APP_INSTALLED=true` und löscht
      das Token. `/setup` liefert danach 404.
+   - Betriebsart im Wizard (ab 1.26.0): "Einzelbetrieb" (Standard, eine Bierkasse) oder "Mandantenbetrieb"
+     (mehrere unabhängige Bierkassen, der erste Admin wird Superadmin). Später änderbar, siehe "Mandantenbetrieb".
    - Danach in `.env` `DB_HOST=127.0.0.1` setzen (nicht `localhost`): PHP auf der Kommandozeile erreicht den
      localhost-Socket nicht, sonst scheitert `migrate` in den Deploy-Aktionen mit `SQLSTATE[HY000] [2002]`.
    - Dann `php -d open_basedir= artisan migrate --force` als letzte Deploy-Aktion ergänzen (Updates mit neuen
@@ -115,7 +117,8 @@
      weisse Fläche mit Rand, ca. 21 % der Code-Breite) auf Bildschirm, Download und A4-Druck; wird beim Erzeugen eingebettet,
      bestehende Codes bleiben gültig und lesbar (Inhalt unverändert).
    - Reiter-Reihenfolge Standard (Entscheid 2026-10-24, v1.20.0; ersetzt 2026-10-23): Kassier: Übersicht, Kasse, Lager,
-     Benutzer, Buchungen, QR-Codes, Protokoll. Admin: Einstellungen, Feedback, SSO, Navigation, Wartung.
+     Benutzer, Buchungen, QR-Codes, Protokoll. Admin: Einstellungen, Feedback, SSO, Navigation, Mandanten (ab 1.26.0),
+     Wartung.
      Zusammengelegt bzw. verschoben: "Statistik" (doppelt zu `/statistik` in der Hauptleiste) entfällt, `/admin/statistik`
      leitet auf `/statistik`; "Runden", "Gäste", "Verschenkt" → "Buchungen" (Reiter Runden | Geschenke | Gäste);
      "Einladungen" → Reiter in "Benutzer"; "Vorschläge" → Reiter "Einzahlungsvorschläge" in "Kasse"; "QR-Codes
@@ -165,10 +168,12 @@
 
 Break-glass via SSH: `php artisan user:password <username>` (optional `--generate`),
 `php artisan user:totp-reset <username>`, `php artisan user:admin <username>`.
+Im Mandantenbetrieb zusätzlich `--tenant=<kürzel>`, wenn der Benutzername in mehreren Mandanten vorkommt.
 
 ## SSO-Anbieter einrichten
 
-Unter Admin > SSO "Neu: <Anbieter>" wählen; das Formular zeigt die Redirect-URI
+Die Anbieter gelten für die ganze Installation (im Mandantenbetrieb für alle Mandanten, verwaltet nur von
+Superadmins). Unter Admin > SSO "Neu: <Anbieter>" wählen; das Formular zeigt die Redirect-URI
 `https://<domain>/login/sso/{kuerzel}/callback` (Kürzel = Standard der Name, z. B. `google`). Diese URI exakt beim
 Anbieter eintragen, Client-ID und Client-Secret ins Formular kopieren, "Aktiv" anhaken. Endpunkte und Scopes sind
 vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter Konto > Einstellungen
@@ -193,8 +198,8 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
 
 ## Wartung (Admin)
 
-`/admin/wartung` (nur Admins, Menüpunkt "Wartung" im Admin-Bereich). Jede Aktion fragt nach und wird mit dem
-Benutzernamen des Admins protokolliert (`Log::info`, `storage/logs`).
+`/admin/wartung` (nur Admins, im Mandantenbetrieb nur Superadmins; Menüpunkt "Wartung" im Admin-Bereich). Jede
+Aktion fragt nach und wird mit dem Benutzernamen des Admins protokolliert (`Log::info`, `storage/logs`).
 
 - System: App-Version aus der Datei `VERSION` (Semver, wird mit jeder Änderung erhöht: Minor = Funktion,
   Patch = Korrektur; "installiert" = Dateidatum beim Deploy), zusätzlich falls `.git` lesbar (Commit-Kurzhash, Branch und Datum, gelesen aus `.git/HEAD`, Refs bzw. `packed-refs`
@@ -248,5 +253,54 @@ php artisan db:restore datei.sql.gz   # fragt nach; --force ohne Nachfrage (z. B
   Bei MySQL nur Basistabellen (keine Views/Trigger/Routinen).
 - Regelmässig per Plesk-Cronjob, z. B. täglich `php artisan db:backup --keep=14`.
 - **Entscheid 2026-10-21:** vorerst Backup der ganzen Datenbank. Mit Mandantenfähigkeit wird das Backup im Admin-Bereich
-  pro Mandant erstellt.
+  pro Mandant erstellt. Stand 1.26.0: noch offen, das Backup umfasst weiterhin alle Mandanten (siehe "Mandantenbetrieb").
 
+## Mandantenbetrieb
+
+Ab 1.26.0 (Entscheid 2026-11-03): mehrere unabhängige Bierkassen (eigene Benutzer, Buchungen, Kasse, Lager,
+Einstellungen, Rechtstexte, QR-Codes, Protokoll) in einer Installation und einer Datenbank. Standard ist der
+Einzelbetrieb; bestehende Installationen bleiben nach dem Update im Einzelbetrieb, alle Daten liegen im Mandanten
+«Standard» (Kürzel `standard`). Technische Details: [Entwicklung](entwicklung.md), "Mandanten (Multi-Tenancy)".
+
+- Einschalten: Admin > Mandanten > «Mandantenbetrieb einschalten» (jeder Admin). Vorher wird automatisch ein
+  Datenbank-Backup in `storage/app/backups` geschrieben (wie `php artisan db:backup`, sichtbar und herunterladbar unter
+  Admin > Wartung); scheitert das Backup, wird nicht umgeschaltet. Der Admin, der einschaltet, wird Superadmin.
+- Superadmin: legt Mandanten an (Name, Kürzel, erster Admin mit Startpasswort), benennt sie um, löscht sie und wechselt
+  in einen Mandanten (Admin > Mandanten > «Wechseln»); dort ist er Admin ohne Bierkonto. Nur Superadmins sehen im
+  Mandantenbetrieb Wartung (Backups der ganzen Datenbank, Wartungsmodus) und SSO. Weitere Superadmins ernennt ein
+  Superadmin in der Benutzer-Detailansicht eines Admins.
+- Mandanten-Admins verwalten ihren Mandanten wie bisher (Einstellungen, Benutzer, Kasse usw.) und dürfen den Namen
+  des eigenen Mandanten ändern; Kürzel und Löschen nur Superadmin.
+- Mandant löschen: nur Superadmin, nie der eigene und nie der letzte; zur Bestätigung das Kürzel eintippen. Vorher
+  wird automatisch ein Backup geschrieben. Gelöscht werden alle Daten des Mandanten (auch sein Protokoll).
+- Global (für alle Mandanten gleich): Mail-Versand, Wartungsmodus, «Eigene Anbieter für User erlauben», SSO-Anbieter
+  und die Betriebsart. Alles andere ist pro Mandant.
+- Adresse eines Mandanten für Benutzer und Gäste:
+  - Hauptadresse mit Kürzel: `https://<domain>/?mandant=<kürzel>` (z. B. für Registrierung und Anmeldung). Funktioniert
+    ohne weitere Einrichtung; der Mandant bleibt für die Sitzung gemerkt.
+  - Links mit Code (Einladung, Registrierungscode, Gäste-QR, Flyer, Kassen-QR) bestimmen den Mandanten selbst;
+    gedruckte Codes bleiben gültig.
+  - Anmeldung an der Hauptadresse ohne Kürzel findet das Konto in allen Mandanten; gibt es denselben Benutzernamen mit
+    demselben Passwort in mehreren Mandanten, wählt man danach den Mandanten. "Passwort vergessen" an der Hauptadresse
+    schickt jedem passenden Konto eine eigene Mail (der Link enthält `?mandant=`).
+  - Ohne Kürzel und Code zeigt die Registrierung nur einen Hinweis und die Gäste-Seite liefert 404.
+- Subdomains (optional): `<kürzel>.<domain>`, z. B. `luks.bier.example` bei `APP_URL=https://bier.example`. Die App
+  akzeptiert im Mandantenbetrieb automatisch direkte Subdomains des `APP_URL`-Hosts und erzeugt dort alle Links auf der
+  Subdomain. Damit sie erreichbar sind:
+  - DNS: ein Wildcard-Eintrag `*.<domain>` (A/AAAA oder CNAME auf die Domain) oder ein Eintrag pro Mandant.
+  - Webserver: die Subdomains müssen auf dieselbe Website (gleicher Dokumentenstamm `<domain>/public`) zeigen. Plesk:
+    unter der Domain einen Alias `*.<domain>` bzw. pro Mandant einen Alias `<kürzel>.<domain>` anlegen
+    (**Annahme:** je nach Plesk-Version sind Wildcard-Aliasse nicht möglich, dann ein Alias pro Mandant).
+  - HTTPS: das Zertifikat muss die Subdomains abdecken (Let's Encrypt: Aliasse mit aufnehmen; ein Wildcard-Zertifikat
+    braucht die DNS-Prüfung). Ohne gültiges HTTPS schlägt jedes Formular fehl (Session-Cookie nur über HTTPS).
+  - `SESSION_DOMAIN` in `.env` nicht setzen (bleibt `null`): das Session-Cookie gilt pro Host. Eine Anmeldung auf der
+    Subdomain gilt deshalb nicht an der Hauptadresse und umgekehrt.
+  - Ohne DNS/Webserver-Eintrag einfach die Hauptadresse mit `?mandant=<kürzel>` verwenden.
+- Zurück zum Einzelbetrieb: Admin > Mandanten > «Zurück zum Einzelbetrieb» (nur Superadmin), nur solange genau ein
+  Mandant besteht (zuerst alle anderen löschen). Vorher automatisch ein Backup; die Superadmin-Rechte werden
+  entfernt, die Daten bleiben unverändert.
+- Kommandozeile: `user:password`, `user:totp-reset` und `user:admin` nehmen `--tenant=<kürzel>`, wenn der
+  Benutzername in mehreren Mandanten vorkommt, z. B. `php artisan user:password hans --tenant=luks`.
+- Backup und Wiederherstellung: `db:backup` und der Download in der Wartung enthalten immer die ganze Installation
+  (alle Mandanten). `db:restore` stellt die ganze Installation auf den Stand des Backups zurück, auch alle anderen
+  Mandanten und die Betriebsart. Backup und Import eines einzelnen Mandanten gibt es noch nicht.

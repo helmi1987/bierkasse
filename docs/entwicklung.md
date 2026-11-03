@@ -143,7 +143,7 @@
   - Korrektur durch Kassier/Admin mit Pflicht-Bemerkung.
   - Übertrag von der alten Strichliste (Entscheid 2026-10-21): bei der Registrierung optional "Ich schulde noch" /
     "Ich habe noch Guthaben", in Bieren (1–500, umgerechnet zum aktuellen Bierpreis, Anzahl und Preis werden
-    gespeichert) oder CHF (max. 500.00). Wird als offene Buchung Typ `carryover` gespeichert (Schuld negativ,
+    gespeichert; Betrag ebenfalls max. CHF 500.00, sonst Feldfehler) oder CHF (max. 500.00). Wird als offene Buchung Typ `carryover` gespeichert (Schuld negativ,
     Guthaben positiv); zählt für den Benutzer sofort (verfügbarer Saldo, siehe oben), im Admin-Bereich erst nach
     Bestätigung. Kassier/Admin bestätigen (Betrag anpassbar; dann
     wird die Bier-Anzahl verworfen und der gemeldete Wert in der Bemerkung festgehalten) oder lehnen ab in der

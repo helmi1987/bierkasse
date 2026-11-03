@@ -321,6 +321,14 @@ class RegisterController extends Controller
             if ($beers < 1 || $beers > Transaction::CARRYOVER_MAX_BEERS || $price <= 0) {
                 throw ValidationException::withMessages(['carryover_value' => __('register.carryover_beers_invalid', ['max' => Transaction::CARRYOVER_MAX_BEERS])]);
             }
+            // Same amount limit as in CHF (Ledger::reportCarryover rejects more).
+            if ($beers * $price > Transaction::CARRYOVER_MAX_AMOUNT) {
+                throw ValidationException::withMessages(['carryover_value' => __('register.carryover_beers_amount_invalid', [
+                    'max' => chf(Transaction::CARRYOVER_MAX_AMOUNT),
+                    'beers' => intdiv(Transaction::CARRYOVER_MAX_AMOUNT, $price),
+                    'price' => chf($price),
+                ])]);
+            }
 
             return [$sign * $beers * $price, $beers, $price];
         }

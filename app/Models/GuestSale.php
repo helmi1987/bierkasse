@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Support\AppSettings;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class GuestSale extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = ['name', 'beers', 'unit_price', 'amount', 'method', 'booked_by', 'source'];
 
     public const SOURCE_CASHBOX = 'cashbox';

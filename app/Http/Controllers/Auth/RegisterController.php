@@ -13,6 +13,7 @@ use App\Services\Audit;
 use App\Services\KassierNotifier;
 use App\Services\Ledger;
 use App\Services\LegalArchive;
+use App\Services\Tenancy;
 use App\Support\AppSettings;
 use App\Support\LegalTexts;
 use App\Support\Money;
@@ -47,6 +48,12 @@ class RegisterController extends Controller
 
     public function show(Request $request): View|RedirectResponse
     {
+        if (Tenancy::isMulti() && Tenancy::current() === null) {
+            // Multi mode without tenant: only a link naming the tenant (sub-domain, ?mandant=, invitation or code) works.
+            return view('auth.register', ['state' => 'no_tenant', 'tokenState' => null, 'throttle' => null, 'inviter' => null,
+                'token' => '', 'flyer' => '', 'regCode' => '', 'code' => '', 'price' => 0, 'carryover' => false, 'revisions' => []]);
+        }
+
         $regCode = null;
         if ($this->regCode($request) !== '') {
             $regCode = $this->validRegCode($request);
@@ -117,6 +124,8 @@ class RegisterController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        abort_if(Tenancy::isMulti() && Tenancy::current() === null, 404);
+
         $regCode = null;
         if ($this->regCode($request) !== '') {
             $regCode = $this->validRegCode($request);

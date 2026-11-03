@@ -5,7 +5,9 @@
 
 @section('content')
 <h1>{{ __('register.title') }}</h1>
-@if ($state === 'closed')
+@if ($state === 'no_tenant')
+    <p class="muted">{{ __('register.no_tenant') }}</p>
+@elseif ($state === 'closed')
     <div class="card"><p>{{ __('register.closed') }}</p></div>
 @elseif ($state === 'invite_only')
     <div class="card"><p>{{ __('register.invite_only') }}</p></div>

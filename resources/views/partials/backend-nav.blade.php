@@ -2,6 +2,7 @@
 @php($navGroup = \App\Support\BackendNav::isAdminPage() ? \App\Support\BackendNav::BACKEND : \App\Support\BackendNav::KASSIER)
 <nav class="subnav" aria-label="{{ __('backend.title') }}">
     @foreach (\App\Support\BackendNav::order($navGroup, auth()->user()) as $key)
+        @continue(! \App\Support\BackendNav::visible($key, auth()->user()))
         @php([$navRoute, $navActive] = \App\Support\BackendNav::ITEMS[$navGroup][$key])
         @php($unreadFeedback = $key === 'feedback' ? \App\Models\Feedback::unreadCount() : 0)
         {{-- Pending deposits, payouts and carry-overs are handled on the overview tab. --}}

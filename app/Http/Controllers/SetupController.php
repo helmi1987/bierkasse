@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\Audit;
+use App\Services\Tenancy;
 use App\Support\DatabaseConnection;
 use App\Support\EnvEditor;
 use App\Support\LegalTexts;
@@ -70,6 +71,8 @@ class SetupController extends Controller
             'admin_last_name' => ['nullable', 'string', 'max:100'],
             'admin_email' => ['required', 'email', 'max:255'],
             'admin_password' => ['required', 'string', 'min:12', 'max:1024', 'confirmed'],
+            // Single (default) or multi tenancy; can be changed later under Admin > Mandanten.
+            'tenancy' => ['nullable', Rule::in(Tenancy::MODES)],
         ]);
 
         $expected = is_file(self::tokenPath()) ? trim((string) file_get_contents(self::tokenPath())) : '';
@@ -99,6 +102,8 @@ class SetupController extends Controller
             if (! Schema::hasTable('users')) {
                 throw new RuntimeException(__('setup.error_migration', ['output' => Artisan::output()]));
             }
+            // The migrations created the first tenant: resolve it afresh.
+            Tenancy::flush();
 
             $user = User::query()->updateOrCreate(
                 ['username' => $data['admin_username']],
@@ -115,7 +120,12 @@ class SetupController extends Controller
             // The first admin runs the installation and publishes the texts: counts as accepted (current versions).
             $user->forceFill(LegalTexts::consentAttributes())->save();
 
-            Audit::try('setup', $user, [], ['username' => $user->username, 'role' => $user->role], $user);
+            Audit::try('setup', $user, [], ['username' => $user->username, 'role' => $user->role, 'tenancy' => $data['tenancy'] ?? Tenancy::MODE_SINGLE], $user);
+
+            if (($data['tenancy'] ?? Tenancy::MODE_SINGLE) === Tenancy::MODE_MULTI) {
+                // Fresh installation: nothing to back up yet.
+                Tenancy::enableMulti($user, backup: false);
+            }
 
             EnvEditor::set([
                 'APP_URL' => rtrim($data['app_url'], '/'),

@@ -8,6 +8,9 @@
 <form method="post" action="{{ route('password.update') }}" class="card stack">
     @csrf
     <input type="hidden" name="token" value="{{ $token }}">
+    @if ($tenant !== '')
+        <input type="hidden" name="{{ \App\Services\Tenancy::QUERY }}" value="{{ $tenant }}">
+    @endif
     <div class="field">
         <label for="email">{{ __('passwords.email') }}</label>
         <input type="email" id="email" name="email" value="{{ old('email', $email) }}" autocomplete="email" required>

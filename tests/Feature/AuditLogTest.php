@@ -204,10 +204,8 @@ class AuditLogTest extends TestCase
 
         $rows = fn (string $c) => DB::connection($c)->table('audit_logs')->orderBy('id')->get()->map(fn ($r) => (array) $r)->all();
         $this->assertSame($rows(config('database.default')), $rows('restore'));
-        $this->assertSame(
-            (array) DB::table('audit_chain')->first(),
-            (array) DB::connection('restore')->table('audit_chain')->first(),
-        );
+        $chains = fn (string $c) => DB::connection($c)->table('audit_chains')->orderBy('id')->get()->map(fn ($r) => (array) $r)->all();
+        $this->assertSame($chains(config('database.default')), $chains('restore'));
     }
 
     public function test_audit_page_for_kassier_and_admin_with_filters_and_detail(): void

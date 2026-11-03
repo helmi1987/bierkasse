@@ -35,6 +35,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     Route::get('/anmelden/totp', [LoginController::class, 'totpForm'])->name('login.totp');
     Route::post('/anmelden/totp', [LoginController::class, 'totpVerify'])->middleware('throttle:30,1')->name('login.totp.verify');
     Route::post('/anmelden/totp/abbrechen', [LoginController::class, 'totpCancel'])->name('login.totp.cancel');
+    // Multi mode: the same name and password in several tenants -> pick the tenant.
+    Route::get('/anmelden/mandant', [LoginController::class, 'tenantForm'])->name('login.tenant');
+    Route::post('/anmelden/mandant', [LoginController::class, 'tenantChoose'])->middleware('throttle:30,1')->name('login.tenant.choose');
     Route::post('/abmelden', [LoginController::class, 'logout'])->name('logout');
     Route::get('/login/sso/{provider}', [LoginController::class, 'ssoRedirect'])->name('login.sso')->where('provider', '[a-z0-9-]+');
     Route::get('/login/sso/{provider}/callback', [LoginController::class, 'ssoCallback'])->name('login.sso.callback')->where('provider', '[a-z0-9-]+');
@@ -163,6 +166,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/benutzer/{user}/korrektur', [Backend\UserController::class, 'correction'])->whereNumber('user')->name('users.correction');
             Route::put('/benutzer/{user}/rolle', [Backend\UserController::class, 'role'])->whereNumber('user')->middleware('role:admin')->name('users.role');
             Route::put('/benutzer/{user}/nur-verwaltung', [Backend\UserController::class, 'adminOnly'])->whereNumber('user')->middleware('role:admin')->name('users.admin-only');
+            // Multi mode: superadmins appoint superadmins (admins only).
+            Route::put('/benutzer/{user}/superadmin', [Backend\UserController::class, 'superadmin'])->whereNumber('user')->middleware('role:superadmin')->name('users.superadmin');
 
             // Bookings: tabs "Runden", "Geschenke", "Gäste" (?tab=…, Livewire component incl. guest storno).
             Route::get('/buchungen', [Backend\BookingController::class, 'index'])->name('bookings');
@@ -220,20 +225,31 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 Route::put('/feedback/empfaenger', [Backend\FeedbackController::class, 'recipients'])->name('feedback.recipients');
                 Route::post('/feedback/{feedback}/gelesen', [Backend\FeedbackController::class, 'read'])->whereNumber('feedback')->name('feedback.read');
                 Route::delete('/feedback/{feedback}', [Backend\FeedbackController::class, 'destroy'])->whereNumber('feedback')->name('feedback.destroy');
-                Route::get('/wartung', [Backend\MaintenanceController::class, 'index'])->name('maintenance');
-                Route::post('/wartung/cache', [Backend\MaintenanceController::class, 'clearCache'])->name('maintenance.cache');
-                Route::post('/wartung/sperren', [Backend\MaintenanceController::class, 'clearLimits'])->name('maintenance.limits');
-                Route::post('/wartung/optimierung', [Backend\MaintenanceController::class, 'clearOptimize'])->name('maintenance.optimize');
-                Route::post('/wartung/migrieren', [Backend\MaintenanceController::class, 'migrate'])->name('maintenance.migrate');
-                Route::post('/wartung/backup', [Backend\MaintenanceController::class, 'backup'])->name('maintenance.backup');
-                // Without the .sql.gz extension: Plesk/nginx may serve such URLs as static files.
-                Route::get('/wartung/backup/{backup}', [Backend\MaintenanceController::class, 'backupFile'])
-                    ->where('backup', 'bierkasse-\d{4}-\d{2}-\d{2}-\d{6}')->name('maintenance.backup.file');
-                Route::delete('/wartung/backup/{backup}', [Backend\MaintenanceController::class, 'backupDelete'])
-                    ->where('backup', 'bierkasse-\d{4}-\d{2}-\d{2}-\d{6}')->name('maintenance.backup.delete');
-                Route::put('/wartung/modus', [Backend\MaintenanceController::class, 'mode'])->name('maintenance.mode');
-                Route::resource('sso', Backend\SsoProviderController::class)->except(['show'])
-                    ->parameters(['sso' => 'ssoProvider'])->names('sso');
+                // Tenants (App\Services\Tenancy): the mode switch for admins, tenant management for superadmins.
+                Route::get('/mandanten', [Backend\TenantController::class, 'index'])->name('tenants');
+                Route::post('/mandanten/modus', [Backend\TenantController::class, 'mode'])->name('tenants.mode');
+                Route::post('/mandanten', [Backend\TenantController::class, 'store'])->name('tenants.store');
+                Route::put('/mandanten/{tenant}', [Backend\TenantController::class, 'update'])->whereNumber('tenant')->name('tenants.update');
+                Route::delete('/mandanten/{tenant}', [Backend\TenantController::class, 'destroy'])->whereNumber('tenant')->name('tenants.destroy');
+                Route::post('/mandanten/{tenant}/wechseln', [Backend\TenantController::class, 'switch'])->whereNumber('tenant')->name('tenants.switch');
+
+                // Installation-wide pages: in multi mode superadmins only (whole-database backups, global SSO providers).
+                Route::middleware('role:superadmin')->group(function () {
+                    Route::get('/wartung', [Backend\MaintenanceController::class, 'index'])->name('maintenance');
+                    Route::post('/wartung/cache', [Backend\MaintenanceController::class, 'clearCache'])->name('maintenance.cache');
+                    Route::post('/wartung/sperren', [Backend\MaintenanceController::class, 'clearLimits'])->name('maintenance.limits');
+                    Route::post('/wartung/optimierung', [Backend\MaintenanceController::class, 'clearOptimize'])->name('maintenance.optimize');
+                    Route::post('/wartung/migrieren', [Backend\MaintenanceController::class, 'migrate'])->name('maintenance.migrate');
+                    Route::post('/wartung/backup', [Backend\MaintenanceController::class, 'backup'])->name('maintenance.backup');
+                    // Without the .sql.gz extension: Plesk/nginx may serve such URLs as static files.
+                    Route::get('/wartung/backup/{backup}', [Backend\MaintenanceController::class, 'backupFile'])
+                        ->where('backup', 'bierkasse-\d{4}-\d{2}-\d{2}-\d{6}')->name('maintenance.backup.file');
+                    Route::delete('/wartung/backup/{backup}', [Backend\MaintenanceController::class, 'backupDelete'])
+                        ->where('backup', 'bierkasse-\d{4}-\d{2}-\d{2}-\d{6}')->name('maintenance.backup.delete');
+                    Route::put('/wartung/modus', [Backend\MaintenanceController::class, 'mode'])->name('maintenance.mode');
+                    Route::resource('sso', Backend\SsoProviderController::class)->except(['show'])
+                        ->parameters(['sso' => 'ssoProvider'])->names('sso');
+                });
             });
         });
     });

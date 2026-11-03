@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Services\Ledger;
+use App\Services\Tenancy;
 use App\Support\AppSettings;
 use App\Support\LegalTexts;
 use Database\Factories\UserFactory;
@@ -17,7 +19,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use BelongsToTenant, HasFactory, Notifiable;
 
     public const ROLE_ADMIN = 'admin';
 
@@ -47,6 +49,7 @@ class User extends Authenticatable
         'stats_opt_out' => false,
         'must_change_password' => false,
         'admin_only' => false,
+        'superadmin' => false,
     ];
 
     /** Fixed colour theme ("light"/"dark") or null for automatic (follows the device). */
@@ -63,6 +66,7 @@ class User extends Authenticatable
             'stats_opt_out' => 'boolean',
             'must_change_password' => 'boolean',
             'admin_only' => 'boolean',
+            'superadmin' => 'boolean',
             'nav_order' => 'array',
             'last_login_at' => 'datetime',
             'left_at' => 'datetime',
@@ -136,15 +140,31 @@ class User extends Authenticatable
         return ! LegalTexts::accepted($this);
     }
 
+    /** Admin of the current tenant; a superadmin (multi mode) is admin in every tenant. */
     public function isAdmin(): bool
     {
-        return $this->role === self::ROLE_ADMIN;
+        return $this->role === self::ROLE_ADMIN || $this->isSuperadmin();
     }
 
     /** Kassier rights (admins have them too). */
     public function isKassier(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_KASSIER], true);
+        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_KASSIER], true) || $this->isSuperadmin();
+    }
+
+    /**
+     * Manages tenants, global settings (mail, maintenance, SSO providers) and acts as admin in every tenant.
+     * Only in multi mode (the flag is kept but has no effect in single mode).
+     */
+    public function isSuperadmin(): bool
+    {
+        return (bool) $this->superadmin && Tenancy::isMulti();
+    }
+
+    /** Logged in while another tenant is the current one (superadmin who switched): no beer account there. */
+    public function isInForeignTenant(): bool
+    {
+        return Tenancy::isMulti() && $this->isForeignTenant();
     }
 
     /**
@@ -153,7 +173,7 @@ class User extends Authenticatable
      */
     public function isAdminOnly(): bool
     {
-        return $this->admin_only && $this->isKassier();
+        return ($this->admin_only || $this->isInForeignTenant()) && $this->isKassier();
     }
 
     /** Has a beer account (dashboard /konto, beers, deposits, rounds, leaving). */

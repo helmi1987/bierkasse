@@ -29,6 +29,12 @@ return [
         'sso_hint' => 'SSO funktioniert nur, wenn das Konto in den Einstellungen verknüpft wurde.',
     ],
 
+    'tenant' => [
+        'title' => 'Mandant wählen',
+        'intro' => 'Dieses Konto gibt es in mehreren Mandanten. Wo möchtest du dich anmelden?',
+        'invalid' => 'Ungültige Auswahl.',
+    ],
+
     'totp' => [
         'title' => 'Bestätigungscode',
         'code' => 'Code aus der Authenticator-App',

@@ -14,6 +14,7 @@ return [
         'feedback' => 'Feedback',
         'sso' => 'SSO',
         'nav' => 'Navigation',
+        'tenants' => 'Mandanten',
         'maintenance' => 'Wartung',
     ],
     // Tabs inside the pages (1.20.0).

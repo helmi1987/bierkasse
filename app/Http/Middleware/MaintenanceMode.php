@@ -17,7 +17,7 @@ class MaintenanceMode
 {
     /** Routes guests can still reach (login incl. second factor, SSO, password reset, legal texts). */
     public const GUEST_ROUTES = [
-        'login', 'login.post', 'login.totp', 'login.totp.verify', 'login.totp.cancel', 'logout',
+        'login', 'login.post', 'login.totp', 'login.totp.verify', 'login.totp.cancel', 'login.tenant', 'login.tenant.choose', 'logout',
         'login.sso', 'login.sso.callback',
         'login.personal', 'login.personal.post', 'login.personal.user', 'login.personal.start',
         'password.request', 'password.email', 'password.reset', 'password.update',

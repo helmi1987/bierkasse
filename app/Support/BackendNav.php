@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\Tenancy;
 
 /**
  * Split of the admin area (/admin) in the top bar: "Kassier" (kassiers and admins) and "Admin" (admins only;
@@ -39,9 +40,14 @@ class BackendNav
             'feedback' => ['backend.feedback', 'backend.feedback*'],
             'sso' => ['backend.sso.index', 'backend.sso.*'],
             'nav' => ['backend.nav', 'backend.nav'],
+            // Tenancy mode and (multi mode) the tenants.
+            'tenants' => ['backend.tenants', 'backend.tenants*'],
             'maintenance' => ['backend.maintenance', 'backend.maintenance*'],
         ],
     ];
+
+    /** Installation-wide tabs: in multi mode for superadmins only (see routes, role:superadmin). */
+    public const SUPERADMIN_TABS = ['sso', 'maintenance'];
 
     /**
      * Tabs merged into a new one in 1.20.0: a stored order keeps the new tab at the place of the first
@@ -53,7 +59,7 @@ class BackendNav
     ];
 
     /** Route patterns of the admin-only pages. */
-    public const ADMIN_ROUTES = ['backend.settings*', 'backend.nav*', 'backend.feedback*', 'backend.maintenance*', 'backend.sso.*'];
+    public const ADMIN_ROUTES = ['backend.settings*', 'backend.nav*', 'backend.feedback*', 'backend.maintenance*', 'backend.sso.*', 'backend.tenants*'];
 
     public static function isAdminPage(): bool
     {
@@ -63,6 +69,12 @@ class BackendNav
     public static function isKassierPage(): bool
     {
         return request()->routeIs('backend.*') && ! self::isAdminPage();
+    }
+
+    /** Whether the account sees a tab (installation-wide tabs only for superadmins in multi mode). */
+    public static function visible(string $key, ?User $user): bool
+    {
+        return ! in_array($key, self::SUPERADMIN_TABS, true) || ! Tenancy::isMulti() || (bool) $user?->isSuperadmin();
     }
 
     /** Groups an account can order: kassiers only "Kassier", admins both. */

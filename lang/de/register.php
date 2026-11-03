@@ -9,6 +9,7 @@ return [
     'invitation_invalid' => 'Dieser Einladungslink ist ungültig, abgelaufen oder wurde schon benutzt. Bitte einen neuen Link verlangen.',
     'invitation_invalid_password' => 'Dieser Einladungslink ist ungültig, abgelaufen oder wurde schon benutzt. Du kannst dich mit dem Registrierungspasswort registrieren.',
     'closed' => 'Die Registrierung ist zurzeit geschlossen. Bitte beim Kassier melden.',
+    'no_tenant' => 'Registrieren geht nur über den Link oder QR-Code deiner Bierkasse (Einladung, Registrierungscode oder Flyer).',
     'code' => 'Registrierungspasswort',
     'username' => 'Benutzername',
     'username_hint' => '3–32 Zeichen: Buchstaben, Ziffern, Punkt, Bindestrich, Unterstrich. Wird in Kleinbuchstaben gespeichert.',

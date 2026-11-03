@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Audit;
 use App\Services\MailSettings;
+use App\Services\Tenancy;
 use App\Support\UserRules;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
@@ -31,15 +32,18 @@ class PasswordResetController extends Controller
         $data = $request->validate(['login' => ['required', 'string', 'max:255']]);
         $login = trim($data['login']);
 
-        $user = User::query()->where('status', User::STATUS_ACTIVE)
+        // Within the current tenant; without tenant context (multi mode) every account with that name or
+        // address gets its own mail (the link carries the tenant).
+        $users = (Tenancy::current() === null ? User::withoutTenant() : User::query())
+            ->where('status', User::STATUS_ACTIVE)
             ->where(fn ($q) => $q->where('username', Str::lower($login))->orWhere('email', $login))
             ->whereNotNull('email')->where('email', '!=', '')
-            ->first();
+            ->get();
 
-        if ($user) {
+        foreach ($users as $user) {
             try {
                 MailSettings::apply();
-                Password::broker()->sendResetLink(['email' => $user->email, 'id' => $user->id]);
+                Tenancy::runAs($user->tenant, fn () => Password::broker()->sendResetLink(['email' => $user->email, 'id' => $user->id]));
             } catch (Throwable $e) {
                 Log::warning('Password reset mail failed', ['user' => $user->id, 'error' => $e->getMessage()]);
             }
@@ -51,7 +55,7 @@ class PasswordResetController extends Controller
 
     public function edit(Request $request, string $token): View
     {
-        return view('auth.reset', ['token' => $token, 'email' => (string) $request->query('email', '')]);
+        return view('auth.reset', ['token' => $token, 'email' => (string) $request->query('email', ''), 'tenant' => (string) $request->query(Tenancy::QUERY, '')]);
     }
 
     public function update(Request $request): RedirectResponse

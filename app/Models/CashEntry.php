@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class CashEntry extends Model
 {
+    use BelongsToTenant;
+
     public const TYPES = ['expense_beer', 'expense_other', 'income', 'adjustment'];
 
     protected $fillable = ['type', 'date', 'amount', 'beers', 'method', 'note', 'created_by'];

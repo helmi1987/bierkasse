@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Services\Tenancy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -59,17 +60,32 @@ class Audit
             'user_agent' => $request !== null ? Str::limit((string) $request->userAgent(), 255, '') ?: null : 'cli',
         ];
 
-        DB::transaction(function () use ($entry) {
-            $head = DB::table('audit_chain')->where('id', 1)->lockForUpdate()->first();
-            if ($head === null) {
-                DB::table('audit_chain')->insert(['id' => 1, 'last_hash' => '', 'entries' => 0]);
-                $head = DB::table('audit_chain')->where('id', 1)->lockForUpdate()->first();
-            }
+        $tenantId = Tenancy::currentId();
+        $entry['tenant_id'] = $tenantId;
+
+        DB::transaction(function () use ($entry, $tenantId) {
+            $head = self::lockChain($tenantId);
             $entry['prev_hash'] = (string) $head->last_hash;
             $entry['hash'] = self::hash($entry);
             DB::table('audit_logs')->insert($entry);
-            DB::table('audit_chain')->where('id', 1)->update(['last_hash' => $entry['hash'], 'entries' => (int) $head->entries + 1]);
+            DB::table('audit_chains')->where('id', $head->id)->update(['last_hash' => $entry['hash'], 'entries' => (int) $head->entries + 1]);
         });
+    }
+
+    /**
+     * Locks (and creates on first use) the head row of a tenant's hash chain; null = the global chain
+     * (entries without tenant context). Call inside a DB transaction.
+     */
+    public static function lockChain(?int $tenantId): object
+    {
+        $query = fn () => DB::table('audit_chains')->when($tenantId === null, fn ($q) => $q->whereNull('tenant_id'), fn ($q) => $q->where('tenant_id', $tenantId));
+        $head = $query()->lockForUpdate()->first();
+        if ($head === null) {
+            DB::table('audit_chains')->insert(['tenant_id' => $tenantId, 'last_hash' => '', 'entries' => 0]);
+            $head = $query()->lockForUpdate()->first();
+        }
+
+        return $head;
     }
 
     /**
@@ -137,17 +153,22 @@ class Audit
     }
 
     /**
-     * Checks the whole chain. Returns null when intact, else the first broken entry.
+     * Checks the chain of a tenant (default: the current tenant; $current = false and null = the global chain).
+     * Returns null when intact, else the first broken entry.
      *
      * @return array{id: int|null, reason: string}|null
      */
-    public static function verify(): ?array
+    public static function verify(?int $tenantId = null, bool $current = true): ?array
     {
+        if ($current && $tenantId === null) {
+            $tenantId = Tenancy::currentId();
+        }
         $prev = '';
         $count = 0;
         $broken = null;
 
-        foreach (DB::table('audit_logs')->lazyById(500) as $row) {
+        $rows = DB::table('audit_logs')->when($tenantId === null, fn ($q) => $q->whereNull('tenant_id'), fn ($q) => $q->where('tenant_id', $tenantId));
+        foreach ($rows->lazyById(500) as $row) {
             $entry = (array) $row;
             if ((string) $entry['prev_hash'] !== $prev) {
                 $broken = ['id' => (int) $entry['id'], 'reason' => 'gap'];
@@ -165,7 +186,7 @@ class Audit
             return $broken;
         }
 
-        $head = DB::table('audit_chain')->where('id', 1)->first();
+        $head = DB::table('audit_chains')->when($tenantId === null, fn ($q) => $q->whereNull('tenant_id'), fn ($q) => $q->where('tenant_id', $tenantId))->first();
         if ($head !== null && ((string) $head->last_hash !== $prev || (int) $head->entries !== $count)) {
             return ['id' => null, 'reason' => 'tail'];
         }

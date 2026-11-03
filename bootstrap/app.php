@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureBeerAccount;
 use App\Http\Middleware\EnsureInstalled;
 use App\Http\Middleware\MaintenanceMode;
 use App\Http\Middleware\RequireRole;
+use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
@@ -24,14 +25,20 @@ return Application::configure(basePath: dirname(__DIR__))
         if ($proxies !== []) {
             $middleware->trustProxies(at: $proxies === ['*'] ? '*' : $proxies);
         }
-        // Once installed only the host of APP_URL is accepted (against Host header injection).
+        // Once installed only the host of APP_URL is accepted (against Host header injection); in multi mode
+        // also its direct sub-domains (one per tenant, see App\Services\Tenancy).
         // Before the setup any host is allowed, so the wizard works on any domain.
         $middleware->trustHosts(at: function () {
             $host = (string) parse_url((string) config('app.url'), PHP_URL_HOST);
+            if (! config('app.installed') || $host === '') {
+                return [];
+            }
 
-            return config('app.installed') && $host !== '' ? ['^'.preg_quote($host).'$'] : [];
+            return \App\Services\Tenancy::isMulti() ? ['^([a-z0-9-]+\.)?'.preg_quote($host).'$'] : ['^'.preg_quote($host).'$'];
         }, subdomains: false);
         $middleware->append(SecurityHeaders::class);
+        // Current tenant (after the session, before anything reads tenant data).
+        $middleware->appendToGroup('web', ResolveTenant::class);
         // Maintenance mode for users (backend setting): after the session, so admins are recognized.
         $middleware->appendToGroup('web', MaintenanceMode::class);
         // Live refresh fingerprint, taken before the page content is built.

@@ -6,6 +6,7 @@ use App\Models\QrCode;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\LegalArchive;
+use App\Services\Tenancy;
 use App\Support\AppSettings;
 use App\Support\FormToken;
 use App\Support\OutboundUrl;
@@ -22,8 +23,8 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        // The settings cache is static; start every test with an empty one.
-        Setting::flushCache();
+        // The settings and tenancy caches are static; start every test with empty ones.
+        Tenancy::flush();
         // No real DNS lookups from a previous test's resolver.
         OutboundUrl::resolveUsing(null);
 

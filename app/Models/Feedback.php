@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,8 @@ use Throwable;
  */
 class Feedback extends Model
 {
+    use BelongsToTenant;
+
     public const TYPE_FEEDBACK = 'feedback';
 
     public const TYPE_IDEA = 'idea';

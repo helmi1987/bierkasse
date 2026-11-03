@@ -6,6 +6,7 @@ use App\Models\SsoProvider;
 use App\Models\User;
 use App\Services\Audit;
 use App\Services\Sso;
+use App\Services\Tenancy;
 use App\Support\AppSettings;
 use App\Support\OutboundUrl;
 use App\Support\UserRules;
@@ -260,7 +261,10 @@ class PersonalSsoController extends Controller
         }
         RateLimiter::hit($ipKey, 60);
 
-        $user = User::query()->where('username', $username)->where('status', User::STATUS_ACTIVE)->first();
+        // Without tenant context (multi mode) the name must be unambiguous across the tenants.
+        $users = (Tenancy::current() === null ? User::withoutTenant() : User::query())
+            ->where('username', $username)->where('status', User::STATUS_ACTIVE)->limit(2)->get();
+        $user = $users->count() === 1 ? $users->first() : null;
         $provider = $user?->personalSsoProvider()->first();
 
         // Only offered when the provider is complete and already linked to its owner.

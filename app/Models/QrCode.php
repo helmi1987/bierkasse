@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Services\Audit;
+use App\Services\Tenancy;
 use App\Support\AppSettings;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,6 +22,8 @@ use Illuminate\Support\Str;
  */
 class QrCode extends Model
 {
+    use BelongsToTenant;
+
     public const KIND_CASH = 'cashbox_cash';
 
     public const KIND_TWINT = 'cashbox_twint';
@@ -81,7 +85,7 @@ class QrCode extends Model
             return;
         }
         try {
-            Cache::lock('qr-first-'.$kind, 10)->block(5, function () use ($kind, $creator) {
+            Cache::lock('qr-first-'.Tenancy::currentId().'-'.$kind, 10)->block(5, function () use ($kind, $creator) {
                 DB::transaction(function () use ($kind, $creator) {
                     if (self::query()->where('kind', $kind)->exists()) {
                         return;

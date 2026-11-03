@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\QrCode;
+use App\Services\Tenancy;
 
 /**
  * Registration URL, optionally with a flyer code as ?flyer=… (registration without password).
@@ -25,6 +26,6 @@ class RegistrationLink
             }
         }
 
-        return route('register');
+        return route('register', Tenancy::linkParams());
     }
 }

@@ -72,6 +72,10 @@ class LegalArchive
         if ($cached !== null && $cached->matches($hash, $version)) {
             return $cached;
         }
+        if (Tenancy::currentId() === null) {
+            // No tenant context (multi mode, public page on the base host): the texts are shown, nothing is archived.
+            return new LegalRevision(['kind' => $kind, 'version' => $version, 'body' => $body, 'hash' => $hash]);
+        }
         $latest = LegalRevision::latestOf($kind);
         if ($latest !== null && $latest->matches($hash, $version)) {
             return $this->latest[$kind] = $latest;
@@ -79,7 +83,7 @@ class LegalArchive
 
         return DB::transaction(function () use ($kind, $reason, $body, $hash, $version) {
             // Serialises writers (same lock Audit::log() takes below), then re-check under the lock.
-            DB::table('audit_chain')->where('id', 1)->lockForUpdate()->first();
+            Audit::lockChain(Tenancy::currentId());
             $latest = LegalRevision::latestOf($kind, true);
             if ($latest !== null && $latest->matches($hash, $version)) {
                 DB::afterCommit(fn () => $this->latest[$kind] = $latest);

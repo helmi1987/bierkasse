@@ -282,7 +282,8 @@ class Sso
         }
         $identity?->forceFill(['last_login_at' => now()])->save();
 
-        return $identity?->user;
+        // The identity decides the account, whatever the tenant context of the callback request is.
+        return $identity ? User::withoutTenant()->find($identity->user_id) : null;
     }
 
     /**

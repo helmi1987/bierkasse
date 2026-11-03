@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Services\Gifts;
 use App\Support\AppSettings;
 use Carbon\CarbonInterface;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Transaction extends Model
 {
+    use BelongsToTenant;
+
     public const TYPE_CONSUMPTION = 'consumption';
 
     public const TYPE_DEPOSIT = 'deposit';

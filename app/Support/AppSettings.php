@@ -164,6 +164,16 @@ class AppSettings
 
     public const MAIL_TRANSPORTS = ['sendmail', 'smtp'];
 
+    /** Tenancy mode (App\Services\Tenancy): "single" (default) or "multi". Global setting. */
+    public const TENANCY_MODE = 'tenancy_mode';
+
+    /**
+     * Settings stored once for the installation (tenant_id null); every other key is stored per tenant.
+     * Mail transport, maintenance mode and the tenancy mode belong to the installation, personal SSO is
+     * decided on the login page (no tenant context).
+     */
+    public const GLOBAL_KEYS = [self::MAIL, self::MAINTENANCE, self::MAINTENANCE_MESSAGE, self::PERSONAL_SSO, self::TENANCY_MODE];
+
     public const MAIL_ENCRYPTIONS = ['', 'tls', 'ssl'];
 
     public static function get(string $key, mixed $default = null): mixed

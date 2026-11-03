@@ -12,6 +12,8 @@ use App\Services\CashBook;
 use App\Support\AppSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use App\Services\Tenancy;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -161,6 +163,9 @@ class CashboxQrTest extends TestCase
         $migration = require database_path('migrations/2026_10_23_000100_create_qr_codes_table.php');
         Schema::drop('qr_codes');
         $migration->up();
+        // The old migration knows nothing about tenants (1.26.0): add the column the way the tenants migration does.
+        Schema::table('qr_codes', fn ($table) => $table->unsignedBigInteger('tenant_id')->nullable()->after('id'));
+        DB::table('qr_codes')->update(['tenant_id' => Tenancy::currentId()]);
         Setting::flushCache();
 
         $this->assertSame('cash', AppSettings::cashboxQrMethod('oldCashCode123'));

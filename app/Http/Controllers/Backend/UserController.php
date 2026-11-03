@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Audit;
+use App\Services\Tenancy;
 use App\Services\Gifts;
 use App\Services\Ledger;
 use App\Services\LedgerException;
@@ -278,10 +279,28 @@ class UserController extends Controller
             return back()->with('error', __('users.role_email_required'));
         }
 
-        // "Nur Verwaltung" exists only for kassiers and admins.
-        Audit::save('user.role', $user->forceFill(['role' => $data['role']] + ($data['role'] === User::ROLE_USER ? ['admin_only' => false] : [])));
+        // "Nur Verwaltung" exists only for kassiers and admins; superadmin only for admins.
+        Audit::save('user.role', $user->forceFill(['role' => $data['role']] + ($data['role'] === User::ROLE_USER ? ['admin_only' => false] : []) + ($data['role'] !== User::ROLE_ADMIN ? ['superadmin' => false] : [])));
 
         return back()->with('status', __('users.role_saved'));
+    }
+
+    /** Superadmin on/off (multi mode, superadmins only; admins only; never the last superadmin). */
+    public function superadmin(Request $request, User $user): RedirectResponse
+    {
+        abort_unless(Tenancy::isMulti(), 404);
+        $on = $request->boolean('superadmin');
+
+        if ($on && $user->role !== User::ROLE_ADMIN) {
+            return back()->with('error', __('tenants.superadmin_needs_admin'));
+        }
+        if (! $on && $user->superadmin && User::withoutTenant()->where('superadmin', true)->count() <= 1) {
+            return back()->with('error', __('tenants.superadmin_last'));
+        }
+
+        Audit::save('user.superadmin', $user->forceFill(['superadmin' => $on]));
+
+        return back()->with('status', __($on ? 'tenants.superadmin_on' : 'tenants.superadmin_off'));
     }
 
     /** "Nur Verwaltung" on/off (admins only; also for the own account). */

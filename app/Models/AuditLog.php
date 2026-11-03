@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\TenantScope;
+use App\Services\Tenancy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +21,21 @@ class AuditLog extends Model
 
     protected static function booted(): void
     {
+        // Entries of the current tenant; global entries (no tenant, e.g. failed logins without tenant context or
+        // tenant management) for everyone in single mode and for superadmins in multi mode.
+        static::addGlobalScope(TenantScope::class, function (Builder $query) {
+            $tenantId = Tenancy::currentId();
+            $withGlobal = ! Tenancy::isMulti() || (bool) auth()->user()?->isSuperadmin();
+            $query->where(function (Builder $q) use ($tenantId, $withGlobal) {
+                $q->whereRaw('0 = 1');
+                if ($tenantId !== null) {
+                    $q->orWhere('audit_logs.tenant_id', $tenantId);
+                }
+                if ($withGlobal) {
+                    $q->orWhereNull('audit_logs.tenant_id');
+                }
+            });
+        });
         // Written only by App\Services\Audit (query builder, with the hash chain).
         static::creating(fn () => throw new LogicException('Audit log entries are written by App\Services\Audit only.'));
         static::updating(fn () => throw new LogicException('Audit log entries cannot be changed.'));

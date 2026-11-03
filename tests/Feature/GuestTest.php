@@ -135,7 +135,7 @@ class GuestTest extends TestCase
             ->assertRedirect(route('backend.settings').'#funktionen')->assertSessionHas('status');
         $this->assertSame('neues-pw', AppSettings::guestPassword());
         $this->assertFalse(AppSettings::guestUserBooking());
-        $this->assertStringNotContainsString('neues-pw', (string) Setting::query()->find(AppSettings::GUEST_PASSWORD)->getRawOriginal('value'));
+        $this->assertStringNotContainsString('neues-pw', (string) Setting::row(AppSettings::GUEST_PASSWORD)->getRawOriginal('value'));
         $this->assertNotSame(AppSettings::registrationPassword(), AppSettings::guestPassword());
         $this->get('/admin/einstellungen')->assertOk()->assertSee('value="neues-pw"', false);
 

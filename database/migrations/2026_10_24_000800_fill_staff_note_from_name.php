@@ -10,7 +10,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        User::query()->where(fn ($q) => $q->whereNotNull('first_name')->orWhereNotNull('last_name'))
+        // No tenant scope: this runs before the tenant columns exist (1.26.0).
+        User::query()->withoutGlobalScopes()->where(fn ($q) => $q->whereNotNull('first_name')->orWhereNotNull('last_name'))
             ->each(function (User $user) {
                 if (trim((string) $user->staff_note) === '') {
                     $user->applyNameToStaffNote();

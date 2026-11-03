@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Services\Tenancy;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -31,16 +32,29 @@ class LiveFingerprint
         'audit_logs' => ['id'],
     ];
 
+    /** Tables without tenant_id (global, or scoped through the user/transaction they belong to). */
+    private const GLOBAL_TABLES = ['round_items', 'user_identities', 'sso_providers', 'user_favorites'];
+
+    /** Per tenant: a change in another tenant does not reload the open pages of this one. */
     public static function current(): string
     {
+        $tenantId = Tenancy::currentId();
         $parts = [];
+        $bindings = [];
         foreach (self::TABLES as $table => $columns) {
+            $where = '';
+            if ($tenantId !== null && ! in_array($table, self::GLOBAL_TABLES, true)) {
+                $where = $table === 'settings' ? ' WHERE tenant_id = ? OR tenant_id IS NULL' : ' WHERE tenant_id = ?';
+            }
             foreach ($columns as $column) {
                 $expr = $column === 'count' ? 'COUNT(*)' : 'MAX('.$column.')';
-                $parts[] = '(SELECT '.$expr.' FROM '.$table.') AS '.$table.'_'.$column;
+                $parts[] = '(SELECT '.$expr.' FROM '.$table.$where.') AS '.$table.'_'.$column;
+                if ($where !== '') {
+                    $bindings[] = $tenantId;
+                }
             }
         }
-        $row = (array) DB::selectOne('SELECT '.implode(', ', $parts));
+        $row = (array) DB::selectOne('SELECT '.implode(', ', $parts), $bindings);
 
         // The local date: day-based numbers (statistics) change at midnight.
         $row['date'] = now()->toDateString();

@@ -2,12 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Tenancy;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * role:kassier (kassier or admin) / role:admin.
+ * role:kassier (kassier or admin) / role:admin / role:superadmin (multi mode: superadmin only; single mode: admin).
  */
 class RequireRole
 {
@@ -17,6 +18,7 @@ class RequireRole
 
         $allowed = match ($role) {
             'admin' => $user?->isAdmin(),
+            'superadmin' => Tenancy::isMulti() ? $user?->isSuperadmin() : $user?->isAdmin(),
             'kassier' => $user?->isKassier(),
             default => false,
         };

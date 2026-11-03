@@ -7,6 +7,7 @@ use App\Models\SsoProvider;
 use App\Models\User;
 use App\Services\Audit;
 use App\Services\Sso;
+use App\Services\Tenancy;
 use App\Support\AppSettings;
 use App\Support\Totp;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +27,9 @@ class LoginController extends Controller
 {
     /** Pending second factor: [user, remember, method, expires]. */
     private const PENDING = 'login.pending';
+
+    /** Pending tenant choice (multi mode, same user name and password in several tenants): [users, remember, expires]. */
+    private const PENDING_TENANT = 'login.tenants';
 
     /** Seconds a login waits for the TOTP code. */
     private const PENDING_TTL = 300;
@@ -60,32 +64,101 @@ class LoginController extends Controller
             }
         }
 
-        $user = $this->findLoginUser($username);
-        // Always hash once so response times do not reveal existing user names.
-        $ok = Hash::check($data['password'], $user?->password ?: '$2y$12$'.str_repeat('a', 53)) && $user?->password;
+        $candidates = $this->findLoginUsers($username);
+        // Every candidate is checked (multi mode: the same name may exist in several tenants); without one,
+        // hash once anyway so response times do not reveal existing user names.
+        $matched = $candidates->filter(fn (User $u) => (string) $u->password !== '' && Hash::check($data['password'], $u->password));
+        if ($candidates->isEmpty()) {
+            Hash::check($data['password'], '$2y$12$'.str_repeat('a', 53));
+        }
 
-        if (! $ok) {
+        if ($matched->isEmpty()) {
             RateLimiter::hit($key, 300);
             RateLimiter::hit($ipKey, 900);
             // The user name tried, never the password.
-            Audit::try('auth.login_failed', $user, [], ['username' => Str::limit($username, 100, '')]);
+            Audit::try('auth.login_failed', $candidates->count() === 1 ? $candidates->first() : null, [], ['username' => Str::limit($username, 100, '')]);
 
             return back()->onlyInput('username')->withErrors(['username' => __('auth.failed')]);
         }
 
         RateLimiter::clear($key);
 
+        if ($matched->count() > 1) {
+            // Same name and password in several tenants: the user picks the tenant.
+            $request->session()->regenerate();
+            $request->session()->put(self::PENDING_TENANT, [
+                'users' => $matched->pluck('id')->all(),
+                'remember' => $request->boolean('remember'),
+                'expires' => time() + self::PENDING_TTL,
+            ]);
+
+            return redirect()->route('login.tenant');
+        }
+
+        return $this->continueLogin($request, $matched->first(), $request->boolean('remember'));
+    }
+
+    /** Tenant choice after the password (multi mode only, see login()). */
+    public function tenantForm(Request $request): View|RedirectResponse
+    {
+        $users = $this->pendingTenantUsers($request);
+        if ($users === null) {
+            return redirect()->route('login');
+        }
+
+        return view('auth.tenant', ['users' => $users]);
+    }
+
+    public function tenantChoose(Request $request): RedirectResponse
+    {
+        $users = $this->pendingTenantUsers($request);
+        if ($users === null) {
+            return redirect()->route('login')->withErrors(['username' => __('auth.login_expired')]);
+        }
+        $request->validate(['user' => ['required', 'integer']]);
+        $user = $users->firstWhere('id', (int) $request->input('user'));
+        if ($user === null) {
+            return back()->withErrors(['user' => __('auth.tenant.invalid')]);
+        }
+        $pending = (array) $request->session()->pull(self::PENDING_TENANT);
+
+        return $this->continueLogin($request, $user, (bool) ($pending['remember'] ?? false));
+    }
+
+    /** After the password: locked check, then the second factor or the login itself. */
+    private function continueLogin(Request $request, User $user, bool $remember): RedirectResponse
+    {
         // Locked accounts: only after the correct password, so the lock does not reveal account names.
         if ($user->isLocked()) {
             return $this->lockedResponse($user);
         }
 
         if (! $user->hasTotp()) {
-            return $this->finish($request, $user, $request->boolean('remember'), 'local');
+            return $this->finish($request, $user, $remember, 'local');
         }
 
-        return $this->askTotp($request, $user, $request->boolean('remember'), 'local');
+        return $this->askTotp($request, $user, $remember, 'local');
     }
+
+    /**
+     * Users of a pending tenant choice (with their tenants), null when none or expired.
+     *
+     * @return \Illuminate\Support\Collection<int, User>|null
+     */
+    private function pendingTenantUsers(Request $request): ?\Illuminate\Support\Collection
+    {
+        $pending = $request->session()->get(self::PENDING_TENANT);
+        if (! is_array($pending) || ($pending['expires'] ?? 0) < time() || ! Tenancy::isMulti()) {
+            $request->session()->forget(self::PENDING_TENANT);
+
+            return null;
+        }
+        $users = User::withoutTenant()->with('tenant')->whereIn('id', (array) ($pending['users'] ?? []))
+            ->whereIn('status', [User::STATUS_ACTIVE, User::STATUS_LOCKED])->get()->sortBy(fn (User $u) => $u->tenant?->name)->values();
+
+        return $users->count() > 1 ? $users : null;
+    }
+
 
     public function totpForm(Request $request): View|RedirectResponse
     {
@@ -113,7 +186,8 @@ class LoginController extends Controller
             }
         }
 
-        $user = User::query()->where('id', $pending['user'])->whereIn('status', [User::STATUS_ACTIVE, User::STATUS_LOCKED])->first();
+        // The pending user may belong to a tenant that is not the request's tenant context yet (multi mode).
+        $user = User::withoutTenant()->where('id', $pending['user'])->whereIn('status', [User::STATUS_ACTIVE, User::STATUS_LOCKED])->first();
         if ($user?->isLocked()) {
             // Locked while the second factor was pending.
             $request->session()->forget(self::PENDING);
@@ -262,6 +336,12 @@ class LoginController extends Controller
         Auth::login($user, $remember);
         $request->session()->regenerate();
         $request->session()->put('auth.method', $method);
+        // The user's tenant is the tenant of the session from now on (superadmins may switch later).
+        $request->session()->forget(Tenancy::GUEST_KEY);
+        $request->session()->put(Tenancy::SESSION_KEY, $user->tenant_id);
+        if (Tenancy::isMulti()) {
+            Tenancy::set($user->tenant);
+        }
         $user->forceFill(['last_login_at' => now()])->save();
         Audit::try('auth.login', $user, [], ['method' => $method], $user);
 
@@ -288,18 +368,22 @@ class LoginController extends Controller
     }
 
     /**
-     * Active (or locked, refused after the password check) user by user name, or by e-mail address when the
-     * input contains "@" (only if unambiguous).
+     * Active (or locked, refused after the password check) users by user name, or by e-mail address when the
+     * input contains "@" (only if unambiguous within a tenant). Within the current tenant; without tenant
+     * context (multi mode, base host) across all tenants: the password then decides, see login().
+     *
+     * @return \Illuminate\Support\Collection<int, User>
      */
-    private function findLoginUser(string $login): ?User
+    private function findLoginUsers(string $login): \Illuminate\Support\Collection
     {
-        $query = User::query()->whereIn('status', [User::STATUS_ACTIVE, User::STATUS_LOCKED]);
+        $query = (Tenancy::current() === null ? User::withoutTenant() : User::query())
+            ->whereIn('status', [User::STATUS_ACTIVE, User::STATUS_LOCKED]);
         if (! str_contains($login, '@')) {
-            return $query->where('username', $login)->first();
+            return $query->where('username', $login)->get();
         }
 
-        $matches = $query->whereRaw('LOWER(email) = ?', [$login])->limit(2)->get();
-
-        return $matches->count() === 1 ? $matches->first() : null;
+        // Several accounts with the same e-mail in one tenant: none of them (ambiguous).
+        return $query->whereRaw('LOWER(email) = ?', [$login])->get()
+            ->groupBy('tenant_id')->filter(fn ($group) => $group->count() === 1)->flatten(1)->values();
     }
 }

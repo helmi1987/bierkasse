@@ -405,13 +405,15 @@ class InviteTest extends TestCase
 
         $migration = require database_path('migrations/2026_10_21_000200_migrate_registration_switch_to_mode.php');
         $migration->up();
+        Setting::flushCache();
 
         $this->assertSame($expected, AppSettings::registrationMode());
-        $this->assertFalse(Setting::query()->whereKey(AppSettings::LEGACY_REGISTRATION_ENABLED)->exists());
+        $this->assertNull(Setting::row(AppSettings::LEGACY_REGISTRATION_ENABLED));
 
         // Idempotent: an existing mode is never overwritten.
         Setting::put(AppSettings::REGISTRATION_MODE, AppSettings::MODE_INVITE);
         $migration->up();
+        Setting::flushCache();
         $this->assertSame(AppSettings::MODE_INVITE, AppSettings::registrationMode());
     }
 

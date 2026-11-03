@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
  */
 class Invitation extends Model
 {
+    use BelongsToTenant;
+
     /** Validity of a new invitation. */
     public const VALID_DAYS = 7;
 

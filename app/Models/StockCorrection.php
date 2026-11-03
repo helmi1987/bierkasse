@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class StockCorrection extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = ['delta', 'counted', 'note', 'created_by'];
 
     protected function casts(): array

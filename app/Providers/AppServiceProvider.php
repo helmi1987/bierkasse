@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Http\Middleware\EnsureActiveUser;
 use App\Http\Middleware\RequireRole;
+use App\Models\SsoProvider;
 use App\Services\Ledger;
 use App\Services\LegalArchive;
 use App\Support\AppSettings;
@@ -84,9 +85,20 @@ class AppServiceProvider extends ServiceProvider
                     $open = 0;
                 }
             }
+            // Admins: client secrets of global SSO providers that expire within 90 days (or have expired).
+            $secretWarnings = collect();
+            if ($user && $user->isAdmin()) {
+                try {
+                    $secretWarnings = SsoProvider::query()->withSecretExpiry()->orderBy('client_secret_expires_at')->get()
+                        ->filter(fn (SsoProvider $p) => $p->secretUrgency() !== null)->values();
+                } catch (Throwable) {
+                    $secretWarnings = collect();
+                }
+            }
             $view->with('appName', AppSettings::appName())
                 ->with('openItems', $open)
-                ->with('maintenanceBanner', $user && $user->isAdmin() && AppSettings::maintenanceMode());
+                ->with('maintenanceBanner', $user && $user->isAdmin() && AppSettings::maintenanceMode())
+                ->with('secretWarnings', $secretWarnings);
         });
     }
 }

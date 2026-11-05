@@ -99,6 +99,13 @@
   den Callback per `response_mode=form_post` auf (Cross-Site-POST ohne Lax-Session-Cookie): `POST /login/sso/{kuerzel}/callback`
   läuft ohne `web`-Middleware (keine Session, keine Cookies, kein CSRF) und leitet nur `code`/`state`/`error` per 303
   an den GET-Callback weiter, dort laufen die normalen Prüfungen. ID-Token wie OIDC (nonce), ohne Userinfo.
+- Ablauf Client-Secret (v1.28.0, globale Anbieter ausser Apple): `sso_providers.client_secret_expires_at` (Datum, im
+  Formular) und `secret_reminder_stage` (zuletzt gesendete Stufe, wird bei neuem/geleertem Datum zurückgesetzt, nicht im
+  Audit). Banner für Admins auf jeder Seite ab 90 Tagen (`info` 31-90, `warn` 8-30, `bad` ≤ 7 Tage/abgelaufen), Pill in der
+  Liste. `php artisan sso:secret-reminders` (Scheduler täglich 08:00, `--dry-run`) mailt alle aktiven Admins mit E-Mail an
+  den Stufen 90/60/30/14/7/3/2/1/0 Tage (`SsoProvider::SECRET_REMINDER_STAGES`), jede Stufe einmal, verpasste Stufen
+  werden nicht nachgeholt; ohne Empfänger oder wenn alle Mails scheitern bleibt die Stufe offen. Audit
+  `sso_provider.secret_reminder` (Akteur `cli`). Eigene Anbieter der Benutzer sind nie betroffen.
 - Eigener Anmelde-Anbieter (Konto > Einstellungen): jeder Benutzer kann einen eigenen OAuth2-/OIDC-Anbieter
   (z. B. selbst gehostetes Authentik/Keycloak) hinterlegen: Discovery-URL oder Endpunkte von Hand, Client-ID,
   Client-Secret (verschlüsselt). Die angezeigte Redirect-URI (`/login/sso/p-…/callback`) beim Anbieter eintragen,

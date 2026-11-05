@@ -97,6 +97,13 @@
             <a href="{{ route('backend.maintenance') }}">{{ __('maintenance.banner_link') }}</a>
         </div>
     @endif
+    @foreach ($secretWarnings ?? [] as $secretProvider)
+        @php($secretDays = $secretProvider->secretDaysLeft())
+        <div class="alert {{ $secretProvider->secretUrgency() }}" role="alert" data-testid="secret-warning-{{ $secretProvider->slug }}">
+            {{ __($secretDays < 0 ? 'sso.banner_expired' : 'sso.banner_expiring', ['name' => $secretProvider->name, 'date' => $secretProvider->client_secret_expires_at->format('d.m.Y'), 'days' => $secretDays]) }}
+            <a href="{{ route('backend.sso.edit', $secretProvider) }}">{{ __('sso.banner_link') }}</a>
+        </div>
+    @endforeach
     @include('partials.install-hint')
     @if ($authUser && ! request()->routeIs('consent.*'))
         @foreach (\App\Support\LegalTexts::pendingNotices($authUser) as $noticeKind => $noticeDate)

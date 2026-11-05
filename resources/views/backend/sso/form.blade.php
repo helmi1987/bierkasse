@@ -84,6 +84,14 @@
                 <input type="password" id="client_secret" name="client_secret" autocomplete="new-password" placeholder="{{ $provider->client_secret ? __('sso.secret_stored') : '' }}">
                 <div class="hint">{{ __('sso.secret_hint') }}</div>
             </div>
+            <div class="field">
+                <label for="client_secret_expires_at">{{ __('sso.secret_expires_at') }}</label>
+                <input type="date" id="client_secret_expires_at" name="client_secret_expires_at" value="{{ old('client_secret_expires_at', $provider->client_secret_expires_at?->format('Y-m-d')) }}">
+                <div class="hint">{{ __('sso.secret_expires_hint') }}</div>
+                @if ($type === 'microsoft')
+                    <div class="hint">{{ __('sso.secret_expires_hint_microsoft') }}</div>
+                @endif
+            </div>
         @endif
     </div>
     @if ($apple)

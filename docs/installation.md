@@ -26,9 +26,10 @@
    Ab 1.20.0 braucht die App das Paket `livewire/livewire`: `composer install` muss bei jedem Deploy laufen (erste Zeile
    oben; ohne sie fehlt Livewire und die Admin-Seiten Buchungen, Benutzer, QR-Codes, Protokoll liefern Fehler 500).
    `package:discover` danach ist nötig, damit Laravel den Livewire-Provider findet.
-5. Geplante Aufgabe (optional): Mails werden synchron beim Request verschickt (keine Queue), daher braucht
-   die App keinen Cron. Wer trotzdem den Laravel-Scheduler laufen lassen will (z. B. für spätere Erweiterungen):
-   Plesk "Geplante Aufgaben", jede Minute `php -d open_basedir= artisan schedule:run` im Projektordner.
+5. Geplante Aufgabe (ab 1.28.0 nötig): Mails werden synchron beim Request verschickt (keine Queue). Der
+   Laravel-Scheduler verschickt aber täglich um 08:00 die Erinnerungen zum Ablauf der SSO-Client-Secrets
+   (`sso:secret-reminders`, siehe "SSO-Anbieter einrichten"). Plesk "Geplante Aufgaben", jede Minute
+   `php -d open_basedir= artisan schedule:run` im Projektordner.
 6. Setup:
    - `bootstrap/ensure-env.php` wird nur von `public/index.php` geladen, also erst beim ersten
      Web-Aufruf. Dabei entstehen `.env` (aus `.env.example`, mit generiertem `APP_KEY`) und das
@@ -194,6 +195,15 @@ Liste.
 Die Reihenfolge der Knöpfe auf der Login-Seite entspricht der Reihenfolge in der Liste und wird dort mit den Pfeilen
 ↑/↓ geändert (nur globale Anbieter; eigene Anbieter der Benutzer sind nicht betroffen). Das Zahlenfeld "Reihenfolge"
 im Formular gibt es weiterhin; die Pfeile nummerieren alle Anbieter neu von 1 bis n.
+
+Ablauf des Client-Secrets (ab 1.28.0, alle Typen ausser Apple): im Formular "Client-Secret gültig bis" das
+Ablaufdatum eintragen (leer = keine Erinnerung). Microsoft-Secrets gelten höchstens 24 Monate: rechtzeitig im Entra
+Admin Center (App-Registrierung > Zertifikate & Geheimnisse) ein neues Secret erstellen und Secret und Ablaufdatum im
+Formular nachführen. Ab 90 Tagen vor Ablauf sehen Admins auf jeder Seite ein Banner (ab 90 Tagen Hinweis, ab 30 Tagen
+gelb, ab 7 Tagen und nach Ablauf rot); die Liste unter Admin > SSO zeigt das Datum farbig. Zusätzlich gehen Mails an
+alle aktiven Admins mit E-Mail, 90, 60, 30, 14, 7, 3, 2 und 1 Tag vorher und am Ablauftag, jede Stufe einmal (ein
+neues Datum startet die Erinnerungen neu). Dafür muss der Cron `schedule:run` laufen (siehe Installation, Schritt 5).
+Von Hand: `php artisan sso:secret-reminders` (mit `--dry-run` nur anzeigen, nichts senden).
 
 - Google: [console.cloud.google.com](https://console.cloud.google.com) > APIs & Dienste > OAuth-Zustimmungsbildschirm
   einrichten, dann Anmeldedaten > OAuth-Client-ID, Typ "Webanwendung", Redirect-URI als "Autorisierte

@@ -35,4 +35,21 @@ return [
     'register_carryover' => 'Übertrag',
     'register_carryover_hint' => 'Der Übertrag von der alten Strichliste muss im Admin-Bereich bestätigt werden.',
     'register_button' => 'Benutzer im Admin-Bereich ansehen',
+
+    // SSO secret expiry
+    'sso_secret_subject' => 'SSO-Anbieter :name: Client-Secret läuft in :days Tagen ab',
+    'sso_secret_subject_today' => 'SSO-Anbieter :name: Client-Secret läuft heute ab',
+    'sso_secret_subject_expired' => 'SSO-Anbieter :name: Client-Secret abgelaufen',
+    'sso_secret_line' => 'Das Client-Secret des SSO-Anbieters «:name» ist bis :date gültig. Danach funktioniert die Anmeldung mit diesem Anbieter nicht mehr.',
+    'sso_secret_line_expired' => 'Das Client-Secret des SSO-Anbieters «:name» ist am :date abgelaufen. Die Anmeldung mit diesem Anbieter funktioniert nicht mehr.',
+    'sso_secret_line_microsoft' => 'Neues Secret erstellen: Entra Admin Center > App-Registrierung > Zertifikate & Geheimnisse (höchstens 24 Monate gültig).',
+    'sso_secret_provider' => 'Anbieter',
+    'sso_secret_type' => 'Typ',
+    'sso_secret_expires' => 'Gültig bis',
+    'sso_secret_left' => 'Verbleibend',
+    'sso_secret_left_days' => ':days Tage',
+    'sso_secret_left_today' => 'Läuft heute ab',
+    'sso_secret_left_expired' => 'Abgelaufen',
+    'sso_secret_outro' => 'Nach dem Erneuern das neue Secret und das neue Ablaufdatum im Formular eintragen.',
+    'button_sso' => 'Anbieter im Admin-Bereich öffnen',
 ];

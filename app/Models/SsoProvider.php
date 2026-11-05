@@ -27,8 +27,14 @@ class SsoProvider extends Model
     protected $fillable = [
         'name', 'slug', 'type', 'tenant', 'enabled', 'discovery_url', 'issuer', 'authorize_url', 'token_url',
         'userinfo_url', 'client_id', 'client_secret', 'apple_team_id', 'apple_key_id', 'scopes', 'token_auth', 'use_pkce', 'subject_claim',
-        'email_claim', 'label_claim', 'sort', 'discovered_at',
+        'email_claim', 'label_claim', 'sort', 'discovered_at', 'client_secret_expires_at',
     ];
+
+    /**
+     * Reminder stages in days before the client-secret expiry (0 = expiry day), most distant first.
+     * Each stage is mailed once; the last stage sent is kept in secret_reminder_stage (set via forceFill).
+     */
+    public const SECRET_REMINDER_STAGES = [90, 60, 30, 14, 7, 3, 2, 1, 0];
 
     protected $hidden = ['client_secret'];
 
@@ -41,7 +47,62 @@ class SsoProvider extends Model
             'sort' => 'integer',
             'discovered_at' => 'datetime',
             'owner_user_id' => 'integer',
+            'client_secret_expires_at' => 'date',
+            'secret_reminder_stage' => 'integer',
         ];
+    }
+
+    /**
+     * Global providers with a client-secret expiry date (personal providers are never reminded).
+     */
+    public function scopeWithSecretExpiry(Builder $query): void
+    {
+        $query->whereNull('owner_user_id')->whereNotNull('client_secret_expires_at');
+    }
+
+    /**
+     * Whole days from today (app timezone) to the client-secret expiry; negative when expired, null without a date.
+     */
+    public function secretDaysLeft(): ?int
+    {
+        if ($this->client_secret_expires_at === null) {
+            return null;
+        }
+
+        return (int) today()->diffInDays($this->client_secret_expires_at->copy()->startOfDay(), false);
+    }
+
+    /**
+     * Reminder level for banner and list: null (no date or more than 90 days left), 'info' (31-90 days),
+     * 'warn' (8-30 days) or 'bad' (7 days or less, or expired). The values are also the CSS classes.
+     */
+    public function secretUrgency(): ?string
+    {
+        $days = $this->secretDaysLeft();
+
+        return match (true) {
+            $days === null, $days > 90 => null,
+            $days > 30 => 'info',
+            $days > 7 => 'warn',
+            default => 'bad',
+        };
+    }
+
+    /**
+     * The most urgent reminder stage that is due now and not sent yet, or null. Skipped stages are
+     * not caught up (at most one mail per provider and run); after expiry only stage 0 is due.
+     */
+    public function dueSecretReminderStage(): ?int
+    {
+        $days = $this->secretDaysLeft();
+        if ($days === null || $days > self::SECRET_REMINDER_STAGES[0]) {
+            return null;
+        }
+
+        $due = $days <= 0 ? 0 : min(array_filter(self::SECRET_REMINDER_STAGES, fn (int $stage) => $stage >= $days));
+        $sent = $this->secret_reminder_stage;
+
+        return $sent === null || $sent > $due ? $due : null;
     }
 
     public function owner(): BelongsTo

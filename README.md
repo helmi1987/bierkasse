@@ -48,6 +48,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.28.0 | Neue Funktion | Ablaufdatum des Client-Secrets pro SSO-Anbieter mit Banner und Mail-Erinnerungen an Admins (90 bis 0 Tage) |
 | 1.27.0 | Verbesserung | SSO-Anbieter: Redirect-URI in der Liste und live beim Anlegen, Reihenfolge der Login-Knöpfe per Pfeile im Backend |
 | 1.26.0 | Neue Funktion | Anmeldung mit Apple (Sign in with Apple) als SSO-Anbieter |
 | 1.25.2 | Bugfix | Übertrag in Bieren über CHF 500 bei der Registrierung: Feldfehler statt Serverfehler (Issue #86) |

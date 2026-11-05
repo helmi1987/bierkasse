@@ -166,6 +166,7 @@ class SsoProviderController extends Controller
             'email_claim' => $claim,
             'label_claim' => $claim,
             'sort' => ['nullable', 'integer'],
+            'client_secret_expires_at' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
         $data['slug'] = ($data['slug'] ?? '') ?: Str::slug($data['name']);
@@ -183,6 +184,8 @@ class SsoProviderController extends Controller
             $data['apple_team_id'] = null;
             $data['apple_key_id'] = null;
         }
+        // Apple signs its secret with the stored private key: nothing expires to remind about.
+        $data['client_secret_expires_at'] = $data['type'] === 'apple' ? null : ($data['client_secret_expires_at'] ?? null);
 
         // Presets override the endpoint fields of the fixed provider types (Apple also PKCE and token auth).
         $data = array_merge($data, Sso::preset($data['type'], $data['tenant'] ?? null));
@@ -232,6 +235,10 @@ class SsoProviderController extends Controller
 
         $created = ! $provider->exists;
         [$old, $new] = Audit::dirty($provider);
+        // A new or cleared expiry date restarts the reminders (system state, not part of the audited change).
+        if ($provider->isDirty('client_secret_expires_at')) {
+            $provider->forceFill(['secret_reminder_stage' => null]);
+        }
         DB::transaction(function () use ($provider, $created, $old, $new) {
             $provider->save();
             if ($created || $new !== []) {

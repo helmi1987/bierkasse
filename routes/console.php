@@ -2,6 +2,10 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+
+// Client-secret expiry reminders for SSO providers (needs the cron `schedule:run`).
+Schedule::command('sso:secret-reminders')->dailyAt('08:00');
 
 // Break-glass helpers (run via SSH).
 Artisan::command('user:totp-reset {username}', function (string $username) {

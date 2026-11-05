@@ -26,6 +26,10 @@
                         <span class="tx-note">{{ __('sso.redirect_uri_short') }}: <code id="redirect-uri-{{ $provider->id }}">{{ $provider->redirectUri() }}</code>
                             <button type="button" class="btn small" data-copy="#redirect-uri-{{ $provider->id }}" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button></span></span>
                     <span class="row-buttons">
+                        @if ($provider->client_secret_expires_at)
+                            @php($daysLeft = $provider->secretDaysLeft())
+                            <span class="pill {{ $provider->secretUrgency() }}" @if ($daysLeft >= 0) title="{{ __('sso.secret_days_left', ['days' => $daysLeft]) }}" @endif data-testid="secret-expiry-{{ $provider->slug }}">{{ __($daysLeft < 0 ? 'sso.secret_expired' : 'sso.secret_until', ['date' => $provider->client_secret_expires_at->format('d.m.Y')]) }}</span>
+                        @endif
                         @if ($provider->isUsable())
                             <span class="pill ok">{{ __('sso.status_active') }}</span>
                         @elseif ($provider->enabled)

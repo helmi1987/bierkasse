@@ -38,6 +38,8 @@ return [
 
     'attributes' => [
         'token' => 'Setup-Token',
+        'apple_team_id' => 'Team ID',
+        'apple_key_id' => 'Key ID',
         'registration_mode' => 'Registrierungsmodus',
         'app_url' => 'Webseiten-URL',
         'driver' => 'Datenbanktyp',

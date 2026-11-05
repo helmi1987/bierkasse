@@ -124,7 +124,7 @@
    - Mailversand: Server-sendmail (Standard, `MAIL_SENDMAIL_PATH`) oder SMTP (Passwort verschlüsselt gespeichert).
      Kassier-Benachrichtigung (neue Einzahlung, Auszahlungsantrag, neue Selbst-Registrierung mit Link zum Benutzer) an alle Kassiers/Admins mit E-Mail.
      Alle Mails (auch Passwort-Reset) nutzen ein gemeinsames HTML-Layout (`resources/views/mail/layout.blade.php`, Inline-CSS, Logo `public/icon-192.png` als CID eingebettet, fehlt es, entfällt das Logo) plus Textversion; Fakten als Tabelle, Link als Button.
-   - SSO (`/admin/sso`): Google, Microsoft (Tenant, Standard `common`), GitHub, Facebook oder generisches OIDC
+   - SSO (`/admin/sso`): Google, Microsoft (Tenant, Standard `common`), GitHub, Facebook, Apple oder generisches OIDC
      (Discovery-URL). Redirect-URI beim Anbieter: `https://<domain>/login/sso/{kuerzel}/callback`.
      Anmelden per SSO kann nur, wer den Anbieter vorher unter Konto > Einstellungen verknüpft hat.
      Einrichtung pro Anbieter: siehe "SSO-Anbieter einrichten".
@@ -174,6 +174,18 @@ Anbieter eintragen, Client-ID und Client-Secret ins Formular kopieren, "Aktiv" a
 vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter Konto > Einstellungen
 ("Verknüpfte Anmeldungen").
 
+Redirect-URIs für bier.helminet.ch (Standard-Kürzel):
+
+| Anbieter | Redirect-URI |
+|---|---|
+| Google | `https://bier.helminet.ch/login/sso/google/callback` |
+| Microsoft | `https://bier.helminet.ch/login/sso/microsoft/callback` |
+| GitHub | `https://bier.helminet.ch/login/sso/github/callback` |
+| Facebook | `https://bier.helminet.ch/login/sso/facebook/callback` |
+| Apple | `https://bier.helminet.ch/login/sso/apple/callback` |
+
+Ein geändertes Kürzel ändert die URL; die genaue URI zeigt das Formular unter Admin > SSO.
+
 - Google: [console.cloud.google.com](https://console.cloud.google.com) > APIs & Dienste > OAuth-Zustimmungsbildschirm
   einrichten, dann Anmeldedaten > OAuth-Client-ID, Typ "Webanwendung", Redirect-URI als "Autorisierte
   Weiterleitungs-URI". Scopes: `openid profile email`.
@@ -190,6 +202,20 @@ vorgegeben. Aktive Anbieter erscheinen als Knöpfe auf der Login-Seite und unter
   (Subjekt = app-spezifische Facebook-ID).
   **Annahme:** Facebook akzeptiert die PKCE-Parameter (bzw. ignoriert sie); falls die Anmeldung daran scheitert,
   unter Erweitert "PKCE" abschalten. "Require App Secret" (appsecret_proof) wird nicht unterstützt.
+- Apple (Sign in with Apple): Apple Developer Program (kostenpflichtig) nötig.
+  [developer.apple.com](https://developer.apple.com) > Certificates, Identifiers & Profiles:
+  - Identifiers: App ID mit Capability "Sign in with Apple".
+  - Identifiers: Services ID (= Client-ID), dort "Sign in with Apple" konfigurieren: Primary App ID = obige App ID,
+    Domain `bier.helminet.ch`, Return URL = Redirect-URI.
+  - Keys: neuer Key mit "Sign in with Apple" (Primary App ID wählen), .p8-Datei herunterladen (nur einmal möglich),
+    Key ID notieren.
+  - Team ID steht oben rechts im Developer-Konto.
+
+  Im Formular: Services ID, Team ID, Key ID und den ganzen Inhalt der .p8-Datei (verschlüsselt gespeichert).
+  Endpunkte und Scopes (`name email`) sind vorgegeben, kein PKCE; das Client-Secret erzeugt die Bierkasse pro
+  Anmeldung als signiertes JWT. Apple liefert E-Mail (evtl. eine private Relay-Adresse) und Name nur bei der ersten
+  Autorisierung. Anmelden geht nur mit Konten, die Apple unter Konto > Einstellungen verknüpft haben.
+  **Annahme:** nicht gegen den echten Apple-Dienst getestet (nur automatische Tests mit nachgebildetem Token-Endpunkt).
 
 ## Wartung (Admin)
 

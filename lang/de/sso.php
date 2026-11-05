@@ -3,7 +3,7 @@
 // SSO (OAuth2 / OpenID Connect): backend and login messages.
 return [
     'title' => 'SSO-Anbieter',
-    'intro' => 'Anmeldung mit Google, Microsoft, GitHub, Facebook oder einem beliebigen OpenID-Connect-Anbieter. Anmelden kann sich nur, wer den Anbieter vorher im eigenen Konto verknüpft hat.',
+    'intro' => 'Anmeldung mit Google, Microsoft, GitHub, Facebook, Apple oder einem beliebigen OpenID-Connect-Anbieter. Anmelden kann sich nur, wer den Anbieter vorher im eigenen Konto verknüpft hat.',
     'new' => 'Neuer Anbieter',
     'new_type' => 'Neu: :type',
     'edit_title' => 'SSO-Anbieter: :name',
@@ -14,6 +14,7 @@ return [
         'microsoft' => 'Microsoft (Entra ID)',
         'github' => 'GitHub',
         'facebook' => 'Facebook',
+        'apple' => 'Apple',
     ],
     // Where to create the OAuth app per fixed provider type (backend form).
     'setup_help' => [
@@ -21,6 +22,7 @@ return [
         'microsoft' => 'Entra Admin Center (entra.microsoft.com) > App-Registrierungen > Neue Registrierung, Plattform «Web», Redirect-URI oben eintragen. Unter «Zertifikate & Geheimnisse» ein Client-Secret erstellen (den Wert kopieren, nicht die ID).',
         'github' => 'GitHub > Settings > Developer settings > OAuth Apps > New OAuth App. Die Redirect-URI oben als «Authorization callback URL» eintragen, dann ein Client-Secret erzeugen.',
         'facebook' => 'developers.facebook.com > Meine Apps > App erstellen (Anwendungsfall «Facebook Login»). Unter Facebook Login > Einstellungen die Redirect-URI oben bei «Gültige OAuth Redirect URIs» eintragen. App-ID = Client-ID, App-Secret (App-Einstellungen > Allgemein) = Client-Secret. Danach die App live schalten.',
+        'apple' => 'Apple Developer Program nötig. developer.apple.com > Certificates, Identifiers & Profiles: App ID mit «Sign in with Apple», dann eine Services ID (= Client-ID) mit «Sign in with Apple» konfigurieren (Primary App ID, Domain, Return URL = Redirect-URI oben). Unter Keys einen Schlüssel mit «Sign in with Apple» erstellen und die .p8-Datei herunterladen (nur einmal möglich). Team ID steht oben rechts im Konto.',
     ],
     'name' => 'Name (Knopf-Text)',
     'users' => 'Verknüpft',
@@ -44,6 +46,15 @@ return [
     'client_secret' => 'Client-Secret',
     'secret_stored' => '•••••• (gespeichert)',
     'secret_hint' => 'Leer lassen = unverändert. Verschlüsselt gespeichert.',
+    'apple_services_id' => 'Services ID (Client-ID)',
+    'apple_services_id_hint' => 'Identifier der Services ID, z. B. ch.example.bierkasse.login.',
+    'apple_team_id' => 'Team ID',
+    'apple_team_id_hint' => '10 Zeichen (A-Z, 0-9), oben rechts im Apple-Developer-Konto.',
+    'apple_key_id' => 'Key ID',
+    'apple_key_id_hint' => '10 Zeichen (A-Z, 0-9), beim Schlüssel unter Keys.',
+    'apple_private_key' => 'Privater Schlüssel (.p8)',
+    'apple_private_key_hint' => 'Ganzen Inhalt der .p8-Datei einfügen (inkl. BEGIN/END-Zeilen). Leer lassen = unverändert. Verschlüsselt gespeichert.',
+    'apple_key_invalid' => 'Privater Schlüssel ungültig: erwartet wird der Inhalt der .p8-Datei von Apple (EC-Schlüssel P-256).',
     'scopes' => 'Scopes',
     'advanced' => 'Erweitert',
     'issuer' => 'Issuer',

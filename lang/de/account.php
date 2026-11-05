@@ -163,7 +163,7 @@ return [
 
     'identities_heading' => 'Verknüpfte Anmeldungen (SSO)',
     'identities_none' => 'Keine Verknüpfung.',
-    'identities_admin_hint' => 'Noch kein Anbieter aktiv. Google, Microsoft, GitHub oder Facebook unter Admin > SSO einrichten.',
+    'identities_admin_hint' => 'Noch kein Anbieter aktiv. Google, Microsoft, GitHub, Facebook oder Apple unter Admin > SSO einrichten.',
     'identities_admin_link' => 'SSO-Anbieter einrichten',
     'identities_user_hint' => 'Der Admin kann Anmeldung mit Google, GitHub usw. aktivieren.',
     'identity_link' => 'Mit :provider verknüpfen',

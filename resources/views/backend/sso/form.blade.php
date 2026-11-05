@@ -9,6 +9,7 @@
 @include('partials.backend-nav')
 @php($type = old('type', $provider->type ?: 'oidc'))
 @php($preset = in_array($type, \App\Models\SsoProvider::PRESET_TYPES, true))
+@php($apple = $type === 'apple')
 <h1>{{ $provider->exists ? __('sso.edit_title', ['name' => $provider->name]) : __('sso.new_type', ['type' => __('sso.types.'.$type)]) }}</h1>
 
 <div class="card">
@@ -53,15 +54,42 @@
             </div>
         @endif
         <div class="field">
-            <label for="client_id">{{ __('sso.client_id') }}</label>
+            <label for="client_id">{{ $apple ? __('sso.apple_services_id') : __('sso.client_id') }}</label>
             <input type="text" id="client_id" name="client_id" value="{{ old('client_id', $provider->client_id) }}">
+            @if ($apple)
+                <div class="hint">{{ __('sso.apple_services_id_hint') }}</div>
+            @endif
         </div>
-        <div class="field">
-            <label for="client_secret">{{ __('sso.client_secret') }}</label>
-            <input type="password" id="client_secret" name="client_secret" autocomplete="new-password" placeholder="{{ $provider->client_secret ? __('sso.secret_stored') : '' }}">
-            <div class="hint">{{ __('sso.secret_hint') }}</div>
-        </div>
+        @if ($apple)
+            <div class="field">
+                <label for="apple_team_id">{{ __('sso.apple_team_id') }}</label>
+                <input type="text" id="apple_team_id" name="apple_team_id" value="{{ old('apple_team_id', $provider->apple_team_id) }}" maxlength="10" pattern="[A-Z0-9]{10}">
+                <div class="hint">{{ __('sso.apple_team_id_hint') }}</div>
+            </div>
+            <div class="field">
+                <label for="apple_key_id">{{ __('sso.apple_key_id') }}</label>
+                <input type="text" id="apple_key_id" name="apple_key_id" value="{{ old('apple_key_id', $provider->apple_key_id) }}" maxlength="10" pattern="[A-Z0-9]{10}">
+                <div class="hint">{{ __('sso.apple_key_id_hint') }}</div>
+            </div>
+            <div class="field">
+                <label for="sort">{{ __('sso.sort') }}</label>
+                <input type="number" id="sort" name="sort" value="{{ old('sort', $provider->sort ?? 0) }}">
+            </div>
+        @else
+            <div class="field">
+                <label for="client_secret">{{ __('sso.client_secret') }}</label>
+                <input type="password" id="client_secret" name="client_secret" autocomplete="new-password" placeholder="{{ $provider->client_secret ? __('sso.secret_stored') : '' }}">
+                <div class="hint">{{ __('sso.secret_hint') }}</div>
+            </div>
+        @endif
     </div>
+    @if ($apple)
+        <div class="field">
+            <label for="client_secret">{{ __('sso.apple_private_key') }}</label>
+            <textarea id="client_secret" name="client_secret" rows="6" autocomplete="off" spellcheck="false" placeholder="{{ $provider->client_secret ? __('sso.secret_stored') : '-----BEGIN PRIVATE KEY-----' }}"></textarea>
+            <div class="hint">{{ __('sso.apple_private_key_hint') }}</div>
+        </div>
+    @endif
     @if ($preset)
         <p class="hint">{{ __('sso.preset_hint') }}</p>
     @endif
@@ -69,6 +97,7 @@
         <p class="hint">{{ __('sso.discovered_at', ['date' => local_time($provider->discovered_at)]) }}</p>
     @endif
 
+    @unless ($apple)
     <details>
         <summary>{{ __('sso.advanced') }}</summary>
         <div class="grid-2">
@@ -118,10 +147,11 @@
         </div>
         <label class="check"><input type="checkbox" name="use_pkce" value="1" @checked(old('use_pkce', $provider->use_pkce))> {{ __('sso.use_pkce') }}</label>
     </details>
+    @endunless
 
     <div class="row-buttons">
         <button type="submit" class="btn primary">{{ __('sso.save') }}</button>
-        @if (! in_array($type, ['github', 'facebook'], true))
+        @if (! in_array($type, ['github', 'facebook', 'apple'], true))
             <button type="submit" name="rediscover" value="1" class="btn">{{ __('sso.save_rediscover') }}</button>
         @endif
     </div>

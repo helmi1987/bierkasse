@@ -83,6 +83,21 @@ class Sso
                 'email_claim' => 'email',
                 'label_claim' => 'name',
             ],
+            // Sign in with Apple: OIDC without discovery and userinfo; the client secret is a
+            // JWT (AppleClientSecret), Apple posts the callback (response_mode=form_post).
+            'apple' => [
+                'discovery_url' => null,
+                'issuer' => 'https://appleid.apple.com',
+                'authorize_url' => 'https://appleid.apple.com/auth/authorize',
+                'token_url' => 'https://appleid.apple.com/auth/token',
+                'userinfo_url' => null,
+                'scopes' => 'name email',
+                'subject_claim' => 'sub',
+                'email_claim' => 'email',
+                'label_claim' => 'email',
+                'use_pkce' => false,
+                'token_auth' => 'post',
+            ],
             default => [],
         };
     }
@@ -189,7 +204,11 @@ class Sso
         if ($provider->isOidc()) {
             $params['nonce'] = $nonce;
         }
-        if ($provider->use_pkce) {
+        if ($provider->isApple()) {
+            // Apple requires form_post when scopes are requested; see LoginController::ssoFormPost.
+            $params['response_mode'] = 'form_post';
+        }
+        if ($provider->use_pkce && ! $provider->isApple()) {
             $params['code_challenge'] = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
             $params['code_challenge_method'] = 'S256';
         }
@@ -317,12 +336,15 @@ class Sso
             'code' => $code,
             'redirect_uri' => $provider->redirectUri(),
         ];
-        if ($provider->use_pkce) {
+        if ($provider->use_pkce && ! $provider->isApple()) {
             $form['code_verifier'] = $verifier;
         }
 
         $http = OutboundUrl::client((string) $provider->token_url, $provider->isPersonal(), 15)->asForm();
-        if ($provider->token_auth === 'basic') {
+        if ($provider->isApple()) {
+            $form['client_id'] = $provider->client_id;
+            $form['client_secret'] = AppleClientSecret::forProvider($provider);
+        } elseif ($provider->token_auth === 'basic') {
             $http = $http->withBasicAuth(rawurlencode((string) $provider->client_id), rawurlencode((string) $provider->client_secret));
         } else {
             $form['client_id'] = $provider->client_id;

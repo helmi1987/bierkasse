@@ -23,7 +23,7 @@ class SsoProviderController extends Controller
     public function index(): View
     {
         return view('backend.sso.index', [
-            'providers' => SsoProvider::query()->globalOnly()->withCount('identities')->orderBy('sort')->orderBy('name')->get(),
+            'providers' => SsoProvider::query()->globalOnly()->withCount('identities')->orderBy('sort')->orderBy('name')->orderBy('id')->get(),
         ]);
     }
 
@@ -87,6 +87,36 @@ class SsoProviderController extends Controller
     }
 
     /**
+     * Moves a provider one place up or down (login button order) and renumbers all global providers 1..n.
+     */
+    public function move(Request $request, SsoProvider $ssoProvider): RedirectResponse
+    {
+        $this->guardGlobal($ssoProvider);
+        $direction = $request->validate(['direction' => ['required', Rule::in(['up', 'down'])]])['direction'];
+
+        $providers = SsoProvider::query()->globalOnly()->orderBy('sort')->orderBy('name')->orderBy('id')->get()->values();
+        $index = $providers->search(fn (SsoProvider $p) => $p->is($ssoProvider));
+        $target = $direction === 'up' ? $index - 1 : $index + 1;
+
+        if ($index !== false && $target >= 0 && $target < $providers->count()) {
+            $old = $providers->pluck('slug')->all();
+            $ordered = $providers->all();
+            [$ordered[$index], $ordered[$target]] = [$ordered[$target], $ordered[$index]];
+
+            DB::transaction(function () use ($ordered, $old, $ssoProvider) {
+                foreach ($ordered as $i => $provider) {
+                    if ((int) $provider->sort !== $i + 1) {
+                        $provider->forceFill(['sort' => $i + 1])->save();
+                    }
+                }
+                Audit::log('sso_provider.reorder', $ssoProvider, ['order' => $old], ['order' => array_map(fn (SsoProvider $p) => $p->slug, $ordered)]);
+            });
+        }
+
+        return redirect()->route('backend.sso.index')->with('status', __('sso.reordered'));
+    }
+
+    /**
      * Personal providers belong to their owner and are not managed here.
      */
     private function guardGlobal(SsoProvider $provider): void
@@ -99,6 +129,7 @@ class SsoProviderController extends Controller
         return view('backend.sso.form', [
             'provider' => $provider,
             'redirectUri' => $provider->exists ? $provider->redirectUri() : url('/login/sso').'/<kuerzel>/callback',
+            'redirectUriTemplate' => route('login.sso.callback', '__slug__'),
         ]);
     }
 

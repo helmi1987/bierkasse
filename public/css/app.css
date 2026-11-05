@@ -313,6 +313,9 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .list li:last-child { border-bottom: 0; }
 .list li.wrap-row { flex-wrap: wrap; }
 .list li.wrap-row > span:first-child { flex: 1 1 220px; }
+.list .row-buttons { margin-bottom: 0; }
+.list .row-buttons form { margin: 0; }
+.list .tx-note code { overflow-wrap: anywhere; }
 .tx-date { font-size: .8rem; color: var(--muted); }
 .tx-note { display: block; font-size: .85rem; color: var(--muted); }
 .amount { font-variant-numeric: tabular-nums; white-space: nowrap; }

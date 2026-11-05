@@ -133,7 +133,7 @@ class SsoProvider extends Model
      */
     public static function usable(): Collection
     {
-        return self::query()->globalOnly()->where('enabled', true)->orderBy('sort')->orderBy('name')->get()
+        return self::query()->globalOnly()->where('enabled', true)->orderBy('sort')->orderBy('name')->orderBy('id')->get()
             ->filter(fn (self $p) => $p->isUsable())->values();
     }
 }

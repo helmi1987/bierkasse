@@ -289,6 +289,27 @@
             });
         });
 
+        // SSO provider form (new provider): live redirect URI preview from the slug field or the name,
+        // approximating Str::slug (umlauts transliterated, other characters become "-").
+        all(root, '[data-redirect-template]').forEach(function (code) {
+            var slugInput = document.getElementById('slug');
+            var nameInput = document.getElementById('name');
+            var update = function () {
+                var raw = (slugInput && slugInput.value.trim()) || (nameInput ? nameInput.value : '');
+                var slug = raw.toLowerCase()
+                    .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss')
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                code.textContent = slug ? code.dataset.redirectTemplate.replace('__slug__', slug) : code.dataset.redirectPlaceholder;
+            };
+            [slugInput, nameInput].forEach(function (input) {
+                if (input) {
+                    input.addEventListener('input', update);
+                }
+            });
+            update();
+        });
+
         // Text that is selected completely on tap (e.g. the TWINT message), for manual copying.
         all(root, '[data-select-all]').forEach(function (el) {
             el.addEventListener('click', function () { selectText(el); });

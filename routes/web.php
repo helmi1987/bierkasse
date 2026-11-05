@@ -238,6 +238,8 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 Route::put('/wartung/modus', [Backend\MaintenanceController::class, 'mode'])->name('maintenance.mode');
                 Route::resource('sso', Backend\SsoProviderController::class)->except(['show'])
                     ->parameters(['sso' => 'ssoProvider'])->names('sso');
+                Route::post('/sso/{ssoProvider}/verschieben', [Backend\SsoProviderController::class, 'move'])
+                    ->whereNumber('ssoProvider')->name('sso.move');
             });
         });
     });

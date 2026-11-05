@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\SsoProvider;
 use App\Models\User;
 use App\Models\UserIdentity;
@@ -379,5 +380,67 @@ class SsoTest extends TestCase
                 $url => fn () => Http::response(['access_token' => 'access', 'token_type' => 'Bearer', 'id_token' => $this->jwts[$url]]),
             ]);
         }
+    }
+
+    public function test_admin_list_shows_redirect_uri(): void
+    {
+        $this->actingAs($this->admin())->get('/admin/sso')->assertOk()
+            ->assertSee(route('login.sso.callback', 'firma'), false)
+            ->assertSee('data-copy="#redirect-uri-'.$this->provider->id.'"', false);
+    }
+
+    public function test_admin_moves_provider_and_login_page_follows(): void
+    {
+        $second = $this->provider->replicate()->fill(['name' => 'Zweiter', 'slug' => 'zweiter', 'sort' => 0]);
+        $second->client_secret = 'top-secret';
+        $second->save();
+        $admin = $this->admin();
+
+        $this->get('/')->assertSeeInOrder(['Mit Firmen-SSO anmelden', 'Mit Zweiter anmelden']);
+
+        $this->actingAs($admin)->post(route('backend.sso.move', $second), ['direction' => 'up'])
+            ->assertRedirect('/admin/sso')->assertSessionHas('status');
+        $this->assertSame(1, $second->fresh()->sort);
+        $this->assertSame(2, $this->provider->fresh()->sort);
+        $this->assertTrue(AuditLog::query()->where('action', 'sso_provider.reorder')->exists());
+        $this->post('/abmelden');
+        $this->get('/')->assertSeeInOrder(['Mit Zweiter anmelden', 'Mit Firmen-SSO anmelden']);
+
+        $this->actingAs($admin)->post(route('backend.sso.move', $second), ['direction' => 'down'])->assertRedirect('/admin/sso');
+        $this->assertSame(2, $second->fresh()->sort);
+        $this->assertSame(1, $this->provider->fresh()->sort);
+
+        // Already first: no change, no further audit entry.
+        $audits = AuditLog::query()->where('action', 'sso_provider.reorder')->count();
+        $this->post(route('backend.sso.move', $this->provider), ['direction' => 'up'])->assertRedirect('/admin/sso');
+        $this->assertSame(1, $this->provider->fresh()->sort);
+        $this->assertSame(2, $second->fresh()->sort);
+        $this->assertSame($audits, AuditLog::query()->where('action', 'sso_provider.reorder')->count());
+        $this->post('/abmelden');
+        $this->get('/')->assertSeeInOrder(['Mit Firmen-SSO anmelden', 'Mit Zweiter anmelden']);
+    }
+
+    public function test_non_admin_cannot_move_provider(): void
+    {
+        $this->post(route('backend.sso.move', $this->provider), ['direction' => 'up'])->assertRedirect(route('login'));
+
+        $this->actingAs($this->user())->post(route('backend.sso.move', $this->provider), ['direction' => 'up'])->assertForbidden();
+    }
+
+    public function test_create_form_contains_redirect_template(): void
+    {
+        $this->actingAs($this->admin())->get('/admin/sso/create?type=google')->assertOk()
+            ->assertSee('data-redirect-template', false)->assertSee('__slug__', false);
+    }
+
+    public function test_personal_provider_cannot_be_moved(): void
+    {
+        $personal = $this->provider->replicate()->fill(['name' => 'Privat', 'slug' => 'privat', 'sort' => 7]);
+        $personal->client_secret = 'top-secret';
+        $personal->owner_user_id = $this->user()->id;
+        $personal->save();
+
+        $this->actingAs($this->admin())->post(route('backend.sso.move', $personal), ['direction' => 'up'])->assertNotFound();
+        $this->assertSame(7, $personal->fresh()->sort);
     }
 }

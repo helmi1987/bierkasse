@@ -186,6 +186,15 @@ Redirect-URIs für bier.helminet.ch (Standard-Kürzel):
 
 Ein geändertes Kürzel ändert die URL; die genaue URI zeigt das Formular unter Admin > SSO.
 
+Die Liste unter Admin > SSO zeigt bei jedem Anbieter die Redirect-URI mit Kopier-Knopf. Beim Anlegen zeigt das
+Formular die URI schon live als Vorschau aus Kürzel bzw. Name. Ist das Kürzel beim Speichern schon vergeben, vergibt
+die Bierkasse ein zufälliges Kürzel (`sso-xxxxxx`); die endgültige URI steht nach dem Speichern im Formular und in der
+Liste.
+
+Die Reihenfolge der Knöpfe auf der Login-Seite entspricht der Reihenfolge in der Liste und wird dort mit den Pfeilen
+↑/↓ geändert (nur globale Anbieter; eigene Anbieter der Benutzer sind nicht betroffen). Das Zahlenfeld "Reihenfolge"
+im Formular gibt es weiterhin; die Pfeile nummerieren alle Anbieter neu von 1 bis n.
+
 - Google: [console.cloud.google.com](https://console.cloud.google.com) > APIs & Dienste > OAuth-Zustimmungsbildschirm
   einrichten, dann Anmeldedaten > OAuth-Client-ID, Typ "Webanwendung", Redirect-URI als "Autorisierte
   Weiterleitungs-URI". Scopes: `openid profile email`.

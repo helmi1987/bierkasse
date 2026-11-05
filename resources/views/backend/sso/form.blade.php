@@ -13,8 +13,11 @@
 <h1>{{ $provider->exists ? __('sso.edit_title', ['name' => $provider->name]) : __('sso.new_type', ['type' => __('sso.types.'.$type)]) }}</h1>
 
 <div class="card">
-    <p><strong>{{ __('sso.redirect_uri') }}:</strong> <code id="redirect-uri">{{ $redirectUri }}</code>
+    <p><strong>{{ __('sso.redirect_uri') }}:</strong> <code id="redirect-uri" @unless ($provider->exists) data-redirect-template="{{ $redirectUriTemplate }}" data-redirect-placeholder="{{ $redirectUri }}" @endunless>{{ $redirectUri }}</code>
         <button type="button" class="btn small" data-copy="#redirect-uri" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button></p>
+    @unless ($provider->exists)
+        <p class="hint">{{ __('sso.redirect_uri_preview_hint') }}</p>
+    @endunless
     <p class="hint">{{ __('sso.client_hint') }}</p>
     @if (\Illuminate\Support\Facades\Lang::has('sso.setup_help.'.$type))
         <p class="hint">{{ __('sso.setup_help.'.$type) }}</p>

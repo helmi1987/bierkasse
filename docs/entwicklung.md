@@ -94,6 +94,11 @@
   "Im Minus"; in der Benutzerliste mit Badge "Nur Verwaltung" ohne Saldo/Limit. Karten "Statistik" und
   "Haus verlassen" in den Einstellungen ausgeblendet.
   **Annahme:** Ältere Biere eines solchen Kontos zählen weiter in den Totals der Statistik, nur nicht namentlich.
+- SSO-Typ `apple` (nur globale Anbieter): Client-Secret = ES256-JWT pro Token-Abruf (`app/Services/AppleClientSecret.php`,
+  Team ID/Key ID in `sso_providers.apple_team_id/apple_key_id`, .p8 verschlüsselt in `client_secret`). Apple ruft
+  den Callback per `response_mode=form_post` auf (Cross-Site-POST ohne Lax-Session-Cookie): `POST /login/sso/{kuerzel}/callback`
+  läuft ohne `web`-Middleware (keine Session, keine Cookies, kein CSRF) und leitet nur `code`/`state`/`error` per 303
+  an den GET-Callback weiter, dort laufen die normalen Prüfungen. ID-Token wie OIDC (nonce), ohne Userinfo.
 - Eigener Anmelde-Anbieter (Konto > Einstellungen): jeder Benutzer kann einen eigenen OAuth2-/OIDC-Anbieter
   (z. B. selbst gehostetes Authentik/Keycloak) hinterlegen: Discovery-URL oder Endpunkte von Hand, Client-ID,
   Client-Secret (verschlüsselt). Die angezeigte Redirect-URI (`/login/sso/p-…/callback`) beim Anbieter eintragen,

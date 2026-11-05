@@ -260,7 +260,7 @@ class SsoTest extends TestCase
             ->assertDontSee('Noch kein Anbieter aktiv.');
 
         $this->actingAs($this->admin())->get('/konto/einstellungen')->assertOk()
-            ->assertSee('Noch kein Anbieter aktiv. Google, Microsoft, GitHub oder Facebook unter Admin > SSO einrichten.')
+            ->assertSee('Noch kein Anbieter aktiv. Google, Microsoft, GitHub, Facebook oder Apple unter Admin > SSO einrichten.')
             ->assertSee(route('backend.sso.index'));
     }
 

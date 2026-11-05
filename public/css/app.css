@@ -225,12 +225,16 @@ details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: 
 .btn.sso-microsoft:hover { border-color: #8c8c8c; }
 .btn.sso-facebook { background: #1877F2; border-color: #1877F2; color: #ffffff; }
 .btn.sso-facebook:hover { border-color: #1877F2; filter: brightness(.92); }
+.btn.sso-apple { background: #000000; border-color: #000000; color: #ffffff; }
+.btn.sso-apple:hover { border-color: #000000; filter: brightness(1.35); }
 :root[data-theme="dark"] .btn.sso-github, :root[data-theme="dark"] .btn.sso-github:hover { border-color: #6e7681; }
+:root[data-theme="dark"] .btn.sso-apple, :root[data-theme="dark"] .btn.sso-apple:hover { border-color: #6e6e73; }
 :root[data-theme="dark"] .btn.sso-google, :root[data-theme="dark"] .btn.sso-google:hover { background: #131314; border-color: #8e918f; color: #e3e3e3; }
 :root[data-theme="dark"] .btn.sso-microsoft, :root[data-theme="dark"] .btn.sso-microsoft:hover { background: #2f2f2f; border-color: #6e6e6e; color: #ffffff; }
 :root[data-theme="dark"] .btn.sso-google:hover, :root[data-theme="dark"] .btn.sso-microsoft:hover { filter: brightness(1.25); }
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .btn.sso-github, :root:not([data-theme="light"]) .btn.sso-github:hover { border-color: #6e7681; }
+    :root:not([data-theme="light"]) .btn.sso-apple, :root:not([data-theme="light"]) .btn.sso-apple:hover { border-color: #6e6e73; }
     :root:not([data-theme="light"]) .btn.sso-google, :root:not([data-theme="light"]) .btn.sso-google:hover { background: #131314; border-color: #8e918f; color: #e3e3e3; }
     :root:not([data-theme="light"]) .btn.sso-microsoft, :root:not([data-theme="light"]) .btn.sso-microsoft:hover { background: #2f2f2f; border-color: #6e6e6e; color: #ffffff; }
     :root:not([data-theme="light"]) .btn.sso-google:hover, :root:not([data-theme="light"]) .btn.sso-microsoft:hover { filter: brightness(1.25); }

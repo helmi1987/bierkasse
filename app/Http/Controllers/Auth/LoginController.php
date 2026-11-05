@@ -221,6 +221,37 @@ class LoginController extends Controller
         return $this->finish($request, $user, false, 'sso');
     }
 
+    /**
+     * Sign in with Apple posts the callback (response_mode=form_post) cross-site, so the
+     * SameSite=Lax session cookie is missing. This route runs without the "web" middleware
+     * (no session, no cookies, no CSRF check) and only bounces code/state/error to the
+     * GET callback, where the browser sends the session cookie and the normal checks run.
+     * The "user" JSON (name, first login only) is ignored.
+     */
+    public function ssoFormPost(Request $request, string $provider): RedirectResponse
+    {
+        $p = $this->provider($provider);
+        abort_unless($p->isApple() && ! $p->isPersonal(), 404);
+
+        $limits = ['code' => 2048, 'state' => 255, 'error' => 100];
+        $query = [];
+        // all() instead of get(): get() throws on array values (e.g. code[]=x).
+        $input = $request->request->all();
+        foreach ($limits as $key => $max) {
+            $value = $input[$key] ?? null;
+            if (is_string($value) && $value !== '' && strlen($value) <= $max) {
+                $query[$key] = $value;
+            }
+        }
+
+        $url = route('login.sso.callback', $p->slug);
+        if ($query !== []) {
+            $url .= '?'.http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        }
+
+        return new RedirectResponse($url, 303);
+    }
+
     private function provider(string $slug): SsoProvider
     {
         $p = SsoProvider::query()->where('slug', $slug)->first();

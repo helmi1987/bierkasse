@@ -38,6 +38,10 @@ Route::middleware(EnsureInstalled::class)->group(function () {
     Route::post('/abmelden', [LoginController::class, 'logout'])->name('logout');
     Route::get('/login/sso/{provider}', [LoginController::class, 'ssoRedirect'])->name('login.sso')->where('provider', '[a-z0-9-]+');
     Route::get('/login/sso/{provider}/callback', [LoginController::class, 'ssoCallback'])->name('login.sso.callback')->where('provider', '[a-z0-9-]+');
+    // Sign in with Apple (form_post): cross-site POST without session cookie; no session, cookies or CSRF,
+    // only a 303 bounce to the GET callback above (LoginController::ssoFormPost).
+    Route::post('/login/sso/{provider}/callback', [LoginController::class, 'ssoFormPost'])->withoutMiddleware('web')
+        ->name('login.sso.callback.post')->where('provider', '[a-z0-9-]+');
     // Personal provider of a user (rate limited in the controller, plus a coarse route throttle).
     Route::get('/login/eigener', [PersonalSsoController::class, 'loginForm'])->name('login.personal');
     Route::post('/login/eigener', [PersonalSsoController::class, 'loginPost'])->middleware('throttle:30,1')->name('login.personal.post');

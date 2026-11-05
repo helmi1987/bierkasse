@@ -11,21 +11,22 @@ use Illuminate\Support\Collection;
 
 /**
  * An OAuth2 / OpenID Connect login provider. Types: generic OIDC (discovery URL),
- * Google, Microsoft (Entra, tenant configurable), GitHub and Facebook (both plain OAuth2).
+ * Google, Microsoft (Entra, tenant configurable), GitHub and Facebook (both plain OAuth2),
+ * Apple (Sign in with Apple: client secret JWT, form_post callback; global providers only).
  *
  * owner_user_id null = global provider (admin); otherwise a personal provider
  * of that user (never listed for others, only logs in / links its owner).
  */
 class SsoProvider extends Model
 {
-    public const TYPES = ['oidc', 'google', 'microsoft', 'github', 'facebook'];
+    public const TYPES = ['oidc', 'google', 'microsoft', 'github', 'facebook', 'apple'];
 
     /** Types with fixed endpoints (no discovery URL to edit). */
-    public const PRESET_TYPES = ['google', 'microsoft', 'github', 'facebook'];
+    public const PRESET_TYPES = ['google', 'microsoft', 'github', 'facebook', 'apple'];
 
     protected $fillable = [
         'name', 'slug', 'type', 'tenant', 'enabled', 'discovery_url', 'issuer', 'authorize_url', 'token_url',
-        'userinfo_url', 'client_id', 'client_secret', 'scopes', 'token_auth', 'use_pkce', 'subject_claim',
+        'userinfo_url', 'client_id', 'client_secret', 'apple_team_id', 'apple_key_id', 'scopes', 'token_auth', 'use_pkce', 'subject_claim',
         'email_claim', 'label_claim', 'sort', 'discovered_at',
     ];
 
@@ -71,18 +72,34 @@ class SsoProvider extends Model
      */
     public function isUsable(): bool
     {
-        return $this->enabled
+        $base = $this->enabled
             && (! $this->isPersonal() || AppSettings::personalSsoAllowed())
             && (string) $this->authorize_url !== ''
             && (string) $this->token_url !== ''
             && (string) $this->client_id !== ''
-            && (string) $this->client_secret !== ''
-            && ((string) $this->userinfo_url !== '' || $this->isOidc());
+            && (string) $this->client_secret !== '';
+
+        if ($this->isApple()) {
+            // Apple: no userinfo endpoint; the client secret is a JWT signed with the stored private key.
+            return $base && ! $this->isPersonal()
+                && (string) $this->apple_team_id !== ''
+                && (string) $this->apple_key_id !== '';
+        }
+
+        return $base && ((string) $this->userinfo_url !== '' || $this->isOidc());
     }
 
+    /**
+     * Apple is OIDC (ID token, nonce) although it does not document the "openid" scope.
+     */
     public function isOidc(): bool
     {
-        return in_array('openid', $this->scopeList(), true);
+        return $this->isApple() || in_array('openid', $this->scopeList(), true);
+    }
+
+    public function isApple(): bool
+    {
+        return $this->type === 'apple';
     }
 
     public function isGithub(): bool

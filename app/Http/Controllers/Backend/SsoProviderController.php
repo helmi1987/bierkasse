@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\SsoProvider;
+use App\Services\AppleClientSecret;
 use App\Services\Audit;
 use App\Services\Sso;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +16,7 @@ use Illuminate\View\View;
 use Throwable;
 
 /**
- * SSO providers (admin): generic OIDC, Google, Microsoft (tenant), GitHub, Facebook.
+ * SSO providers (admin): generic OIDC, Google, Microsoft (tenant), GitHub, Facebook, Apple.
  */
 class SsoProviderController extends Controller
 {
@@ -33,16 +34,16 @@ class SsoProviderController extends Controller
         return $this->form(new SsoProvider([
             'type' => $type,
             'name' => match ($type) {
-                'google' => 'Google', 'microsoft' => 'Microsoft', 'github' => 'GitHub', 'facebook' => 'Facebook', default => '',
+                'google' => 'Google', 'microsoft' => 'Microsoft', 'github' => 'GitHub', 'facebook' => 'Facebook', 'apple' => 'Apple', default => '',
             },
             'tenant' => $type === 'microsoft' ? 'common' : null,
             'enabled' => true,
-            'scopes' => 'openid profile email',
+            'scopes' => $type === 'apple' ? 'name email' : 'openid profile email',
             'token_auth' => 'post',
-            'use_pkce' => true,
+            'use_pkce' => $type !== 'apple',
             'subject_claim' => 'sub',
             'email_claim' => 'email',
-            'label_claim' => 'preferred_username',
+            'label_claim' => $type === 'apple' ? 'email' : 'preferred_username',
         ]));
     }
 
@@ -108,7 +109,11 @@ class SsoProviderController extends Controller
     private function save(Request $request, SsoProvider $provider): ?string
     {
         $url = ['nullable', 'url', 'max:500'];
-        $claim = ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_.:\/-]+$/'];
+        // Apple: scopes, claims and token auth come from the preset (not shown in the form).
+        $isApple = $request->input('type') === 'apple';
+        $required = $isApple ? 'nullable' : 'required';
+        $claim = [$required, 'string', 'max:64', 'regex:/^[A-Za-z0-9_.:\/-]+$/'];
+        $appleId = ['nullable', 'string', 'regex:/^[A-Z0-9]{10}$/'];
 
         $data = $request->validate([
             'type' => ['required', Rule::in(SsoProvider::TYPES)],
@@ -122,8 +127,10 @@ class SsoProviderController extends Controller
             'userinfo_url' => $url,
             'client_id' => ['nullable', 'string', 'max:255'],
             'client_secret' => ['nullable', 'string', 'max:2000'],
-            'scopes' => ['required', 'string', 'max:255'],
-            'token_auth' => ['required', Rule::in(['post', 'basic'])],
+            'apple_team_id' => $appleId,
+            'apple_key_id' => $appleId,
+            'scopes' => [$required, 'string', 'max:255'],
+            'token_auth' => [$required, Rule::in(['post', 'basic'])],
             'subject_claim' => $claim,
             'email_claim' => $claim,
             'label_claim' => $claim,
@@ -138,7 +145,15 @@ class SsoProviderController extends Controller
             $data['tenant'] = trim((string) ($data['tenant'] ?? '')) ?: 'common';
         }
 
-        // Presets override the endpoint fields of the fixed provider types.
+        foreach (['enabled', 'use_pkce'] as $flag) {
+            $data[$flag] = $request->boolean($flag);
+        }
+        if ($data['type'] !== 'apple') {
+            $data['apple_team_id'] = null;
+            $data['apple_key_id'] = null;
+        }
+
+        // Presets override the endpoint fields of the fixed provider types (Apple also PKCE and token auth).
         $data = array_merge($data, Sso::preset($data['type'], $data['tenant'] ?? null));
 
         if ($data['discovery_url'] ?? null) {
@@ -158,9 +173,14 @@ class SsoProviderController extends Controller
         $secret = $data['client_secret'] ?? '';
         unset($data['client_secret']);
 
-        foreach (['enabled', 'use_pkce'] as $flag) {
-            $data[$flag] = $request->boolean($flag);
+        // Apple: the "secret" is the private key (.p8); it must be an EC key on P-256 (ES256).
+        if ($data['type'] === 'apple' && $secret !== '') {
+            $secret = AppleClientSecret::normalizePem($secret);
+            if (AppleClientSecret::loadKey($secret) === null) {
+                return __('sso.apple_key_invalid');
+            }
         }
+
         $data['sort'] = (int) ($data['sort'] ?? 0);
 
         $provider->fill($data);

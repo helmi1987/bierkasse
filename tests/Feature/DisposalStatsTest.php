@@ -196,4 +196,70 @@ class DisposalStatsTest extends TestCase
         $this->assertFalse($user->fresh()->disposal_stats_opt_out);
         $this->assertFalse($user->fresh()->stats_opt_out);
     }
+
+    /** Feature switched off (1.32.2): opt-out switch and KPI hidden for the user, the route is 404, the value stays. */
+    public function test_feature_off_hides_switch_and_kpi_and_route_is_404(): void
+    {
+        $this->setPrice(150);
+        $this->setDefaultLimit(100000);
+        $user = $this->user(['first_name' => 'Edi', 'last_name' => 'Entsorger']);
+        $this->dispose($user, 2, 1);
+        Setting::putMany([AppSettings::DISPOSAL_ENABLED => false]);
+
+        $this->actingAs($user)->get('/konto/einstellungen')->assertOk()
+            ->assertDontSee('data-testid="disposal-stats-form"', false)->assertDontSee(__('account.disposal_stats_show'))
+            ->assertSee('action="'.route('account.stats').'"', false)->assertSee('name="show"', false)
+            ->assertSee(__('account.stats_show'));
+        $this->get('/konto')->assertOk()->assertDontSee('data-testid="disposals"', false);
+
+        $this->post('/konto/statistik-entsorgung', [])->assertNotFound();
+        $this->assertFalse($user->fresh()->disposal_stats_opt_out);
+    }
+
+    public function test_feature_on_shows_switch_and_kpi(): void
+    {
+        $this->setPrice(150);
+        $this->setDefaultLimit(100000);
+        $user = $this->user(['first_name' => 'Edi', 'last_name' => 'Entsorger']);
+        $this->dispose($user, 2, 1);
+
+        $this->actingAs($user)->get('/konto/einstellungen')->assertOk()
+            ->assertSee('data-testid="disposal-stats-form"', false)->assertSee(__('account.disposal_stats_show'))
+            ->assertSee('action="'.route('account.stats').'"', false)->assertSee(__('account.stats_show'));
+        $this->get('/konto')->assertOk()->assertSee('data-testid="disposals"', false);
+    }
+
+    public function test_opt_out_survives_feature_off_and_on(): void
+    {
+        Setting::putMany([AppSettings::DISPOSAL_RANKING_PUBLIC => true]);
+        $user = $this->user(['first_name' => 'Heiri', 'last_name' => 'Versteckt']);
+        $viewer = $this->user(['first_name' => 'Vreni', 'last_name' => 'Viewer']);
+        $this->dispose($user, 2);
+
+        $this->actingAs($user)->post('/konto/statistik-entsorgung', [])->assertSessionHas('status', __('account.stats_saved'));
+        $this->assertTrue($user->fresh()->disposal_stats_opt_out);
+
+        Setting::putMany([AppSettings::DISPOSAL_ENABLED => false]);
+        $this->assertTrue($user->fresh()->disposal_stats_opt_out);
+        $this->enable();
+        $this->assertTrue($user->fresh()->disposal_stats_opt_out);
+
+        $page = $this->actingAs($viewer)->get('/statistik')->assertOk()->assertDontSee('Heiri')->getContent();
+        $this->assertMatchesRegularExpression('/data-testid="disposal-ranking">\s*<li class="rank-1">\s*<span class="rank">1<\/span>\s*<span class="name">Anonym 1<\/span>/', $page);
+    }
+
+    public function test_backend_unchanged_while_feature_off(): void
+    {
+        $this->setPrice(150);
+        $this->setDefaultLimit(100000);
+        $user = $this->user(['first_name' => 'Edi', 'last_name' => 'Entsorger']);
+        $this->dispose($user, 1, 2);
+        $this->dispose($user, 1, 3);
+        Setting::putMany([AppSettings::DISPOSAL_ENABLED => false]);
+
+        $this->actingAs($this->kassier)->get('/admin/benutzer/'.$user->id)->assertOk()
+            ->assertSee('data-testid="disposals"', false)->assertSee('Entsorgungen: 2 · 5 Biere');
+        $this->get('/admin/entsorgung')->assertOk()
+            ->assertSee('data-testid="backend-disposal-ranking"', false)->assertSee('Edi Entsorger')->assertSee('2×');
+    }
 }

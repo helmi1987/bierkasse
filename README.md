@@ -50,6 +50,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.32.2 | Fehlerbehebung | Entsorgungsbonus ausgeschaltet: Schalter «Name in Statistik Entsorgung zeigen» und Kennzahl «Entsorgungen» beim Benutzer ausgeblendet |
 | 1.32.1 | Verbesserung | Runde spendieren: Total und beide Knöpfe oben, nebeneinander und beim Scrollen fixiert unter der Kopfzeile |
 | 1.32.0 | Neue Funktion | Entsorgungsbonus: Leergut-Meldung mit Sperrfrist, Mindestmenge, verzögerter Buchung (fix oder Zufall), Erfassung durch Kassier/Admin, Rangliste Entsorgungen |
 | 1.31.0 | Neue Funktion | Backend-Statistik für Kassier und Admin: Zeitraum (inkl. Quartal), Benutzer, Typ, Gruppierung nach Zeit oder Benutzer, Vergleich Vorperiode, CSV-Export |

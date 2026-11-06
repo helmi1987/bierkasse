@@ -408,6 +408,9 @@
     Standard an (Name sichtbar); die Migration übernimmt den Bier-Schalter bewusst nicht. Jede Rangliste nutzt nur
     ihren eigenen Schalter. Aus = «Anonym n» überall (auch im Backend), nummeriert nach der Reihenfolge in der
     gezeigten Liste; die `user_id` bleibt für die eigene Zeile (`.me`).
+  - Seit 1.32.2: Funktion aus → Schalter «Name in Statistik Entsorgung zeigen» und Kennzahl «Entsorgungen» beim
+    Benutzer ausgeblendet, Route `account.disposal-stats` 404; gespeicherter Wert bleibt; Bonus-Hinweis, Kontoauszug
+    und Backend unverändert.
   - Protokoll: `disposal.report` (mit Begründung beim Übersteuern), `disposal.withdraw`, `disposal.book` (System,
     mit Anzahl und Betrag), `disposal.skip`, `disposal.storno`.
 - Lager (`/admin/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"

@@ -111,6 +111,127 @@
             }, { capture: true, passive: true });
         });
 
+        // ---- Deploy while the page is open (1.34.0) --------------------------------------------
+        // A component found newer CSS/JS on the server (App\Livewire\Concerns\WatchesAssets dispatches
+        // "assets-changed"): a bar offers to reload. Automatic reload never mid-use: only after a minute
+        // without activity, or when the tab comes back into view; in both cases with no focused field,
+        // nothing typed since the page was loaded and no form being sent.
+        var lwDirty = false;
+        document.addEventListener('input', function (e) {
+            if (e.isTrusted) {
+                lwDirty = true;
+            }
+        }, { capture: true, passive: true });
+
+        function canReload() {
+            var active = document.activeElement;
+            var inField = !!active && active !== body && active.matches('input, textarea, select, [contenteditable]');
+            return !lwDirty && !inField && !document.querySelector('form[data-submitted]');
+        }
+
+        var updateShown = false;
+        function showUpdate() {
+            if (updateShown) {
+                return;
+            }
+            updateShown = true;
+            var bar = document.createElement('div');
+            bar.className = 'alert info update-bar';
+            bar.setAttribute('role', 'status');
+            bar.setAttribute('data-testid', 'update-bar');
+            var text = document.createElement('span');
+            text.textContent = body.getAttribute('data-update-text') || '';
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn small';
+            button.textContent = body.getAttribute('data-update-button') || 'Reload';
+            button.addEventListener('click', function () {
+                window.location.reload();
+            });
+            bar.appendChild(text);
+            bar.appendChild(button);
+            var main = document.getElementById('main') || body;
+            main.insertBefore(bar, main.firstChild);
+
+            var check = function (idleMs) {
+                if (!document.hidden && Date.now() - lwLastActivity > idleMs && canReload()) {
+                    window.location.reload();
+                }
+            };
+            window.setInterval(function () { check(60000); }, 5000);
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) {
+                    check(0);
+                }
+            });
+        }
+
+        var lwUpdateHook = function () {
+            if (!window.Livewire || typeof window.Livewire.on !== 'function' || lwUpdateHook.done) {
+                return;
+            }
+            lwUpdateHook.done = true;
+            window.Livewire.on('assets-changed', showUpdate);
+        };
+        lwUpdateHook();
+        document.addEventListener('livewire:init', lwUpdateHook);
+
+        // ---- Scroll anchoring for component updates (1.34.0) ---------------------------------
+        // Chrome keeps the visible content in place when markup above it changes height (scroll anchoring),
+        // Safari does not: a morphed island above the viewport would shift the page. Before each morph the
+        // first visible element outside the morphed part is remembered; afterwards the page is scrolled by
+        // the distance it moved (nothing happens where the browser anchors itself).
+        var topbar = document.querySelector('.topbar');
+        var anchor = null;
+        var anchorTop = 0;
+        function visibleTop() {
+            return topbar ? topbar.getBoundingClientRect().bottom : 0;
+        }
+        function rememberAnchor(isInsideChange) {
+            anchor = null;
+            var limit = visibleTop();
+            var candidates = document.querySelectorAll('#main section, #main .card, #main form, #main h2, #main li, #main p');
+            for (var i = 0; i < candidates.length; i++) {
+                var rect = candidates[i].getBoundingClientRect();
+                if (rect.bottom > limit && rect.height > 0 && !isInsideChange(candidates[i])) {
+                    anchor = candidates[i];
+                    anchorTop = rect.top;
+                    return;
+                }
+            }
+        }
+        // Inside an island = between its start and end comment nodes.
+        function withinIsland(el, startNode, endNode) {
+            return !!(startNode.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)
+                && !!(el.compareDocumentPosition(endNode) & Node.DOCUMENT_POSITION_FOLLOWING);
+        }
+        function restoreAnchor() {
+            if (!anchor || !anchor.isConnected) {
+                return;
+            }
+            var delta = anchor.getBoundingClientRect().top - anchorTop;
+            if (Math.abs(delta) >= 1) {
+                window.scrollBy(0, delta);
+            }
+            anchor = null;
+        }
+        var lwScrollHook = function () {
+            if (!window.Livewire || typeof window.Livewire.hook !== 'function' || lwScrollHook.done) {
+                return;
+            }
+            lwScrollHook.done = true;
+            window.Livewire.hook('morph', function (ctx) {
+                rememberAnchor(function (el) { return !!ctx.el && ctx.el.contains(el); });
+            });
+            window.Livewire.hook('morphed', restoreAnchor);
+            window.Livewire.hook('island.morph', function (ctx) {
+                rememberAnchor(function (el) { return withinIsland(el, ctx.startNode, ctx.endNode); });
+            });
+            window.Livewire.hook('island.morphed', restoreAnchor);
+        };
+        lwScrollHook();
+        document.addEventListener('livewire:init', lwScrollHook);
+
         // No full-page live refresh on Livewire pages.
         return;
     }

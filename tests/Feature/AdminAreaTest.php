@@ -68,7 +68,7 @@ class AdminAreaTest extends TestCase
             ->assertSee('href="'.url('/admin/statistik').'"', false);
 
         $this->actingAs($this->admin());
-        $this->get('/admin/einstellungen')->assertOk()->assertSee('>'."\n                        Admin", false)
+        $this->get('/admin/einstellungen')->assertOk()->assertSeeText('Admin')
             ->assertSee(route('backend.maintenance'))->assertSee('id="funktionen"', false)->assertDontSee('Backend');
         $this->get('/admin')->assertOk()->assertDontSee('Backend');
     }
@@ -187,7 +187,7 @@ class AdminAreaTest extends TestCase
 
         $html = (string) $response->getContent();
         // CSP build of Livewire, script and style tag with the nonce of this response.
-        $this->assertMatchesRegularExpression('/<script src="[^"]*\/livewire\.min\.js\?id=[^"]*-csp" nonce="'.preg_quote($nonce, '/').'"[^>]*data-update-uri="[^"]*\/admin\/livewire\/update"/', $html);
+        $this->assertMatchesRegularExpression('/<script src="[^"]*\/livewire\.min\.js\?id=[^"]*-csp" nonce="'.preg_quote($nonce, '/').'"[^>]*data-update-uri="[^"]*\/livewire\/update"/', $html);
         $this->assertStringContainsString('<style nonce="'.$nonce.'" data-livewire-style>', $html);
         $this->assertStringContainsString('data-livewire-page', $html);
         // No full-page live refresh on Livewire pages; polling by the component.
@@ -205,20 +205,25 @@ class AdminAreaTest extends TestCase
         $this->assertStringContainsString('data-live="', $classic);
     }
 
-    public function test_livewire_update_route_runs_the_admin_middleware(): void
+    public function test_livewire_update_route_runs_the_auth_middleware(): void
     {
-        $route = Route::getRoutes()->getByName('backend.livewire.update');
+        // Since 1.34.0 the update route serves every logged-in page (user dashboard too); the admin components
+        // re-check the kassier role themselves (AuthorizesAdminArea, test above), the dashboard the beer account.
+        $route = Route::getRoutes()->getByName('livewire.update');
         $this->assertNotNull($route);
-        $this->assertSame('admin/livewire/update', $route->uri());
+        $this->assertSame('livewire/update', $route->uri());
         $middleware = $route->gatherMiddleware();
-        foreach (['web', 'auth', 'active', 'role:kassier'] as $expected) {
+        foreach (['web', 'auth', 'active'] as $expected) {
             $this->assertContains($expected, $middleware);
         }
+        $this->assertNotContains('role:kassier', $middleware);
+        $this->assertNull(Route::getRoutes()->getByName('backend.livewire.update'));
 
         $headers = ['X-Livewire' => '1', 'Accept' => 'application/json'];
         $payload = ['components' => [['snapshot' => '{}', 'updates' => [], 'calls' => []]]];
-        $this->postJson('/admin/livewire/update', $payload, $headers)->assertUnauthorized();
+        $this->postJson('/livewire/update', $payload, $headers)->assertUnauthorized();
         $this->actingAs($this->user());
-        $this->postJson('/admin/livewire/update', $payload, $headers)->assertForbidden();
+        // Logged in: the request reaches Livewire (the empty snapshot is rejected there, not by the middleware).
+        $this->assertNotContains($this->postJson('/livewire/update', $payload, $headers)->getStatusCode(), [401, 403]);
     }
 }

@@ -59,7 +59,8 @@ class LiveRefreshTest extends TestCase
         $user = $this->user();
         $this->actingAs($user);
 
-        $response = $this->get('/konto', ['X-Live-Refresh' => '1'])->assertOk()
+        // The dashboard is a Livewire page since 1.34.0 (polls itself); the statistics page still uses the live refresh.
+        $response = $this->get('/statistik', ['X-Live-Refresh' => '1'])->assertOk()
             ->assertSee('data-live="'.route('live', [], false).'"', false)
             ->assertSee('data-live-fp="'.LiveFingerprint::current().'"', false)
             ->assertSee('data-live-assets="'.AssetVersion::current().'"', false)
@@ -67,7 +68,7 @@ class LiveRefreshTest extends TestCase
             ->assertSee('js/live.js', false)
             ->assertSee('id="main"', false)
             ->assertSee('data-live-keep="alerts"', false)
-            ->assertSee('data-testid="balance"', false);
+            ->assertSee('data-testid="stats-total"', false);
         $this->assertStringContainsString('text/html', (string) $response->headers->get('Content-Type'));
 
         $kassier = $this->kassier();
@@ -90,10 +91,10 @@ class LiveRefreshTest extends TestCase
         $this->get('/')->assertOk()->assertDontSee('data-live="', false)->assertSee('<meta name="server-now"', false);
 
         $this->actingAs($this->user());
-        $this->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => 'abc', 'method' => 'cash']))->assertSessionHasErrors('amount');
+        $this->post('/konto/feedback', $this->tokened('feedback', ['message' => 'x']))->assertSessionHasErrors('message');
         // Page after the validation error keeps old input: no live swap for this view.
-        $this->get('/konto')->assertOk()->assertDontSee('data-live="', false);
-        $this->get('/konto')->assertOk()->assertSee('data-live="', false);
+        $this->get('/konto/feedback')->assertOk()->assertDontSee('data-live="', false);
+        $this->get('/konto/feedback')->assertOk()->assertSee('data-live="', false);
     }
 
     public function test_undo_items_carry_their_expiry_in_server_time(): void
@@ -157,10 +158,10 @@ class LiveRefreshTest extends TestCase
         $start = LiveFingerprint::current();
 
         // A change while the page is being built must not be hidden by the rendered fingerprint.
-        View::composer('account.dashboard', function () use ($user) {
+        View::composer('stats.index', function () use ($user) {
             Ledger::reportDeposit($user, 500, 'cash');
         });
-        $html = $this->get('/konto')->getContent();
+        $html = $this->get('/statistik')->getContent();
         preg_match('/data-live-fp="([^"]+)"/', $html, $m);
         $this->assertSame($start, $m[1]);
         $this->assertNotSame(LiveFingerprint::current(), $m[1]);

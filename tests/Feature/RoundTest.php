@@ -207,7 +207,7 @@ class RoundTest extends TestCase
         Mail::assertNotSent(KassierNotice::class, fn (KassierNotice $m) => $m->hasTo('anna@example.test'));
 
         $this->actingAs($anna)->get('/konto')->assertOk()
-            ->assertSee('🍺 Gabi Geber hat dir ein Bier spendiert – Prost zum Geburtstag!');
+            ->assertSee('🍺 Gabi Geber hat dir ein Bier spendiert')->assertSee('– Prost zum Geburtstag!');
         $this->actingAs($other)->get('/konto')->assertOk()->assertDontSee('hat dir ein Bier spendiert');
 
         // Only the last day.

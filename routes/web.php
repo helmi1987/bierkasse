@@ -78,6 +78,11 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::get('/zustimmung', [LegalController::class, 'consent'])->name('consent.show');
         Route::post('/zustimmung', [LegalController::class, 'accept'])->middleware('throttle:20,1')->name('consent.store');
 
+        // Livewire update endpoint for every logged-in page (1.34.0; until 1.33 under /admin for kassiers only):
+        // auth, session, active/consent gate, maintenance mode via "web". Components re-check their own rights
+        // on every request (beer account, kassier/admin role; see App\Livewire\Concerns).
+        Livewire::setUpdateRoute(fn ($handle) => Route::post('/livewire/update', $handle)->name('livewire.update'));
+
         Route::post('/rechtliches/{kind}/gelesen', [LegalController::class, 'dismissNotice'])->middleware('throttle:30,1')->whereIn('kind', ['privacy', 'terms'])->name('legal.notice.dismiss');
         // Archived revisions of the legal texts (read-only, any logged-in user; never changed or deleted).
         Route::get('/rechtliches/fassung/{revision}', [LegalController::class, 'revision'])->whereNumber('revision')->name('legal.revision');
@@ -138,10 +143,6 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         // Admin area (URL prefix /admin, until 1.19 /backend; route names stay "backend.*").
         // Kassier pages: kassiers and admins; see App\Support\BackendNav for the tab groups.
         Route::prefix('admin')->name('backend.')->middleware('role:kassier')->group(function () {
-            // Livewire update endpoint with the same middleware as the admin pages (auth, active/consent
-            // gate, role, maintenance mode via "web"); components re-check the role themselves.
-            Livewire::setUpdateRoute(fn ($handle) => Route::post('/livewire/update', $handle));
-
             Route::get('/', [Backend\DashboardController::class, 'index'])->name('dashboard');
             Route::post('/einzahlungen/{transaction}/bestaetigen', [Backend\DashboardController::class, 'confirmDeposit'])->whereNumber('transaction')->name('deposits.confirm');
             Route::post('/einzahlungen/{transaction}/ablehnen', [Backend\DashboardController::class, 'rejectDeposit'])->whereNumber('transaction')->name('deposits.reject');

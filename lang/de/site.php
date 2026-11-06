@@ -12,6 +12,8 @@ return [
         'logout' => 'Abmelden',
     ],
     'open_items' => ':count offene Posten',
+    'update_available' => 'Neue Version verfügbar.',
+    'update_reload' => 'Neu laden',
     'manifest_description' => 'Digitale Bierkasse: Bier abstreichen, einzahlen, Statistik.',
     'previous' => 'Zurück',
     'next' => 'Weiter',

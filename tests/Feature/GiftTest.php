@@ -54,7 +54,8 @@ class GiftTest extends TestCase
         $this->assertSame(30, BeerStock::current());
         $this->assertSame($cash, CashBook::balance());
 
-        $this->actingAs($anna)->get('/konto')->assertOk()->assertSee('Gabi Geber hat dir 2 Biere geschenkt – Danke!');
+        // Livewire view: Blade conditionals carry morph markers, so the note is asserted on its own.
+        $this->actingAs($anna)->get('/konto')->assertOk()->assertSee('Gabi Geber hat dir 2 Biere geschenkt')->assertSee('– Danke!');
         $stats = Stats::forUser($this->giver);
         $this->assertSame([4, 0, 600], [$stats['gifted'], $stats['total_beers'], $stats['total_amount']]);
         $this->assertSame([2, 0], [Stats::forUser($anna)['gift_received'], Stats::forUser($anna)['total_beers']]);

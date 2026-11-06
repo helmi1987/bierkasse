@@ -327,7 +327,7 @@ class RoundTest extends TestCase
     {
         $this->user(['first_name' => 'Anna']);
         $html = $this->actingAs($this->giver)->get('/konto')->assertOk()
-            ->assertSeeInOrder(['data-round-count', 'data-round-submit', 'data-round-submit-self', 'name="recipients[]"'], false)
+            ->assertSeeInOrder(['action-bar is-sticky', 'data-round-count', 'data-round-submit', 'data-round-submit-self', 'name="recipients[]"'], false)
             ->getContent();
 
         $this->assertSame(1, substr_count($html, 'data-round-submit '));

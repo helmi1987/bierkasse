@@ -26,6 +26,7 @@ return [
     'book_heading' => 'Bier für Gast',
     'book_intro' => 'Für einen Gast abstreichen: der Gast bezahlt sofort bar oder per TWINT, dein Guthaben bleibt gleich.',
     'book_submit' => 'Für Gast abstreichen',
+    'total' => 'Total',
     'booked_cash' => '{1} :count Bier für Gast erfasst – bitte :amount bar in die Kasse legen.|[2,*] :count Biere für Gast erfasst – bitte :amount bar in die Kasse legen.',
     'booked_twint' => '{1} :count Bier für Gast erfasst – bitte :amount per TWINT an :phone senden.|[2,*] :count Biere für Gast erfasst – bitte :amount per TWINT an :phone senden.',
     'undone' => 'Gäste-Verkauf zurückgenommen.',

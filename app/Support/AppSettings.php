@@ -125,6 +125,13 @@ class AppSettings
     /** "Bier verschenken" on/off. */
     public const GIFTS_ENABLED = 'gifts_enabled';
 
+    /** "Knöpfe oben fixieren" per area (default on): total and buttons at the top and sticky; off: at the form's end. */
+    public const ROUNDS_BAR_TOP = 'rounds_bar_top';
+
+    public const GIFTS_BAR_TOP = 'gifts_bar_top';
+
+    public const GUEST_BAR_TOP = 'guest_bar_top';
+
     /** Statistics page "/statistik" for users (master switch, default on): off = nav item hidden, page 404. */
     public const STATS_ENABLED = 'stats_enabled';
 
@@ -500,6 +507,21 @@ class AppSettings
     public static function giftsAllowed(): bool
     {
         return (bool) self::get(self::GIFTS_ENABLED, true);
+    }
+
+    public static function roundsBarTop(): bool
+    {
+        return (bool) self::get(self::ROUNDS_BAR_TOP, true);
+    }
+
+    public static function giftsBarTop(): bool
+    {
+        return (bool) self::get(self::GIFTS_BAR_TOP, true);
+    }
+
+    public static function guestBarTop(): bool
+    {
+        return (bool) self::get(self::GUEST_BAR_TOP, true);
     }
 
     /** Carryover from the old tally sheet can be reported when registering (default on). */

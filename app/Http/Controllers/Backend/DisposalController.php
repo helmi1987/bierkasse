@@ -21,35 +21,10 @@ use Illuminate\View\View;
  */
 class DisposalController extends Controller
 {
-    public function index(Request $request): View
+    /** Host page of the Livewire component App\Livewire\Backend\Disposals (1.36.0); the forms post here. */
+    public function index(): View
     {
-        $enabled = Disposals::isEnabled();
-        $last = $enabled ? Disposals::lastActive()?->load('user') : null;
-
-        return view('backend.disposals', [
-            'enabled' => $enabled,
-            'enabledAt' => Disposals::enabledAt(),
-            'mode' => AppSettings::disposalMode(),
-            'fixed' => AppSettings::disposalFixed(),
-            'randomMax' => AppSettings::disposalRandomMax(),
-            'lockDays' => AppSettings::disposalLockDays(),
-            'minBeers' => AppSettings::disposalMinBeers(),
-            'withdrawMinutes' => AppSettings::undoMinutes('disposal'),
-            'rankingPublic' => AppSettings::disposalRankingPublic(),
-            'last' => $last,
-            'lockedUntil' => $last !== null ? Disposals::lockedUntil($last) : null,
-            'beersSince' => $last !== null ? Disposals::beersSince($last->reported_at) : null,
-            'blockReason' => Disposals::blockReason(),
-            'users' => User::query()->where('status', User::STATUS_ACTIVE)->hasBeerAccount()
-                ->whereKeyNot($request->user()->id)->get()
-                ->sortBy(fn (User $u) => mb_strtolower($u->displayName()))->values(),
-            'disposals' => Disposal::query()->with(['user', 'reporter', 'withdrawer', 'transaction'])
-                ->latest('reported_at')->latest('id')->paginate(50),
-            'viewer' => $request->user(),
-            // Always shown here (regardless of "Rangliste öffentlich"), same anonymisation as on /statistik.
-            'ranking' => Disposals::ranking(20),
-            'totals' => Disposals::totals(),
-        ]);
+        return view('backend.disposals');
     }
 
     public function settings(Request $request): RedirectResponse

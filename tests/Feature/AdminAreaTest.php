@@ -199,10 +199,10 @@ class AdminAreaTest extends TestCase
             $this->assertStringContainsString('nonce="'.$nonce.'"', $tag);
         }
 
-        // Classic pages are unchanged: no Livewire assets, live refresh on.
-        $classic = (string) $this->get('/admin/lager')->assertOk()->getContent();
+        // Classic pages are unchanged: no Livewire assets; since 1.36.0 no live refresh either (live_off).
+        $classic = (string) $this->actingAs($this->admin())->get('/admin/einstellungen')->assertOk()->getContent();
         $this->assertStringNotContainsString('livewire', $classic);
-        $this->assertStringContainsString('data-live="', $classic);
+        $this->assertStringNotContainsString('data-live="', $classic);
     }
 
     public function test_livewire_update_route_runs_the_auth_middleware(): void

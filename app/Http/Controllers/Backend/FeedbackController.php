@@ -25,15 +25,10 @@ class FeedbackController extends Controller
     /** Maximum number of fixed recipient addresses. */
     public const MAX_RECIPIENTS = 20;
 
+    /** Host page of the Livewire component App\Livewire\Backend\FeedbackList (1.36.0); the forms post here. */
     public function index(): View
     {
-        return view('backend.feedback', [
-            'feedback' => Feedback::query()->with('user')->latest('id')->paginate(30),
-            'unread' => Feedback::unreadCount(),
-            'recipientMode' => AppSettings::feedbackRecipientMode(),
-            'recipients' => AppSettings::feedbackRecipients(),
-            'effectiveRecipients' => FeedbackNotifier::recipients(),
-        ]);
+        return view('backend.feedback');
     }
 
     /** Toggles read/unread. */

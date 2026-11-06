@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('title', __('settings.qr_title'))
+{{-- No live data (1.36.0): never refreshed live. --}}
+@section('live_off', '1')
 @section('body_class', 'printable'.($view === 'flyer' ? ' print-flyer' : ''))
 
 @section('content')

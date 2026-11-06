@@ -4,7 +4,7 @@
 @section('livewire', '1')
 
 @section('content')
-@include('partials.backend-nav')
+<livewire:backend.sub-nav />
 <h1>{{ __('qr.title') }}</h1>
 <livewire:backend.qr-codes />
 @endsection

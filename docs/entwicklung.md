@@ -543,8 +543,9 @@
   Benutzername-Eingabe bei Registrierung/Setup ist gross-/kleinschreibungsunabhängig, gespeichert wird klein.
 - Live-Aktualisierung (Entscheid 2026-10-23): alle Seiten für angemeldete Benutzer (Konto, Kassier, Admin,
   Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Seit 1.34.0/1.35.0 sind
-  die Benutzerseiten Livewire-Komponenten, die sich selbst aktualisieren (siehe Livewire); `live.js` bedient nur noch die
-  übrigen klassischen Kassier- und Admin-Seiten. Keine Websockets:
+  die Benutzerseiten, seit 1.36.0 auch die Kassier- und Admin-Seiten mit Live-Daten Livewire-Komponenten, die sich selbst
+  aktualisieren (siehe Livewire); alle übrigen Seiten sind `live_off`, `live.js` lädt keine Seite mehr neu (Rückbau des
+  Refresh in 1.37.0, die Beschreibung unten gilt bis dahin). Keine Websockets:
   `public/js/live.js` fragt alle 10 Sekunden `/live` ab (JSON `fp`, `App\Support\LiveFingerprint`: eine Abfrage mit
   MAX(id)/COUNT/MAX(updated_at) der relevanten Tabellen, global für alle). Nur wenn sich `fp` geändert hat (oder alle
   5 Minuten), wird die aktuelle Seite mit Header `X-Live-Refresh` neu geladen und die geänderten direkten Kinder von
@@ -580,7 +581,7 @@
 - Livewire (Entscheid 2026-10-24, v1.20.0: für neue bzw. umgebaute Seiten, die übrigen später): `livewire/livewire` ^4.4,
   ohne JS-Build (das Paket liefert sein Skript selbst über eine eigene Route aus, nichts zu veröffentlichen).
   Komponenten in `app/Livewire/Backend` (Ansichten `resources/views/livewire/backend`): Buchungen, Benutzer
-  (Reiter Benutzer | Einladungen; Detailansicht bleibt klassisch), Kasse > Einzahlungsvorschläge, QR-Codes, Protokoll
+  (Reiter Benutzer | Einladungen; Detailansicht seit 1.36.0 auch, siehe unten), Kasse > Einzahlungsvorschläge, QR-Codes, Protokoll
   (Reiter Protokoll | Fassungen). Die Seiten selbst sind normale Routen (gleiche Middleware wie bisher), die Komponente
   steckt im Inhalt; Reiter stehen in der URL (`?tab=…`, `#[Url]`), Links funktionieren auch ohne JS.
   - Strikte CSP bleibt unverändert (`script-src 'self' 'nonce-…'`, kein `unsafe-eval`, kein `unsafe-inline`):
@@ -613,6 +614,17 @@
     `WithPagination`, Seite in der URL), Konto verlassen (`Account\Leave`, Insel `status` für Saldo/Sperre, Formular
     statisch). Ohne Live-Aktualisierung (nichts, was andere ändern): Einstellungen, Feedback, Einladen, Rechtliches
     (`@section('live_off')`).
+  - Admin-Seiten (1.36.0): Übersicht `/admin` (Inseln Kennzahlen, Einzahlungen, Auszahlungen, Überträge, Minus), Kasse
+    (Kennzahlen, Einträge mit Seiten), Lager (Stand, Korrekturen), Benutzer-Detail (Saldo, Aktionen, Verlauf), Entsorgung
+    (Stand, Liste, Rangliste), Feedback (Liste), Backend-Statistik (ganze Komponente, Filter als Eigenschaften,
+    Filterformular `wire:ignore`); Unternavigation mit Badges als Komponente `Backend\SubNav` (pollt alle 10 s auch ausserhalb des sichtbaren Bereichs, da meist weggescrollt; aktiver Reiter beim
+    Mount festgehalten); Formulare je Zeile `wire:ignore`, Zeilen `wire:key`. Ohne Live-Aktualisierung: Einstellungen,
+    Navigation, SSO, Wartung, QR-Druckseiten, Protokoll-Detail (`live_off`; ebenso die Gast-, Anmelde- und
+    Wartungsmodus-Seiten). Damit nutzt keine Seite mehr den
+    `live.js`-Refresh (Rückbau in 1.37.0).
+    Inseln mit Seitenknöpfen (`always: true`) rendern auch bei einem ganzen Rendern mit; ein Klick auf einen Seitenknopf
+    in der Insel rendert nur diese Insel. Im Benutzer-Detail steht die Überschrift (Rolle, Status, Sperre, Kennzahlen)
+    in der Insel Saldo, weil sie sich durch andere ändert (Sperre, Status).
   - Livewire-Aktionen sind öffentliche Endpunkte: jede Komponente prüft bei jeder Anfrage die Rolle
     (`App\Livewire\Concerns\AuthorizesAdminArea`, Boot-Hook) und Admin-Aktionen zusätzlich `authorizeAdmin()`. Die
     Admin-Formulare auf der QR-Seite senden an die bisherigen `role:admin`-Routen.

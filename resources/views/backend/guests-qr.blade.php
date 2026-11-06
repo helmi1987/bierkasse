@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('title', __('guest.qr_title'))
+{{-- No live data (1.36.0): never refreshed live. --}}
+@section('live_off', '1')
 @section('body_class', 'printable')
 
 @section('content')

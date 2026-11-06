@@ -11,7 +11,7 @@ class SubnavBadgeTest extends TestCase
 
     private function subnav(string $html): string
     {
-        preg_match('/<nav class="subnav".*?<\/nav>/s', $html, $m);
+        preg_match('/<nav [^>]*class="subnav".*?<\/nav>/s', $html, $m);
 
         return $m[0] ?? '';
     }
@@ -26,8 +26,9 @@ class SubnavBadgeTest extends TestCase
 
         $this->actingAs($user)->post('/konto/einzahlung', $this->tokened('deposit', ['amount' => '20.50', 'method' => 'twint']))->assertSessionHas('status');
 
+        // Livewire page (1.36.0): morph markers of the Blade conditionals may sit between label and badge.
         $nav = $this->subnav($this->actingAs($kassier)->get('/admin/kasse')->getContent());
-        $this->assertMatchesRegularExpression('/>\s*Übersicht\s*<span class="badge"[^>]*>1<\/span>/u', $nav);
+        $this->assertMatchesRegularExpression('/>\s*Übersicht\s*(?:<!--.*?-->\s*)*<span class="badge"[^>]*>1<\/span>/u', $nav);
         $this->assertSame(1, substr_count($nav, 'class="badge"'));
     }
 }

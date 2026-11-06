@@ -15,7 +15,7 @@ class NavOrderTest extends TestCase
     /** Tab labels of the sub navigation in the shown order. */
     private function tabs(string $html): array
     {
-        preg_match('/<nav class="subnav".*?<\/nav>/s', $html, $m);
+        preg_match('/<nav [^>]*class="subnav".*?<\/nav>/s', $html, $m);
         preg_match_all('/<a [^>]*>([^<]+)/', $m[0] ?? '', $links);
 
         return array_map('trim', $links[1]);

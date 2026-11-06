@@ -273,8 +273,9 @@ class LegalConsentTest extends TestCase
         $done = $this->user();
         $open = User::factory()->withoutConsent()->create();
 
+        // Livewire page (1.36.0): morph markers around the Blade conditionals, so the visible text is compared.
         $this->get(route('backend.users.show', $done))->assertOk()
-            ->assertSee('Datenschutzerklärung · Stand '.LegalTexts::versionDate(LegalTexts::DEFAULT_VERSION));
+            ->assertSeeText('Datenschutzerklärung · Stand '.LegalTexts::versionDate(LegalTexts::DEFAULT_VERSION));
         $this->get(route('backend.users.show', $open))->assertOk()->assertSee('data-testid="consent-info"', false)->assertSee('noch offen');
     }
 }

@@ -4,9 +4,6 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Transaction;
-use App\Models\User;
-use App\Services\BeerStock;
-use App\Services\CashBook;
 use App\Services\Ledger;
 use App\Services\LedgerException;
 use App\Support\Money;
@@ -17,26 +14,14 @@ use Illuminate\View\View;
 
 /**
  * Kassier dashboard: open deposits, payouts and carry-overs, users in minus, cash box overview.
+ * The page is the Livewire component App\Livewire\Backend\Dashboard (1.36.0); the forms post here.
  */
 class DashboardController extends Controller
 {
+    /** Host page of the Livewire component App\Livewire\Backend\Dashboard (1.36.0). */
     public function index(): View
     {
-        $balances = Ledger::balances();
-        $minusIds = array_keys(array_filter($balances, fn ($b) => $b < 0));
-        $minus = User::query()->whereIn('id', $minusIds)->hasBeerAccount()->get()
-            ->map(fn (User $u) => ['user' => $u, 'balance' => $balances[$u->id]])
-            ->sortBy('balance')->values();
-
-        return view('backend.dashboard', [
-            'deposits' => Ledger::pendingDeposits(),
-            'payouts' => Ledger::pendingPayouts(),
-            'carryovers' => Ledger::pendingCarryovers(),
-            'minus' => $minus,
-            'overview' => CashBook::overview(),
-            'stock' => BeerStock::current(),
-            'stockMin' => BeerStock::minimum(),
-        ]);
+        return view('backend.dashboard');
     }
 
     public function confirmDeposit(Request $request, Transaction $transaction): RedirectResponse

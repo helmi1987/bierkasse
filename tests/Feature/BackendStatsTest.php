@@ -227,8 +227,9 @@ class BackendStatsTest extends TestCase
     {
         $this->scenario();
 
+        // Livewire page (1.36.0): a morph marker of the @unless follows the name inside the option.
         $response = $this->actingAs($this->kassier())->get('/admin/statistik')->assertOk()
-            ->assertSee('<option value="'.$this->anna->id.'" >Anna Amsel</option>', false)
+            ->assertSee('<option value="'.$this->anna->id.'" >Anna Amsel<', false)
             ->assertDontSee('Versteckt')->assertDontSee('Verwalterin')
             ->assertSee(__('stats.backend.anonymous_hint'));
         $this->assertStringNotContainsString('value="'.$this->hidden->id.'"', (string) $response->getContent());

@@ -5,7 +5,7 @@ namespace App\Support;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Cheap "has anything changed?" marker for the live page refresh (public/js/live.js).
+ * Cheap "has anything changed?" marker for the polling Livewire components (their tick()).
  * One query of indexed MAX/COUNT aggregates over the tables the logged-in pages show; global for
  * all users (a change anywhere makes open pages re-render once, which is fine for an office).
  * Row counts catch deletions (e.g. a withdrawn deposit), updated_at catches confirmations/edits.

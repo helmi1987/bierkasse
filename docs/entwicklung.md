@@ -257,8 +257,7 @@
     Text inzwischen mit neuem Stand gespeichert, wird nichts gespeichert und die Seite erscheint erneut mit "Die Texte
     wurden geändert, bitte erneut lesen". Erreichbar bleiben nur diese Seite, Abmelden und die zwei
     öffentlichen Seiten. Reihenfolge: zuerst ein erzwungener Passwortwechsel, dann die Zustimmung. Danach zurück
-    zur ursprünglich aufgerufenen Seite (nur GET-Seiten). Audit `consent.accept`. Live-Abfragen (`/live`,
-    `X-Live-Refresh`) werden wie beim Passwortwechsel umgeleitet (`live.js` lädt bei Umleitung neu).
+    zur ursprünglich aufgerufenen Seite (nur GET-Seiten, keine JSON-Anfragen wie Livewire-Updates). Audit `consent.accept`.
     Bestehende Konten haben nach dem Update noch keine Zustimmung und sehen die Seite bei der nächsten Anfrage.
   - **Annahme:** Der Admin aus dem Setup-Wizard gilt als zugestimmt (er betreibt die Installation und veröffentlicht die Texte).
   - Benutzer-Detailansicht im Admin-Bereich (Karte "Zustimmung", `data-testid="consent-info"`, Entscheid 2026-10-25, v1.24.1): "Akzeptiert am <Datum>"
@@ -541,43 +540,39 @@
   Ohne Zwischenablage-Zugriff wird der Text markiert (Antippen markiert ihn ebenfalls). Der Benutzername `gast`
   ist reserviert (Registrierung und Setup, Gross-/Kleinschreibung egal; `UserRules::RESERVED_USERNAMES`).
   Benutzername-Eingabe bei Registrierung/Setup ist gross-/kleinschreibungsunabhängig, gespeichert wird klein.
-- Live-Aktualisierung (Entscheid 2026-10-23): alle Seiten für angemeldete Benutzer (Konto, Kassier, Admin,
-  Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Seit 1.34.0/1.35.0 sind
-  die Benutzerseiten, seit 1.36.0 auch die Kassier- und Admin-Seiten mit Live-Daten Livewire-Komponenten, die sich selbst
-  aktualisieren (siehe Livewire); alle übrigen Seiten sind `live_off`, `live.js` lädt keine Seite mehr neu (Rückbau des
-  Refresh in 1.37.0, die Beschreibung unten gilt bis dahin). Keine Websockets:
-  `public/js/live.js` fragt alle 10 Sekunden `/live` ab (JSON `fp`, `App\Support\LiveFingerprint`: eine Abfrage mit
-  MAX(id)/COUNT/MAX(updated_at) der relevanten Tabellen, global für alle). Nur wenn sich `fp` geändert hat (oder alle
-  5 Minuten), wird die aktuelle Seite mit Header `X-Live-Refresh` neu geladen und die geänderten direkten Kinder von
-  `<main>` sowie die Kopfzeile ausgetauscht (Formulare danach neu verdrahtet via `window.BierkasseUi.init`).
-  Pausiert, solange der Tab verborgen ist; beim Zurückkehren sofort. Nie ausgetauscht wird ein Teil mit Fokus in
-  einem Feld, mit geänderten Feldern, mit gerade abgeschicktem Formular oder ungespeicherter Sortierung; offene
-  `<details>`, Scroll-Position und Meldungen (`data-live-keep`) bleiben. Einmal-Tokens nicht ausgetauschter Formulare
-  werden aktualisiert. Aus bei Seiten nach POST, mit Validierungsfehlern/alten Eingaben oder einmalig gezeigten
-  Geheimnissen (Wiederherstellungscodes, Wartungsausgabe) sowie per `@section('live_off')`. Abgemeldet: `/live` und
-  `X-Live-Refresh`-Anfragen liefern 401 statt Weiterleitung, dann (wie bei 503/Weiterleitung) einmal neu laden.
-  Seit 1.33.1 trägt `<body data-live-assets>` eine Version der ausgelieferten CSS/JS (`App\Support\AssetVersion`, Hash der
-  Dateidaten von `app.css`, `app.js`, `live.js`). Liefert der Server eine andere, lädt `live.js` die Seite einmal neu statt
-  das neue Markup in ein Dokument mit alter CSS zu tauschen (Befund nach dem Deploy 1.33.0: Knöpfe untereinander, ⓘ ohne
-  Kreis bei offener Seite); mit Eingaben auf dem Bildschirm wartet es auf einen späteren Durchgang.
-  Entscheid 2026-10-24: Die Abfrage hielte die Session eines sichtbaren Tabs ewig am Leben. Darum stoppt sie (samt
-  Neuladen der Seite) nach 30 Minuten ohne Benutzeraktivität (Konstante `IDLE_LIMIT` in `public/js/live.js`;
-  Aktivität = echtes pointerdown, keydown, touchstart, wheel, scroll, input). Danach läuft die Session normal ab
-  (`SESSION_LIFETIME`). Bei der nächsten Aktivität wird sofort wieder abgefragt; liefert der Server 401, wird neu
-  geladen (Login). Der Ablauf der Rückgängig-Knöpfe läuft unabhängig davon weiter.
-  Seiten mit Livewire-Komponenten (seit 1.20.0, `<body data-livewire-page>`) lädt `live.js` nicht neu; die Komponenten
-  aktualisieren ihre Daten selbst mit `wire:poll.10s.visible` (siehe "Livewire"). Die 30-Minuten-Regel gilt dort auch:
-  `live.js` bricht danach die Poll-Aktionen ab (`Livewire.interceptAction`), bis wieder Aktivität kommt.
-  Kopfzeilen-Badges: seit 1.34.0 ist die Hauptnavigation auf Livewire-Seiten für Kassier/Admin selbst eine Komponente
-  (`App\Livewire\TopNav`, `wire:poll.10s.visible`), die Badges folgen den Daten; normale Benutzer (keine Badges) bekommen das
-  statische Partial `partials/top-nav` (auch auf klassischen Seiten; aktiver Eintrag aus `App\Support\TopNav::activeKey()`,
-  beim Mount festgehalten, weil eine Update-Anfrage keine Seitenroute hat).
-  Deploy bei offener Livewire-Seite (1.34.0): die Komponenten merken sich die Asset-Version beim Mount
-  (`App\Livewire\Concerns\WatchesAssets`); findet ein Poll eine neuere, wird einmal das Browser-Ereignis `assets-changed`
-  ausgelöst und `live.js` zeigt oben im Inhalt die Leiste «Neue Version verfügbar» mit Knopf «Neu laden»
-  (Texte als `data-update-*` am `<body>`). Automatisch neu geladen wird nie mitten in der Bedienung: erst nach einer Minute
-  ohne Aktivität oder beim Zurückkehren in den Tab, und nur ohne Fokus in einem Feld, ohne Eingabe seit dem Laden und ohne
-  gerade abgeschicktes Formular. Jede normale Navigation holt die neuen Dateien ohnehin (`?v=`).
+- Live-Aktualisierung (Entscheid 2026-10-23): alle Seiten für angemeldete Benutzer mit Live-Daten (Konto, Kassier, Admin,
+  Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Seit 1.37.0 ist jede
+  solche Seite eine Livewire-Komponente, die sich selbst aktualisiert (`wire:poll.10s.visible`, siehe "Livewire"):
+  Dashboard, Statistik, Verlauf, Konto verlassen, Kopfzeilen-Badges (`TopNav`) sowie im Admin-Bereich Übersicht, Kasse,
+  Lager, Benutzer-Detail, Entsorgung, Feedback, Statistik und die Unternavigation (`Backend\SubNav`). Alle übrigen Seiten
+  haben keine Live-Daten und werden nie aktualisiert. Keine Websockets.
+  Die alte Seiten-Aktualisierung (bis 1.36.0: `public/js/live.js` fragte `/live` ab, lud die Seite mit Header
+  `X-Live-Refresh` neu und tauschte die geänderten Kinder von `<main>` aus, samt Fingerprint auf der Seite,
+  Token-Abgleich und Erkennung geänderter Felder) ist in 1.37.0 entfernt; ebenso `@section('live_off')`.
+  Was weiter gilt:
+  - Änderungsmarke `App\Support\LiveFingerprint`: eine Abfrage mit MAX(id)/COUNT/MAX(updated_at) der relevanten
+    Tabellen, global für alle. `tick()` der Komponenten rendert nur, wenn sie sich geändert hat (oder nach
+    `FORCE_SECONDS`).
+  - Rückgängig-Knöpfe laufen in Serverzeit ab (`<meta name="server-now">`, `data-expires`, `public/js/live.js` auf jeder
+    Seite), auch nach dem Zurückkehren in einen Tab.
+  - Entscheid 2026-10-24: ein Poll hielte die Session eines sichtbaren Tabs ewig am Leben. Darum bricht `live.js` nach
+    30 Minuten ohne Benutzeraktivität die Poll-Aktionen ab (`Livewire.interceptAction`, Konstante `IDLE_LIMIT`;
+    Aktivität = echtes pointerdown, keydown, touchstart, wheel, scroll, input). Danach läuft die Session normal ab
+    (`SESSION_LIFETIME`); nach der nächsten Aktivität läuft der nächste Poll wieder.
+  - Asset-Version `App\Support\AssetVersion` (seit 1.33.1, Hash der Dateidaten von `app.css`, `app.js`, `live.js`) für
+    die Leiste «Neue Version» (siehe unten).
+  - Scroll-Verankerung: `live.js` hält bei jedem Morph (auch von Inseln) das erste sichtbare Element ausserhalb des
+    geänderten Teils an seinem Platz (Safari verankert nicht selbst).
+  - Kopfzeilen-Badges: seit 1.34.0 ist die Hauptnavigation auf Livewire-Seiten für Kassier/Admin selbst eine Komponente
+    (`App\Livewire\TopNav`, `wire:poll.10s.visible`), die Badges folgen den Daten; normale Benutzer (keine Badges) bekommen das
+    statische Partial `partials/top-nav` (auch auf klassischen Seiten; aktiver Eintrag aus `App\Support\TopNav::activeKey()`,
+    beim Mount festgehalten, weil eine Update-Anfrage keine Seitenroute hat).
+  - Deploy bei offener Livewire-Seite (1.34.0): die Komponenten merken sich die Asset-Version beim Mount
+    (`App\Livewire\Concerns\WatchesAssets`); findet ein Poll eine neuere, wird einmal das Browser-Ereignis `assets-changed`
+    ausgelöst und `live.js` zeigt oben im Inhalt die Leiste «Neue Version verfügbar» mit Knopf «Neu laden»
+    (Texte als `data-update-*` am `<body>`). Automatisch neu geladen wird nie mitten in der Bedienung: erst nach einer Minute
+    ohne Aktivität oder beim Zurückkehren in den Tab, und nur ohne Fokus in einem Feld, ohne Eingabe seit dem Laden und ohne
+    gerade abgeschicktes Formular. Jede normale Navigation holt die neuen Dateien ohnehin (`?v=`).
 - Livewire (Entscheid 2026-10-24, v1.20.0: für neue bzw. umgebaute Seiten, die übrigen später): `livewire/livewire` ^4.4,
   ohne JS-Build (das Paket liefert sein Skript selbst über eine eigene Route aus, nichts zu veröffentlichen).
   Komponenten in `app/Livewire/Backend` (Ansichten `resources/views/livewire/backend`): Buchungen, Benutzer
@@ -612,16 +607,14 @@
   - Benutzerseiten (1.35.0): Statistik `/statistik` (`App\Livewire\Stats`, Zeitraum als Eigenschaften, ganze Komponente
     rendert bei geändertem Fingerprint neu, Datumsformular `wire:ignore`), Verlauf `/konto/verlauf` (`Account\History`,
     `WithPagination`, Seite in der URL), Konto verlassen (`Account\Leave`, Insel `status` für Saldo/Sperre, Formular
-    statisch). Ohne Live-Aktualisierung (nichts, was andere ändern): Einstellungen, Feedback, Einladen, Rechtliches
-    (`@section('live_off')`).
+    statisch). Ohne Live-Aktualisierung (nichts, was andere ändern): Einstellungen, Feedback, Einladen, Rechtliches.
   - Admin-Seiten (1.36.0): Übersicht `/admin` (Inseln Kennzahlen, Einzahlungen, Auszahlungen, Überträge, Minus), Kasse
     (Kennzahlen, Einträge mit Seiten), Lager (Stand, Korrekturen), Benutzer-Detail (Saldo, Aktionen, Verlauf), Entsorgung
     (Stand, Liste, Rangliste), Feedback (Liste), Backend-Statistik (ganze Komponente, Filter als Eigenschaften,
     Filterformular `wire:ignore`); Unternavigation mit Badges als Komponente `Backend\SubNav` (pollt alle 10 s auch ausserhalb des sichtbaren Bereichs, da meist weggescrollt; aktiver Reiter beim
     Mount festgehalten); Formulare je Zeile `wire:ignore`, Zeilen `wire:key`. Ohne Live-Aktualisierung: Einstellungen,
-    Navigation, SSO, Wartung, QR-Druckseiten, Protokoll-Detail (`live_off`; ebenso die Gast-, Anmelde- und
-    Wartungsmodus-Seiten). Damit nutzt keine Seite mehr den
-    `live.js`-Refresh (Rückbau in 1.37.0).
+    Navigation, SSO, Wartung, QR-Druckseiten, Protokoll-Detail (ebenso die Gast-, Anmelde- und
+    Wartungsmodus-Seiten). Die alte Seiten-Aktualisierung von `live.js` ist seit 1.37.0 entfernt.
     Inseln mit Seitenknöpfen (`always: true`) rendern auch bei einem ganzen Rendern mit; ein Klick auf einen Seitenknopf
     in der Insel rendert nur diese Insel. Im Benutzer-Detail steht die Überschrift (Rolle, Status, Sperre, Kennzahlen)
     in der Insel Saldo, weil sie sich durch andere ändert (Sperre, Status).

@@ -1,8 +1,6 @@
 @extends('layouts.app')
 
 @section('title', __('audit.entry', ['id' => $entry->id]))
-{{-- No live data (1.36.0): never refreshed live. --}}
-@section('live_off', '1')
 
 @section('content')
 @php($auditBase = 'backend.audit')

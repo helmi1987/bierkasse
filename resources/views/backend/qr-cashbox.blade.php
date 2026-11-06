@@ -1,8 +1,6 @@
 @extends('layouts.app')
 
 @section('title', __('guest.cashbox_heading'))
-{{-- No live data (1.36.0): never refreshed live. --}}
-@section('live_off', '1')
 
 @section('content')
 @include('partials.backend-nav')

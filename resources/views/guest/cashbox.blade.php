@@ -1,8 +1,6 @@
 @extends('layouts.app')
 
 @section('title', __('guest.cashbox_title_'.$method))
-{{-- No live refresh (1.36.0: no page uses live.js any more). --}}
-@section('live_off', '1')
 @section('main_class', 'narrow')
 
 @section('content')

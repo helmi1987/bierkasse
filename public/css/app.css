@@ -96,8 +96,6 @@ img { max-width: 100%; height: auto; }
 .wrap { width: 100%; max-width: 960px; margin: 0 auto; padding: 0 16px; }
 .main { padding-top: 1rem; padding-bottom: 3rem; min-width: 0; }
 .main > *, .card, .grid-2 > * { min-width: 0; }
-/* Wrapper of the flash messages that the live refresh keeps (public/js/live.js); no box of its own. */
-.live-keep { display: contents; }
 .card pre, .card img, .card svg { max-width: 100%; }
 .main.narrow { max-width: 460px; }
 .muted { color: var(--muted); }

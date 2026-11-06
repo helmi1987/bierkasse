@@ -97,8 +97,8 @@
         });
     }
 
-    // Widgets bound to elements; run once for the page and again for content swapped in by the live
-    // refresh (public/js/live.js calls window.BierkasseUi.init(newElement)).
+    // Widgets bound to elements; run once for the page and again for content added by a Livewire
+    // morph (the morph.added hook calls window.BierkasseUi.init(newElement)).
     function initUi(root) {
         // Quantity stepper for "Bier abstreichen" (works without JS as a number input).
         all(root, '[data-stepper]').forEach(function (stepper) {
@@ -478,8 +478,6 @@
                     list.insertBefore(item.nextElementSibling, item);
                 }
                 btn.focus();
-                // Unsaved order: the live refresh must not swap this list.
-                list.setAttribute('data-live-dirty', '');
             });
             list.addEventListener('dragstart', function (e) {
                 dragged = e.target.closest('li');
@@ -502,7 +500,6 @@
                 e.preventDefault();
                 var rect = over.getBoundingClientRect();
                 list.insertBefore(dragged, e.clientY > rect.top + rect.height / 2 ? over.nextSibling : over);
-                list.setAttribute('data-live-dirty', '');
             });
         });
     }

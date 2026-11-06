@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
  * Single-use form tokens against double submits (double tap on "Bier abstreichen").
  * Every rendered form gets a fresh token stored in the session; a booking is only
  * made when the posted token is still unused. Up to KEEP tokens per form are kept so
- * several open tabs (and the live refresh of background tabs) keep working.
+ * several open tabs keep working.
  *
  * The session alone is not atomic (two parallel requests read the same token list),
  * so a used token is additionally claimed with an atomic Cache::add (file and

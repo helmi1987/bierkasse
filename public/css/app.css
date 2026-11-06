@@ -10,8 +10,6 @@
     --accent-strong: #b45309;
     --accent-contrast: #ffffff;
     --accent-soft: #fef3c7;
-    /* Info blue of the help toggle (1.33.1, .hint-icon), white "i" on it. */
-    --info: #2563eb;
     --ok: #15803d;
     --ok-soft: #dcfce7;
     --warn: #a16207;
@@ -40,7 +38,6 @@
     --accent-strong: #fbbf24;
     --accent-contrast: #1f1a14;
     --accent-soft: #3b2a10;
-    --info: #60a5fa;
     --ok: #4ade80;
     --ok-soft: #12301d;
     --warn: #facc15;
@@ -62,7 +59,6 @@
         --accent-strong: #fbbf24;
         --accent-contrast: #1f1a14;
         --accent-soft: #3b2a10;
-        --info: #60a5fa;
         --ok: #4ade80;
         --ok-soft: #12301d;
         --warn: #facc15;
@@ -106,21 +102,6 @@ img { max-width: 100%; height: auto; }
 .main.narrow { max-width: 460px; }
 .muted { color: var(--muted); }
 .hint { color: var(--muted); font-size: .875rem; margin-top: .25rem; }
-/* Collapsible help text (1.33.1): <x-hint-toggle> is a button with a blue info circle at the end of a title or field
-   label, <x-hint> the hidden text block below it. 44x44 hit area; negative margins keep the visual footprint as small
-   as the icon. Without JavaScript (no .js on <html>) all texts are shown and the toggles hidden. */
-.hint-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin: -.6rem -.6rem -.6rem -.2rem; padding: 0; border: 0; background: none; cursor: pointer; vertical-align: middle; border-radius: var(--radius-sm); font: inherit; color: inherit; }
-.hint-toggle:focus-visible { outline: 3px solid color-mix(in srgb, var(--info) 55%, transparent); outline-offset: 2px; }
-.hint-icon { display: inline-flex; align-items: center; justify-content: center; width: 1.15rem; height: 1.15rem; border-radius: 50%; background: var(--info); color: #fff; font: italic 700 .78rem/1 ui-serif, Georgia, serif; }
-.hint-toggle:hover .hint-icon, .hint-toggle:focus-visible .hint-icon { filter: brightness(.9); }
-.hint-toggle[aria-expanded="true"] .hint-icon { box-shadow: 0 0 0 2px color-mix(in srgb, var(--info) 35%, transparent); }
-/* In an h2 (flex row with gap .5rem) the negative margin offsets the gap, so the icon sits close to the title text. */
-h2 > .hint-toggle { margin-left: -.6rem; }
-.label-row { display: flex; align-items: center; gap: .15rem; }
-.hint-text { margin: .1rem 0 .5rem; }
-.hint-text.center { text-align: center; }
-html:not(.js) .hint-text[hidden] { display: block !important; } /* beats the global [hidden] rule */
-html:not(.js) .hint-toggle { display: none; }
 /* Page footer (app name, version, copyright): small and muted, wraps on narrow screens. */
 .site-footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: -2rem; padding-bottom: 1rem; overflow-wrap: anywhere; }
 .center { text-align: center; }

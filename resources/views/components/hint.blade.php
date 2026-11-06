@@ -1,12 +1,8 @@
 @props(['key'])
-{{-- Collapsible help text (1.33.0): closed by default, the info toggle opens it; open keys are remembered per
-     account (App\Support\Hints, saved by app.js on toggle). Works without JavaScript (plain <details>). --}}
+{{-- Help text (1.33.1): hidden block below a title or field label, opened by the <x-hint-toggle> with the same key.
+     Not hidden when the logged-in user opened the key before; shown without JavaScript (html:not(.js) in app.css). --}}
 @php
     \App\Support\Hints::assertKey($key);
-    $hintId = \App\Support\Hints::domId($key);
     $hintOpen = \App\Support\Hints::isOpen(auth()->user(), $key);
 @endphp
-<details {{ $attributes->class(['hint-box']) }} data-hint="{{ $key }}"{{ $hintOpen ? ' open' : '' }}>
-    <summary class="hint-toggle" aria-label="{{ __('account.help_show') }}" aria-controls="{{ $hintId }}" aria-expanded="{{ $hintOpen ? 'true' : 'false' }}" title="{{ __('account.help_show') }}"><span class="hint-icon" aria-hidden="true">i</span></summary>
-    <div class="hint" id="{{ $hintId }}">{{ $slot }}</div>
-</details>
+<div {{ $attributes->class(['hint', 'hint-text']) }} id="{{ \App\Support\Hints::domId($key) }}" data-hint="{{ $key }}"{{ $hintOpen ? '' : ' hidden' }}>{{ $slot }}</div>

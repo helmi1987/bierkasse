@@ -52,7 +52,9 @@
   Text wie bisher. Sichtbar bleiben: Fehler (`@error`, `.alert`), Live-Werte (Rundensumme, Rückgängig-Countdown),
   «Keine Kollegen», Einzahlungen zurückgehalten, Vorschlag und Hinweis «dann melden», Einträge in Listen. Entscheide:
   Anmeldung/Registrierung/TOTP, Gast-Seiten, Rechtstexte, Austritt, Setup und Backend unverändert; kein Audit-Eintrag
-  (nur Anzeigeeinstellung); Gäste sehen nie einen offenen Hinweis.
+  (nur Anzeigeeinstellung); Gäste sehen nie einen offenen Hinweis. Seit 1.33.1: ⓘ als Knopf (blauer Kreis, Token `--info`)
+  am Ende des Titels/Feld-Labels, Text als versteckter Block darunter (`<x-hint-toggle>` + `<x-hint>`); ohne JS sind alle
+  Texte offen; Klick im `<summary>` klappt nur den Hinweis (stopPropagation).
 - Konto sperren (Entscheid 2026-10-24, Status `locked` neben `active`/`left`): Kassier und Admin in der Benutzer-Detailansicht,
   Grund Pflicht (max. 500 Zeichen, `users.locked_reason`, `locked_at`, `locked_by`; angezeigt in der Detailansicht,
   Audit `user.lock`/`user.unlock`). Anders als Deaktivieren auch mit Schulden oder offenen Posten. Kassiers können

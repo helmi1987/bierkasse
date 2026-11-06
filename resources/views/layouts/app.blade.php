@@ -34,6 +34,8 @@
     <meta name="apple-mobile-web-app-title" content="{{ $appName }}">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ @filemtime(public_path('css/app.css')) }}">
+    {{-- Marks JavaScript as available before the first paint: without it (no .js) the help texts are shown (1.33.1). --}}
+    <script nonce="{{ $nonce }}">document.documentElement.classList.add('js')</script>
     <meta name="server-now" content="{{ now()->getTimestampMs() }}">
     <script src="{{ asset('js/live.js') }}?v={{ @filemtime(public_path('js/live.js')) }}" nonce="{{ $nonce }}" defer></script>
     <script src="{{ asset('js/app.js') }}?v={{ @filemtime(public_path('js/app.js')) }}" nonce="{{ $nonce }}" defer></script>

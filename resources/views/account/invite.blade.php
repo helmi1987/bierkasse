@@ -28,7 +28,7 @@
 @if ($flyerQr && ! $new)
     <section class="card invite">
         <details>
-            <summary><h2>{{ __('account.invite_flyer_title') }}</h2></summary>
+            <summary><h2>{{ __('account.invite_flyer_title') }} <x-hint-toggle key="invite.flyer" /></h2></summary>
             <x-hint key="invite.flyer">{{ __('account.invite_flyer_intro') }}</x-hint>
             <img src="{{ $flyerQr }}" alt="QR" width="480" height="480" class="qr invite-qr">
             <div class="row-buttons">
@@ -55,11 +55,11 @@
     @else
         <div class="alert warn">{{ __('account.invitation_limit', ['max' => $max]) }}</div>
     @endif
-    <x-hint key="invite.hash">{{ __('account.invitation_hash_note') }}</x-hint>
 </section>
 
 <section class="card">
-    <h2>{{ __('account.invitation_list') }}</h2>
+    <h2>{{ __('account.invitation_list') }} <x-hint-toggle key="invite.hash" /></h2>
+    <x-hint key="invite.hash">{{ __('account.invitation_hash_note') }}</x-hint>
     @if ($invitations->isEmpty())
         <p class="muted">{{ __('account.invitation_none') }}</p>
     @else

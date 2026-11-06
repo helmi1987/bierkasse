@@ -6,8 +6,8 @@ use App\Models\User;
 use InvalidArgumentException;
 
 /**
- * Collapsible help texts in the user views (1.33.0): each text sits in a <details> behind an info toggle,
- * closed by default. The keys a user has opened are remembered in users.open_hints (display preference,
+ * Collapsible help texts in the user views (1.33.0): each text is a hidden block (<x-hint>) opened by an info
+ * button at the end of its title or field label (<x-hint-toggle>, since 1.33.1), closed by default. The keys a user has opened are remembered in users.open_hints (display preference,
  * no audit entry). Guests never get an open hint.
  */
 final class Hints

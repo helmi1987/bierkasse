@@ -1,0 +1,88 @@
+{{-- Cash book (Livewire since 1.36.0; see App\Livewire\Backend\Cash). Polls every 10 s while visible; only the
+     islands (KPIs, entries) are re-rendered, the new-entry form stays as rendered at mount. --}}
+<div wire:poll.10s.visible="tick" data-testid="backend-cash">
+@island('kpis', with: $__livewire->data())
+<div class="kpis">
+    <div class="kpi"><span>{{ __('backend.cash_balance') }}</span><strong>{{ chf($overview['cash']['total']) }}</strong>
+        <small>{{ __('backend.cash_split', ['cash' => chf($overview['cash']['cash']), 'twint' => chf($overview['cash']['twint'])]) }}</small></div>
+    <div class="kpi"><span>{{ __('cash.deposits') }}</span><strong>{{ chf($deposits) }}</strong></div>
+    <div class="kpi"><span>{{ __('cash.payouts') }}</span><strong>{{ chf($payouts) }}</strong></div>
+    <div class="kpi"><span>{{ __('cash.guests') }}</span><strong>{{ chf($guests) }}</strong>
+        <small><a href="{{ route('backend.bookings', ['tab' => 'gaeste']) }}">{{ __('guest.sales') }} →</a></small></div>
+    <div class="kpi"><span>{{ __('backend.surplus') }}</span><strong @class(['neg' => $overview['surplus'] < 0])>{{ chf($overview['surplus']) }}</strong></div>
+    <div class="kpi"><span>{{ __('stock.stock') }}</span><strong @class(['neg' => $stockLow || $stock < 0])>{{ trans_choice('stock.beers', $stock, ['count' => $stock]) }}</strong>
+        <small><a href="{{ route('backend.stock') }}">{{ __('stock.correct') }} →</a></small></div>
+</div>
+@endisland
+
+<section class="card">
+    <h2>{{ __('cash.new') }}</h2>
+    <form method="post" action="{{ route('backend.cash.store') }}" class="stack">
+        @csrf
+        <div class="grid-2">
+            <div class="field">
+                <label for="type">{{ __('cash.type') }}</label>
+                <select id="type" name="type">
+                    @foreach (\App\Models\CashEntry::TYPES as $type)
+                        <option value="{{ $type }}" @selected(old('type') === $type)>{{ __('cash.types.'.$type) }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="field">
+                <label for="date">{{ __('cash.date') }}</label>
+                <input type="date" id="date" name="date" value="{{ old('date', now()->format('Y-m-d')) }}" required>
+            </div>
+            <div class="field">
+                <label for="amount">{{ __('cash.amount') }}</label>
+                <input type="text" id="amount" name="amount" inputmode="decimal" value="{{ old('amount') }}" required>
+                <div class="hint">{{ __('cash.amount_hint') }}</div>
+            </div>
+            <div class="field">
+                <label for="beers">{{ __('cash.beers') }}</label>
+                <input type="number" id="beers" name="beers" min="1" max="100000" step="1" value="{{ old('beers') }}" inputmode="numeric">
+                <div class="hint">{{ __('cash.beers_hint') }}</div>
+            </div>
+            <div class="field">
+                <label for="method">{{ __('cash.method') }}</label>
+                <select id="method" name="method">
+                    @foreach (\App\Models\Transaction::METHODS as $method)
+                        <option value="{{ $method }}" @selected(old('method') === $method)>{{ __('ledger.method.'.$method) }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        <div class="field">
+            <label for="note">{{ __('cash.note') }}</label>
+            <input type="text" id="note" name="note" value="{{ old('note') }}" maxlength="500" required>
+        </div>
+        <button type="submit" class="btn primary">{{ __('cash.save') }}</button>
+    </form>
+</section>
+
+@island('entries', always: true, with: $__livewire->data())
+<section class="card">
+    <h2>{{ __('cash.entries') }}</h2>
+    @if ($entries->isEmpty())
+        <p class="muted">{{ __('cash.none') }}</p>
+    @else
+        <ul class="list">
+            @foreach ($entries as $entry)
+                <li class="wrap-row" wire:key="entry-{{ $entry->id }}">
+                    <span>
+                        <span class="tx-date">{{ local_time($entry->date, 'd.m.Y') }} · {{ __('cash.types.'.$entry->type) }}@if ($entry->beers) · {{ trans_choice('stock.beers', $entry->beers, ['count' => $entry->beers]) }}@endif · {{ __('ledger.method.'.$entry->method) }}</span><br>
+                        {{ $entry->note }} <span class="muted">{{ __('cash.by') }} {{ $entry->creator?->username ?? '–' }}</span>
+                    </span>
+                    <strong @class(['amount', 'neg' => $entry->amount < 0, 'pos' => $entry->amount > 0])>{{ chf($entry->amount) }}</strong>
+                    <form method="post" action="{{ route('backend.cash.destroy', $entry) }}" class="inline" wire:ignore data-confirm="{{ __('cash.delete_confirm') }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn small ghost">{{ __('cash.delete') }}</button>
+                    </form>
+                </li>
+            @endforeach
+        </ul>
+        {{ $entries->links('livewire.pagination') }}
+    @endif
+</section>
+@endisland
+</div>

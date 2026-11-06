@@ -5,16 +5,18 @@ namespace Tests\Feature;
 use App\Models\GuestSale;
 use App\Models\Transaction;
 use App\Services\Ledger;
-use App\Support\AssetVersion;
 use App\Support\FormToken;
 use App\Support\LiveFingerprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 /**
  * Live page refresh (public/js/live.js) and undo buttons that expire on the open page.
+ *
+ * 1.36.0: no page uses the live refresh any more (Livewire pages poll themselves, the rest is live_off); the
+ * tests of the page markers are removed, the mechanism is removed in the next step. The fingerprint endpoint
+ * (/live), the undo expiry and the form tokens are still tested here.
  */
 class LiveRefreshTest extends TestCase
 {
@@ -54,48 +56,11 @@ class LiveRefreshTest extends TestCase
         $this->assertNotSame($withDeposit, LiveFingerprint::current());
     }
 
-    public function test_logged_in_pages_carry_live_markers_and_render_for_live_requests(): void
-    {
-        $user = $this->user();
-        $this->actingAs($this->kassier());
-
-        // The user pages are Livewire pages since 1.34.0/1.35.0 (poll themselves); classic admin pages like the
-        // stock still use the live refresh.
-        $response = $this->get('/admin/lager', ['X-Live-Refresh' => '1'])->assertOk()
-            ->assertSee('data-live="'.route('live', [], false).'"', false)
-            ->assertSee('data-live-fp="'.LiveFingerprint::current().'"', false)
-            ->assertSee('data-live-assets="'.AssetVersion::current().'"', false)
-            ->assertSee('<meta name="server-now" content="', false)
-            ->assertSee('js/live.js', false)
-            ->assertSee('id="main"', false)
-            ->assertSee('data-live-keep="alerts"', false)
-            ->assertSee('name="counted"', false);
-        $this->assertStringContainsString('text/html', (string) $response->headers->get('Content-Type'));
-
-        $kassier = $this->kassier();
-        Ledger::reportDeposit($user, 500, 'cash');
-        // Header badge and sub-tab badge (pending items) are part of the live render.
-        $this->actingAs($kassier)->get('/admin', ['X-Live-Refresh' => '1'])->assertOk()
-            ->assertSee('data-live="', false)
-            ->assertSee('<span class="badge" title="1 offene Posten">1</span>', false);
-    }
-
     public function test_live_request_when_logged_out_gets_401_instead_of_redirect(): void
     {
         $this->get('/konto', ['X-Live-Refresh' => '1'])->assertUnauthorized();
         $this->get('/admin', ['X-Live-Refresh' => '1'])->assertUnauthorized();
         $this->get('/konto')->assertRedirect('/');
-    }
-
-    public function test_no_live_refresh_for_guests_or_pages_with_errors(): void
-    {
-        $this->get('/')->assertOk()->assertDontSee('data-live="', false)->assertSee('<meta name="server-now"', false);
-
-        $this->actingAs($this->kassier());
-        $this->from('/admin/lager')->put('/admin/lager/mindestbestand', ['minimum' => '-1'])->assertSessionHasErrors('minimum');
-        // Page after the validation error keeps old input: no live swap for this view.
-        $this->get('/admin/lager')->assertOk()->assertDontSee('data-live="', false);
-        $this->get('/admin/lager')->assertOk()->assertSee('data-live="', false);
     }
 
     public function test_undo_items_carry_their_expiry_in_server_time(): void
@@ -133,40 +98,6 @@ class LiveRefreshTest extends TestCase
         $sale = GuestSale::query()->firstOrFail();
         $this->assertFalse($sale->canBeUndoneBy($user));
         Carbon::setTestNow();
-    }
-
-    public function test_live_refresh_is_off_on_the_settings_page(): void
-    {
-        // Off since 1.35.0 in any case (nothing there is changed by others), with and without the TOTP setup secret.
-        $user = $this->user();
-        $this->actingAs($user)->get('/konto/einstellungen')->assertOk()
-            ->assertSee('totp-setup', false)
-            ->assertDontSee('data-live="', false);
-
-        $this->actingAs($this->withTotp($this->user(['username' => 'anna'])))->get('/konto/einstellungen')->assertOk()
-            ->assertDontSee('data-live="', false);
-    }
-
-    public function test_live_refresh_is_off_on_sso_provider_form(): void
-    {
-        $this->actingAs($this->admin())->get('/admin/sso/create')->assertOk()
-            ->assertDontSee('data-live="', false);
-    }
-
-    public function test_fingerprint_is_taken_before_the_page_content(): void
-    {
-        $user = $this->user();
-        $this->actingAs($this->kassier());
-        $start = LiveFingerprint::current();
-
-        // A change while the page is being built must not be hidden by the rendered fingerprint.
-        View::composer('backend.stock', function () use ($user) {
-            Ledger::reportDeposit($user, 500, 'cash');
-        });
-        $html = $this->get('/admin/lager')->getContent();
-        preg_match('/data-live-fp="([^"]+)"/', $html, $m);
-        $this->assertSame($start, $m[1]);
-        $this->assertNotSame(LiveFingerprint::current(), $m[1]);
     }
 
     public function test_form_token_keeps_many_tokens_per_form(): void

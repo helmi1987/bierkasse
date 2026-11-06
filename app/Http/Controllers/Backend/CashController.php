@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\CashEntry;
-use App\Models\GuestSale;
 use App\Models\Transaction;
 use App\Services\Audit;
 use App\Services\BeerStock;
@@ -19,6 +18,7 @@ use Illuminate\View\View;
 
 /**
  * Cash book "Kasse": expenses, other income and adjustments; balance split cash / TWINT.
+ * The book tab is the Livewire component App\Livewire\Backend\Cash (1.36.0); its forms post here.
  * Tab "Einzahlungsvorschläge" (?tab=vorschlaege): Livewire component App\Livewire\Backend\DepositSuggestionsForm.
  */
 class CashController extends Controller
@@ -29,15 +29,8 @@ class CashController extends Controller
             return view('backend.cash-suggestions');
         }
 
-        return view('backend.cash', [
-            'overview' => CashBook::overview(),
-            'entries' => CashEntry::query()->with('creator')->orderByDesc('date')->orderByDesc('id')->paginate(30),
-            'deposits' => (int) Transaction::query()->confirmed()->where('type', Transaction::TYPE_DEPOSIT)->sum('amount'),
-            'payouts' => (int) -Transaction::query()->confirmed()->where('type', Transaction::TYPE_PAYOUT)->sum('amount'),
-            'guests' => (int) GuestSale::query()->sum('amount'),
-            'stock' => BeerStock::current(),
-            'stockLow' => BeerStock::isLow(),
-        ]);
+        // Livewire component App\Livewire\Backend\Cash (1.36.0).
+        return view('backend.cash');
     }
 
     public function store(Request $request): RedirectResponse

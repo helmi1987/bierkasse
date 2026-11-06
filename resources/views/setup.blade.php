@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('title', __('setup.title'))
+{{-- No live refresh (1.36.0: no page uses live.js any more). --}}
+@section('live_off', '1')
 
 @section('content')
 <h1>{{ __('setup.title') }}</h1>

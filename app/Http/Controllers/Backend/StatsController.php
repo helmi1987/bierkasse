@@ -15,14 +15,25 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * Backend statistics "Statistik" (kassiers and admins, read-only, 1.31.0), independent of the user statistics
  * switches. GET: zeitraum/von/bis (StatsPeriod), benutzer, typ, gruppe, raster (BackendStats::filters()).
- * The CSV export takes the same parameters and contains the same rows as the table.
+ * The page is the Livewire component App\Livewire\Backend\Stats (1.36.0). The CSV export takes the same
+ * parameters and contains the same rows as the table.
  */
 class StatsController extends Controller
 {
-    public function index(Request $request): View
+    /** Host page of the Livewire component App\Livewire\Backend\Stats (1.36.0, filters from the query). */
+    public function index(): View
     {
-        $period = StatsPeriod::fromQuery($request->query());
-        $filters = BackendStats::filters($request->query());
+        return view('backend.stats');
+    }
+
+    /**
+     * View data of the page for the GET parameters (zeitraum/von/bis, benutzer, typ, gruppe, raster); used by
+     * App\Livewire\Backend\Stats.
+     */
+    public static function data(array $query): array
+    {
+        $period = StatsPeriod::fromQuery($query);
+        $filters = BackendStats::filters($query);
         $report = BackendStats::report($period, $filters);
         $byTime = $filters['gruppe'] === BackendStats::GROUP_TIME;
         $chart = $byTime && $report['rows'] !== [] && count($report['rows']) <= BackendStats::CHART_MAX_ROWS
@@ -30,7 +41,7 @@ class StatsController extends Controller
             : null;
         $filterQuery = BackendStats::query($filters);
 
-        return view('backend.stats', [
+        return [
             'period' => $period,
             'filters' => $filters,
             'report' => $report,
@@ -39,7 +50,7 @@ class StatsController extends Controller
             'users' => BackendStats::selectableUsers(),
             'filterQuery' => $filterQuery,
             'exportUrl' => route('backend.stats.export', $period->query() + $filterQuery),
-        ]);
+        ];
     }
 
     public function export(Request $request): StreamedResponse

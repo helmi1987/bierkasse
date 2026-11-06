@@ -4,7 +4,7 @@
 @section('livewire', '1')
 
 @section('content')
-@include('partials.backend-nav')
+<livewire:backend.sub-nav />
 <h1>{{ __('backend.bookings_title') }}</h1>
 <p class="muted">{{ __('backend.bookings_intro') }}</p>
 <livewire:backend.bookings />

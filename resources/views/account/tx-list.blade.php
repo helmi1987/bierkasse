@@ -3,15 +3,15 @@
 @else
     <ul class="list tx-list">
         @foreach ($transactions as $tx)
-            <li>
+            <li wire:key="tx-{{ $tx->id }}">
                 <div>
                     <div class="tx-date">{{ local_time($tx->created_at) }}</div>
                     @include('partials.tx', ['tx' => $tx])
                     @if (($stornoUser ?? null) && \App\Services\Ledger::canStorno($tx))
                         {{-- Backend: storno by kassier/admin (note required). --}}
-                        <details class="storno no-print">
+                        <details class="storno no-print" wire:ignore.self>
                             <summary>{{ __('ledger.storno') }}</summary>
-                            <form method="post" action="{{ route('backend.users.storno', [$stornoUser, $tx]) }}" class="inline-form" data-confirm="{{ __('ledger.storno_confirm') }}">
+                            <form method="post" action="{{ route('backend.users.storno', [$stornoUser, $tx]) }}" class="inline-form" data-confirm="{{ __('ledger.storno_confirm') }}" wire:ignore>
                                 @csrf
                                 <label for="storno-note-{{ $tx->id }}" class="sr-only">{{ __('ledger.storno_note') }}</label>
                                 <input type="text" id="storno-note-{{ $tx->id }}" name="note" maxlength="500" placeholder="{{ __('ledger.storno_note') }}" required>

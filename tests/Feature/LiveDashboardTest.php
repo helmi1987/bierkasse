@@ -113,8 +113,8 @@ class LiveDashboardTest extends TestCase
             ->set('assets', 'old')->call('tick')->assertDispatched('assets-changed');
         Livewire::actingAs($user)->test(TopNav::class)->assertForbidden();
 
-        // Classic pages keep the static navigation with the same markup.
-        $classic = (string) $this->actingAs($kassier)->get('/admin/lager')->assertOk()->getContent();
+        // Classic pages keep the static navigation with the same markup (settings: no live data, 1.36.0).
+        $classic = (string) $this->actingAs($this->admin())->get('/admin/einstellungen')->assertOk()->getContent();
         $this->assertStringContainsString('<nav class="nav" aria-label="Hauptnavigation">', $classic);
         $this->assertStringContainsString('<span class="badge" title="1 offene Posten">1</span>', $classic);
         $this->assertStringNotContainsString('wire:poll', $classic);

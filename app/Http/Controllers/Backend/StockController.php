@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
-use App\Models\StockCorrection;
 use App\Services\BeerStock;
 use App\Support\AppSettings;
 use Illuminate\Http\RedirectResponse;
@@ -18,12 +17,8 @@ class StockController extends Controller
 {
     public function index(): View
     {
-        return view('backend.stock', [
-            'stock' => BeerStock::current(),
-            'minimum' => BeerStock::minimum(),
-            'low' => BeerStock::isLow(),
-            'corrections' => StockCorrection::query()->with('creator')->latest('id')->paginate(20),
-        ]);
+        // Livewire component App\Livewire\Backend\Stock (1.36.0).
+        return view('backend.stock');
     }
 
     public function minimum(Request $request): RedirectResponse

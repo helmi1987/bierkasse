@@ -6,11 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Audit;
-use App\Services\Disposals;
-use App\Services\Gifts;
 use App\Services\Ledger;
 use App\Services\LedgerException;
-use App\Services\Rounds;
 use App\Support\Money;
 use App\Support\UserRules;
 use Illuminate\Http\RedirectResponse;
@@ -31,20 +28,10 @@ class UserController extends Controller
         return view('backend.users.index');
     }
 
+    /** Host page of the Livewire component App\Livewire\Backend\UserShow (1.36.0); the forms post here. */
     public function show(User $user): View
     {
-        return view('backend.users.show', [
-            'user' => $user->loadMissing('lockedBy'),
-            'adminOnlySettled' => Ledger::adminOnlySettled($user),
-            'balance' => $user->balance(),
-            'personalSso' => $user->personalSsoProvider()->withCount('identities')->first(),
-            'open' => Ledger::openItems($user),
-            'transactions' => Transaction::query()->with(['creator', 'confirmer', 'roundItems.user', 'giftParts.user', 'giftParent.user'])->where('user_id', $user->id)->latest('id')->paginate(25),
-            'roundsGiven' => Rounds::beersGiven($user),
-            'giftsGiven' => Gifts::beersGiven($user),
-            'giftsReceived' => Gifts::beersReceived($user),
-            'disposals' => Disposals::countFor($user),
-        ]);
+        return view('backend.users.show', ['user' => $user]);
     }
 
     public function limit(Request $request, User $user): RedirectResponse

@@ -322,7 +322,8 @@ class LegalRevisionTest extends TestCase
         // Consent before 1.19.0 (no revision id): "Stand" only.
         $this->get(route('backend.users.show', $old))->assertOk()
             ->assertDontSee('data-testid="accepted-privacy"', false)
-            ->assertSee('Datenschutzerklärung · Stand 24.10.2026');
+            // Livewire page (1.36.0): morph markers around the Blade conditionals, so the visible text is compared.
+            ->assertSeeText('Datenschutzerklärung · Stand 24.10.2026');
     }
 
     public function test_revisions_are_immutable(): void

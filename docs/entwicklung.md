@@ -617,7 +617,7 @@
   - Admin-Seiten (1.36.0): Übersicht `/admin` (Inseln Kennzahlen, Einzahlungen, Auszahlungen, Überträge, Minus), Kasse
     (Kennzahlen, Einträge mit Seiten), Lager (Stand, Korrekturen), Benutzer-Detail (Saldo, Aktionen, Verlauf), Entsorgung
     (Stand, Liste, Rangliste), Feedback (Liste), Backend-Statistik (ganze Komponente, Filter als Eigenschaften,
-    Filterformular `wire:ignore`); Unternavigation mit Badges als Komponente `Backend\SubNav` (pollt, aktiver Reiter beim
+    Filterformular `wire:ignore`); Unternavigation mit Badges als Komponente `Backend\SubNav` (pollt alle 10 s auch ausserhalb des sichtbaren Bereichs, da meist weggescrollt; aktiver Reiter beim
     Mount festgehalten); Formulare je Zeile `wire:ignore`, Zeilen `wire:key`. Ohne Live-Aktualisierung: Einstellungen,
     Navigation, SSO, Wartung, QR-Druckseiten, Protokoll-Detail (`live_off`; ebenso die Gast-, Anmelde- und
     Wartungsmodus-Seiten). Damit nutzt keine Seite mehr den

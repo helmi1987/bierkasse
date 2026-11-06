@@ -59,7 +59,7 @@ class LiveAdminPagesTest extends TestCase
             $this->assertStringContainsString('data-livewire-page', $html, $uri);
             $this->assertStringContainsString('wire:poll.10s.visible="tick"', $html, $uri);
             $this->assertStringNotContainsString('data-live="', $html, $uri);
-            $this->assertMatchesRegularExpression('/<nav [^>]*wire:name="backend.sub-nav"[^>]*class="subnav"[^>]*wire:poll\.10s\.visible>/', $html, $uri);
+            $this->assertMatchesRegularExpression('/<nav [^>]*wire:name="backend.sub-nav"[^>]*class="subnav"[^>]*wire:poll\.10s>/', $html, $uri);
             $this->assertStringNotContainsString('<nav class="subnav"', $html, $uri);
         }
 

@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Schedule;
 // Client-secret expiry reminders for SSO providers (needs the cron `schedule:run`).
 Schedule::command('sso:secret-reminders')->dailyAt('08:00');
 
+// "Entsorgungsbonus": book disposals whose withdrawal window is over. The Plesk cron must run
+// `php artisan schedule:run` every minute; page views catch up when it does not (BookDueDisposals).
+Schedule::command('disposals:book')->everyMinute()->withoutOverlapping();
+
 // Break-glass helpers (run via SSH).
 Artisan::command('user:totp-reset {username}', function (string $username) {
     $user = User::query()->where('username', $username)->first();

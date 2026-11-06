@@ -63,11 +63,11 @@ class NavOrderTest extends TestCase
 
     public function test_built_in_order_entscheid_2026_10_24(): void
     {
-        $this->assertSame(['dashboard', 'cash', 'stock', 'users', 'bookings', 'stats', 'qr', 'audit'], array_keys(BackendNav::ITEMS['kassier']));
+        $this->assertSame(['dashboard', 'cash', 'stock', 'users', 'bookings', 'stats', 'disposals', 'qr', 'audit'], array_keys(BackendNav::ITEMS['kassier']));
         $this->assertSame(['settings', 'feedback', 'sso', 'nav', 'maintenance'], array_keys(BackendNav::ITEMS['backend']));
 
         $this->actingAs($this->kassier());
-        $this->assertSame(['Übersicht', 'Kasse', 'Lager', 'Benutzer', 'Buchungen', 'Statistik', 'QR-Codes', 'Protokoll'], $this->tabs($this->get('/admin')->getContent()));
+        $this->assertSame(['Übersicht', 'Kasse', 'Lager', 'Benutzer', 'Buchungen', 'Statistik', 'Entsorgung', 'QR-Codes', 'Protokoll'], $this->tabs($this->get('/admin')->getContent()));
         $this->actingAs($this->admin());
         $this->assertSame(['Einstellungen', 'Feedback', 'SSO', 'Navigation', 'Wartung'], $this->tabs($this->get('/admin/einstellungen')->getContent()));
         // Audit log and QR codes are one page each, in the kassier group (also for admins).
@@ -86,14 +86,14 @@ class NavOrderTest extends TestCase
             'backend' => ['maintenance', 'qr_admin', 'audit_admin', 'settings'],
         ]);
         // The old key "stats" (dropped in 1.20.0) is a tab again since 1.31.0 and keeps its stored place.
-        $this->assertSame(['audit', 'bookings', 'cash', 'stats', 'users', 'dashboard', 'stock', 'qr'], BackendNav::defaults()['kassier']);
+        $this->assertSame(['audit', 'bookings', 'cash', 'stats', 'users', 'dashboard', 'stock', 'disposals', 'qr'], BackendNav::defaults()['kassier']);
         $this->assertSame(['maintenance', 'settings', 'feedback', 'sso', 'nav'], BackendNav::defaults()['backend']);
 
         $kassier = $this->kassier();
         $kassier->forceFill(['nav_order' => ['kassier' => ['stock', 'deposit_suggestions', 'guests', 'qr', 'stats']]])->save();
-        $this->assertSame(['stock', 'bookings', 'qr', 'stats', 'dashboard', 'cash', 'users', 'audit'], BackendNav::order('kassier', $kassier->fresh()));
+        $this->assertSame(['stock', 'bookings', 'qr', 'stats', 'dashboard', 'cash', 'users', 'disposals', 'audit'], BackendNav::order('kassier', $kassier->fresh()));
         $this->actingAs($kassier);
-        $this->assertSame(['Lager', 'Buchungen', 'QR-Codes', 'Statistik', 'Übersicht', 'Kasse', 'Benutzer', 'Protokoll'], $this->tabs($this->get('/admin')->getContent()));
+        $this->assertSame(['Lager', 'Buchungen', 'QR-Codes', 'Statistik', 'Übersicht', 'Kasse', 'Benutzer', 'Entsorgung', 'Protokoll'], $this->tabs($this->get('/admin')->getContent()));
         // The settings page lists the new tabs only.
         $this->get('/konto/einstellungen')->assertOk()->assertSee('value="bookings"', false)->assertDontSee('value="rounds"', false)
             ->assertDontSee('value="deposit_suggestions"', false);

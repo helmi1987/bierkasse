@@ -34,6 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
         // Maintenance mode for users (backend setting): after the session, so admins are recognized.
         $middleware->appendToGroup('web', MaintenanceMode::class);
+        // "Entsorgungsbonus": page views book due disposals when the cron does not run (at most once a minute).
+        $middleware->appendToGroup('web', \App\Http\Middleware\BookDueDisposals::class);
         // Live refresh fingerprint, taken before the page content is built.
         $middleware->appendToGroup('web', \App\Http\Middleware\CaptureLiveFingerprint::class);
         $middleware->alias([

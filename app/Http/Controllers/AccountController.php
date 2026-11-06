@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Disposal;
 use App\Models\GuestSale;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\BeerStock;
+use App\Services\Disposals;
 use App\Services\Favorites;
 use App\Services\Gifts;
 use App\Services\GuestSales;
@@ -73,6 +75,10 @@ class AccountController extends Controller
             ->where('created_at', '>', now()->subMinutes(AppSettings::undoMinutes('gift')))
             ->latest('id')->get()->reject(fn (Transaction $tx) => Gifts::recipientsBookedSince($tx))->values() : collect();
 
+        // "Entsorgungsbonus": card only when a report is possible or the user has an own pending one (nothing else is shown).
+        $disposalPending = Disposals::isEnabled() ? Disposals::ownPending($user) : null;
+        $disposalCanReport = $disposalPending === null && Disposals::canReport($user);
+
         // Beers left in the cellar (only once the kassier maintains the stock).
         $stock = BeerStock::isTracked() ? BeerStock::current() : null;
 
@@ -97,6 +103,9 @@ class AccountController extends Controller
             'gifts' => $gifts,
             'giftUndoable' => $giftUndoable,
             'giftsReceived' => Gifts::receivedRecently($user),
+            'disposalPending' => $disposalPending,
+            'disposalCanReport' => $disposalCanReport,
+            'disposalsBooked' => Disposals::bookedRecently($user),
             'roundUndoable' => $roundUndoable,
             'roundsReceived' => $rounds ? Rounds::receivedRecently($user) : collect(),
             'balance' => $balance,
@@ -239,6 +248,36 @@ class AccountController extends Controller
         }
 
         return back()->with('status', trans_choice('gift.booked', $tx->quantity, ['count' => $tx->quantity, 'amount' => chf(-$tx->amount)]));
+    }
+
+    /** "Entsorgungsbonus": the user reports that the empties were taken out (all rules re-checked by the service). */
+    public function reportDisposal(Request $request): RedirectResponse
+    {
+        if (! FormToken::consume($request, 'disposal')) {
+            return back()->with('warning', __('ledger.duplicate'));
+        }
+
+        try {
+            Disposals::report($request->user(), $request->user());
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', __('disposal.reported'));
+    }
+
+    /** Own pending disposal: withdraw inside the window (not one a kassier/admin reported for the user). */
+    public function withdrawDisposal(Request $request, Disposal $disposal): RedirectResponse
+    {
+        abort_unless($disposal->user_id === $request->user()->id, 404);
+
+        try {
+            Disposals::withdraw($disposal, $request->user());
+        } catch (LedgerException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('status', __('disposal.withdrawn'));
     }
 
     /**

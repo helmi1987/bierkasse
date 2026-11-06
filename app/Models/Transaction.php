@@ -37,7 +37,13 @@ class Transaction extends Model
      */
     public const TYPE_GIFT = 'gift';
 
-    public const TYPES = [self::TYPE_CONSUMPTION, self::TYPE_DEPOSIT, self::TYPE_PAYOUT, self::TYPE_DONATION, self::TYPE_CORRECTION, self::TYPE_CARRYOVER, self::TYPE_ROUND, self::TYPE_GIFT];
+    /**
+     * "Entsorgungsbonus" (1.32.0): positive credit (quantity = bonus beers at the price at booking time) for
+     * taking out the empties (see App\Services\Disposals). Like a received gift: never drunk, not in the stock.
+     */
+    public const TYPE_DISPOSAL = 'disposal';
+
+    public const TYPES = [self::TYPE_CONSUMPTION, self::TYPE_DEPOSIT, self::TYPE_PAYOUT, self::TYPE_DONATION, self::TYPE_CORRECTION, self::TYPE_CARRYOVER, self::TYPE_ROUND, self::TYPE_GIFT, self::TYPE_DISPOSAL];
 
     /** Types that are beers paid by the user at the stored unit price (stock, open items). */
     public const BEER_TYPES = [self::TYPE_CONSUMPTION, self::TYPE_ROUND];

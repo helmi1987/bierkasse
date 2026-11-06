@@ -36,6 +36,15 @@ return [
     'register_carryover_hint' => 'Der Übertrag von der alten Strichliste muss im Admin-Bereich bestätigt werden.',
     'register_button' => 'Benutzer im Admin-Bereich ansehen',
 
+    // "Entsorgungsbonus" (never with the number of beers: drawn only when booked)
+    'disposal_subject' => 'Leergut entsorgt: :user',
+    'disposal_title' => 'Leergut entsorgt',
+    'disposal_line' => ':user hat das Leergut weggebracht. Der Bonus wird nach Ablauf der Rückzugsfrist automatisch gutgeschrieben.',
+    'disposal_line_by' => 'Erfasst von :by.',
+    'disposal_row_booking' => 'Gutschrift ab',
+    'disposal_row_override' => 'Sperre übersteuert',
+    'disposal_button' => 'Entsorgung im Admin-Bereich öffnen',
+
     // SSO secret expiry
     'sso_secret_subject' => 'SSO-Anbieter :name: Client-Secret läuft in :days Tagen ab',
     'sso_secret_subject_today' => 'SSO-Anbieter :name: Client-Secret läuft heute ab',

@@ -11,6 +11,7 @@ return [
         'carryover' => 'Übertrag alte Strichliste',
         'round' => 'Runde spendiert',
         'gift' => 'Bier verschenkt',
+        'disposal' => 'Leergut-Bonus',
     ],
     'status' => [
         'pending' => 'offen',

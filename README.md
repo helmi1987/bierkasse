@@ -50,6 +50,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.34.0 | Neue Funktion | Konto-Dashboard als Livewire-Komponente: Live-Aktualisierung ohne Springen (nur geänderte Teile, Formulare und Eingaben bleiben), Kopfzeilen-Badges live, Leiste «Neue Version» statt Neuladen mitten in der Bedienung |
 | 1.33.2 | Änderung | Hilfe-Symbol ⓘ entfernt, Hinweistexte wieder immer sichtbar (Runde-Knöpfe nebeneinander und Neuladen bei neuer CSS/JS bleiben) |
 | 1.33.1 | Fehlerbehebung | Hilfe-Symbol ⓘ als blauer Kreis am Ende von Titel/Feld-Label, Runde-Knöpfe nach einem Deploy zuverlässig nebeneinander (Seite lädt bei neuer CSS/JS neu) |
 | 1.33.0 | Neue Funktion | Hilfetexte in der Benutzer-Ansicht standardmässig eingeklappt (ⓘ), aufgeklappte Hinweise werden im Konto gemerkt |

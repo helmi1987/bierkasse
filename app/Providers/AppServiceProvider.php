@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Http\Middleware\EnsureActiveUser;
+use App\Http\Middleware\EnsureBeerAccount;
 use App\Http\Middleware\RequireRole;
 use App\Models\SsoProvider;
 use App\Services\Ledger;
@@ -29,8 +30,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Livewire updates re-run these middleware of the page the component was rendered on (in addition to the
-        // admin middleware of the update route in routes/web.php): consent/active gate and role.
-        Livewire::addPersistentMiddleware([EnsureActiveUser::class, RequireRole::class]);
+        // auth/active middleware of the update route in routes/web.php): consent/active gate, role, beer account.
+        Livewire::addPersistentMiddleware([EnsureActiveUser::class, RequireRole::class, EnsureBeerAccount::class]);
 
         // Links in mails (password reset) must not depend on the Host header of the request:
         // once installed, the root URL is always APP_URL (set by the setup wizard).

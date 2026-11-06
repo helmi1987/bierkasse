@@ -42,7 +42,7 @@
         @livewireStyles(['nonce' => $nonce])
     @endif
 </head>
-<body class="@yield('body_class')" @if ($livewirePage) data-livewire-page @endif @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ app()->bound(\App\Http\Middleware\CaptureLiveFingerprint::KEY) ? app(\App\Http\Middleware\CaptureLiveFingerprint::KEY) : \App\Support\LiveFingerprint::current() }}" data-live-assets="{{ \App\Support\AssetVersion::current() }}" @endif>
+<body class="@yield('body_class')" @if ($livewirePage) data-livewire-page data-update-text="{{ __('site.update_available') }}" data-update-button="{{ __('site.update_reload') }}" @endif @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ app()->bound(\App\Http\Middleware\CaptureLiveFingerprint::KEY) ? app(\App\Http\Middleware\CaptureLiveFingerprint::KEY) : \App\Support\LiveFingerprint::current() }}" @endif @if ($authUser) data-live-assets="{{ \App\Support\AssetVersion::current() }}" @endif>
 <a class="skip-link" href="#main">{{ __('site.skip_to_content') }}</a>
 @if ($authUser)
     <header class="topbar">
@@ -51,44 +51,15 @@
                 <img src="{{ asset('logo.svg') }}" alt="" width="32" height="32">
                 <span>{{ $appName }}</span>
             </a>
-            <nav class="nav" aria-label="Hauptnavigation">
-                @if ($authUser->hasBeerAccount())
-                    <a href="{{ route('account.dashboard') }}" @class(['active' => request()->routeIs('account.dashboard', 'account.history')])>{{ __('site.nav.account') }}</a>
-                @elseif (\App\Support\AppSettings::invitationsAllowed())
-                    {{-- Accounts without beer account have no dashboard: invite from the top bar. --}}
-                    <a href="{{ route('account.invite') }}" @class(['active' => request()->routeIs('account.invite*')])>{{ __('site.nav.invite') }}</a>
-                @endif
-                @if (\App\Support\AppSettings::statsEnabled())
-                    <a href="{{ route('stats') }}" @class(['active' => request()->routeIs('stats')])>{{ __('site.nav.stats') }}</a>
-                @endif
-                @if ($authUser->isKassier())
-                    <a href="{{ route('backend.dashboard') }}" @class(['active' => \App\Support\BackendNav::isKassierPage()])>
-                        {{ __('site.nav.kassier') }}
-                        @if ($openItems > 0)
-                            <span class="badge" title="{{ __('site.open_items', ['count' => $openItems]) }}">{{ $openItems }}</span>
-                        @endif
-                    </a>
-                @endif
-                @if ($authUser->isAdmin())
-                    @php($unreadFeedback = \App\Models\Feedback::unreadCount())
-                    <a href="{{ route('backend.settings') }}" @class(['active' => \App\Support\BackendNav::isAdminPage()])>
-                        {{ __('site.nav.backend') }}
-                        @if ($unreadFeedback > 0)
-                            <span class="badge" title="{{ __('feedback.unread_count', ['count' => $unreadFeedback]) }}">{{ $unreadFeedback }}</span>
-                        @endif
-                    </a>
-                @endif
-                <a href="{{ route('account.settings') }}" @class(['active' => request()->routeIs('account.settings', 'account.leave')]) aria-label="{{ __('site.nav.settings') }}" title="{{ __('site.nav.settings') }}">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg>
-                    <span class="nav-user">{{ $authUser->username }}</span>
-                </a>
-                <form method="post" action="{{ route('logout') }}" class="inline">
-                    @csrf
-                    <button type="submit" class="linkish" title="{{ __('site.nav.logout') }}" aria-label="{{ __('site.nav.logout') }}">
-                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5v16h5v-2H7V6h3V4Zm5.6 3.4L14.2 8.8 16.4 11H9v2h7.4l-2.2 2.2 1.4 1.4L20.2 12l-4.6-4.6Z"/></svg>
-                    </button>
-                </form>
-            </nav>
+            @php($navActive = \App\Support\TopNav::activeKey())
+            @if ($livewirePage && $authUser->isKassier())
+                {{-- Badges refreshed by polling (1.34.0); plain users have no live data in the navigation. --}}
+                <livewire:top-nav :active="$navActive" />
+            @else
+                <nav class="nav" aria-label="Hauptnavigation">
+                    @include('partials.top-nav', ['authUser' => $authUser, 'active' => $navActive, 'openItems' => $openItems, 'unreadFeedback' => $authUser->isAdmin() ? \App\Models\Feedback::unreadCount() : 0])
+                </nav>
+            @endif
         </div>
     </header>
 @endif

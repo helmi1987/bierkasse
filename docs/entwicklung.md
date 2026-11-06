@@ -565,7 +565,16 @@
   Seiten mit Livewire-Komponenten (seit 1.20.0, `<body data-livewire-page>`) lädt `live.js` nicht neu; die Komponenten
   aktualisieren ihre Daten selbst mit `wire:poll.10s.visible` (siehe "Livewire"). Die 30-Minuten-Regel gilt dort auch:
   `live.js` bricht danach die Poll-Aktionen ab (`Livewire.interceptAction`), bis wieder Aktivität kommt.
-  Kopfzeilen-Badges werden auf Livewire-Seiten erst beim nächsten Seitenaufruf aktualisiert.
+  Kopfzeilen-Badges: seit 1.34.0 ist die Hauptnavigation auf Livewire-Seiten für Kassier/Admin selbst eine Komponente
+  (`App\Livewire\TopNav`, `wire:poll.10s.visible`), die Badges folgen den Daten; normale Benutzer (keine Badges) bekommen das
+  statische Partial `partials/top-nav` (auch auf klassischen Seiten; aktiver Eintrag aus `App\Support\TopNav::activeKey()`,
+  beim Mount festgehalten, weil eine Update-Anfrage keine Seitenroute hat).
+  Deploy bei offener Livewire-Seite (1.34.0): die Komponenten merken sich die Asset-Version beim Mount
+  (`App\Livewire\Concerns\WatchesAssets`); findet ein Poll eine neuere, wird einmal das Browser-Ereignis `assets-changed`
+  ausgelöst und `live.js` zeigt oben im Inhalt die Leiste «Neue Version verfügbar» mit Knopf «Neu laden»
+  (Texte als `data-update-*` am `<body>`). Automatisch neu geladen wird nie mitten in der Bedienung: erst nach einer Minute
+  ohne Aktivität oder beim Zurückkehren in den Tab, und nur ohne Fokus in einem Feld, ohne Eingabe seit dem Laden und ohne
+  gerade abgeschicktes Formular. Jede normale Navigation holt die neuen Dateien ohnehin (`?v=`).
 - Livewire (Entscheid 2026-10-24, v1.20.0: für neue bzw. umgebaute Seiten, die übrigen später): `livewire/livewire` ^4.4,
   ohne JS-Build (das Paket liefert sein Skript selbst über eine eigene Route aus, nichts zu veröffentlichen).
   Komponenten in `app/Livewire/Backend` (Ansichten `resources/views/livewire/backend`): Buchungen, Benutzer
@@ -576,10 +585,27 @@
     `config/livewire.php` `csp_safe = true` (CSP-Build mit Alpine-CSP-Auswerter, nur einfache Ausdrücke wie
     `showTab('gaeste')`), `inject_assets = false`; das Layout setzt `@livewireStyles`/`@livewireScripts` nur auf Seiten
     mit `@section('livewire')`, beide mit dem Nonce der Anfrage. Kein Fortschrittsbalken (`navigate.show_progress_bar`).
-  - Update-Endpunkt `POST /admin/livewire/update` (Route `backend.livewire.update`, in `routes/web.php` per
-    `Livewire::setUpdateRoute`): Middleware `web` (Session, CSRF, Wartungsmodus), `auth`, `AuthenticateSession`, `active`
-    (Zustimmungs-/Passwort-Sperre), `role:kassier`; der Standard-Endpunkt von Livewire antwortet dann mit 404.
-    Zusätzlich als persistente Middleware `EnsureActiveUser` und `RequireRole` (AppServiceProvider).
+  - Update-Endpunkt `POST /livewire/update` (Route `livewire.update`, in `routes/web.php` per `Livewire::setUpdateRoute`;
+    bis 1.33 unter `/admin` mit `role:kassier`, seit 1.34.0 für alle angemeldeten Seiten): Middleware `web` (Session, CSRF,
+    Wartungsmodus), `auth`, `AuthenticateSession`, `active` (Zustimmungs-/Passwort-Sperre); der Standard-Endpunkt von
+    Livewire antwortet dann mit 404. Zusätzlich als persistente Middleware `EnsureActiveUser`, `RequireRole` und
+    `EnsureBeerAccount` (AppServiceProvider), d. h. die Middleware der Seite, auf der die Komponente gerendert wurde, läuft
+    bei jedem Update erneut; die Rechte prüfen die Komponenten ausserdem selbst (Boot-Hook).
+  - Dashboard `/konto` (1.34.0, `App\Livewire\Account\Dashboard`, Ansicht `livewire/account/dashboard`; Entscheid: Live
+    ohne Springen, Umstellung aller Live-Seiten in Schritten). Die Komponente pollt alle 10 s (`wire:poll.10s.visible="tick"`
+    auf dem Wurzelelement). `tick()` rendert nichts (`skipRender`), solange der Fingerprint (`LiveFingerprint`) dem des
+    letzten Renderns entspricht und keine 5 Minuten (`FORCE_SECONDS`, zeitabhängige Inhalte) vergangen sind; sonst nur die
+    Inseln (`@island(...)` von Livewire 4, Liste `Dashboard::ISLANDS`: Saldo, Hinweise, Lager, die vier Rückgängig-Listen,
+    Entsorgungs-Karte, TWINT-Betrag, ausstehende Einzahlungen, Buchungen/Statistik). Die Inseln werden per Morph an Ort
+    ersetzt; Formulare, die `<details>` der Karten und alles, was der Benutzer eintippt, liegen ausserhalb und werden von
+    einem Poll nie berührt (Folge: neue Kollegen, Preis und Vorschläge im Formular erst beim nächsten Seitenaufruf; der
+    Server prüft die Buchung ohnehin). Einmal-Tokens entstehen damit wie bisher einmal pro Seitenaufruf. Die Daten liefert
+    `data()` (einmal pro Anfrage berechnet, von der Hauptansicht und jeder Insel per `with: $__livewire->data()` genutzt).
+    Validierungsfehler der klassischen Formular-Posts kommen als `$formErrors` (Session-Bag) in die Ansicht, weil `$errors`
+    in einer Livewire-Ansicht die Bag der Komponente ist. Ausstehende Einzahlungen: `wire:key` je Zeile, `wire:ignore.self`
+    auf dem `<details>` (offen bleibt offen), `wire:ignore` auf dem Bearbeiten-Formular. Livewire setzt in Komponenten-
+    Ansichten Morph-Marker (`<!--[if BLOCK]>…`) um Blade-Bedingungen; Tests, die Text über eine Bedingung hinweg prüfen,
+    prüfen die Teile einzeln. Fehlt dem Konto das Bierkonto, antwortet die Komponente mit 403.
   - Livewire-Aktionen sind öffentliche Endpunkte: jede Komponente prüft bei jeder Anfrage die Rolle
     (`App\Livewire\Concerns\AuthorizesAdminArea`, Boot-Hook) und Admin-Aktionen zusätzlich `authorizeAdmin()`. Die
     Admin-Formulare auf der QR-Seite senden an die bisherigen `role:admin`-Routen.
@@ -640,6 +666,7 @@ php artisan test
 ```
 
 Livewire-Komponenten werden mit `Livewire::test()` getestet (`tests/Feature/AdminAreaTest.php`: Rechte, Reiter,
-Weiterleitungen, CSP/Nonce, Update-Route).
+Weiterleitungen, CSP/Nonce, Update-Route; `tests/Feature/LiveDashboardTest.php`: Dashboard-Inseln, Fingerprint, Deploy-Ereignis,
+Navigation mit Badges).
 
 Die Tests laufen mit SQLite im Speicher (`phpunit.xml`).

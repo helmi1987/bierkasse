@@ -410,8 +410,8 @@
     hat zwei Schalter, «Name in Statistik Konsum zeigen» (`stats_opt_out`, Bier-Statistik) und «Name in Statistik
     Entsorgung zeigen» (`users.disposal_stats_opt_out`, `POST /konto/statistik-entsorgung`, Audit `user.settings`).
     Standard an (Name sichtbar); die Migration übernimmt den Bier-Schalter bewusst nicht. Jede Rangliste nutzt nur
-    ihren eigenen Schalter. Aus = «Anonym n» überall (auch im Backend), nummeriert nach der Reihenfolge in der
-    gezeigten Liste; die `user_id` bleibt für die eigene Zeile (`.me`).
+    ihren eigenen Schalter. Aus = «Anonym n» überall (auch im Backend), Nummern zufällig bei jedem Aufruf
+    (`Stats::numberAnonymous()`); die `user_id` bleibt für die eigene Zeile (`.me`).
   - Seit 1.32.2: Funktion aus → Schalter «Name in Statistik Entsorgung zeigen» und Kennzahl «Entsorgungen» beim
     Benutzer ausgeblendet, Route `account.disposal-stats` 404; gespeicherter Wert bleibt; Bonus-Hinweis, Kontoauszug
     und Backend unverändert.
@@ -431,9 +431,11 @@
   kommt aus `Stats::ranked()`, nicht aus der View. Die Top-10-Grenze zeigt alle mit dem Rang von Platz 10 mit.
   **Annahme:** Wer "In Statistik anzeigen" (seit 1.32.0 «Name in Statistik Konsum zeigen») ausschaltet, wird für andere nirgends namentlich gezeigt
   (im Admin-Bereich ebenfalls als «Anonym n»). Seit 1.29.0 steht er in der Rangliste als «Anonym 1»,
-  «Anonym 2» … (`stats.anonymous`, Zeile mit `anonymous => true`). **Entscheid 2026-11-06:** nummeriert wird
-  nach der Reihenfolge in der angezeigten Liste (nach Sortierung und Top-10-Schnitt, von oben nach unten), nicht
-  fest pro Benutzer, damit niemand über die Zeit wiedererkennbar ist. Die `user_id` bleibt serverseitig in der
+  «Anonym 2» … (`stats.anonymous`, Zeile mit `anonymous => true`). **Entscheid 2026-11-06 (1.38.1, ersetzt die
+  Nummerierung von oben nach unten):** die Nummern werden bei jedem Aufruf und jeder Live-Aktualisierung zufällig auf
+  die anonymen Zeilen verteilt, je Liste für sich (`Stats::numberAnonymous()`). Von oben nach unten wäre die oberste
+  anonyme Person immer «Anonym 1» und damit wiedererkennbar. Rang und Bierzahl bleiben sichtbar; wer die Menge einer
+  Person kennt, kann sie daran weiterhin erkennen. Die `user_id` bleibt serverseitig in der
   Zeile, damit der Opt-out-Benutzer seine eigene Zeile fett (`.me`) sieht; sie wird nie ausgegeben.
   "Nur Verwaltung"-Konten bleiben aussen vor, "Gäste" und "Gäste (eingeladen)" unverändert.
   Kassiers sehen in der Benutzerverwaltung trotzdem Saldo und Buchungen aller Konten.
@@ -489,7 +491,7 @@
     «Gesamt» = Monate der letzten 12 Monate wie `/statistik`), `tag`, `woche` (ISO-Wochen, «KW 45 (2.–8.11.2026)»; am
     Rand angeschnittene Wochen zählen nur die Tage im Zeitraum), `monat`, `jahr`; «Gesamt» mit gewähltem Raster läuft
     von der ersten Buchung bis heute. Oder `benutzer`: eine Zeile pro Trinker (alle, kein Top-N), Sport-Platzierung
-    (`Stats::ranked()`), Opt-out als «Anonym n» von oben nach unten, «Gäste», «Gäste (eingeladen)», Konten ohne
+    (`Stats::ranked()`), Opt-out als «Anonym n» (Nummern zufällig), «Gäste», «Gäste (eingeladen)», Konten ohne
     Bierkonto zusammen als «Ohne Bierkonto».
   Kennzahlen: Biere, Umsatz in CHF (was die Biere gekostet haben: Runden zum Rundenpreis, Gäste zum bezahlten Betrag;
   bei `geschenke` der Wert), Vorperiode (gleich lange Periode direkt davor: Woche/Monat/Quartal/Jahr = `previous()`,

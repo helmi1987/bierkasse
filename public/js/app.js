@@ -42,6 +42,34 @@
         }
     });
 
+    // Collapsible help texts (1.33.0, <details data-hint>): keep aria-expanded in sync and remember the state per
+    // account (POST to data-hints-url on <body>, only present when logged in). Failures are ignored: the hint
+    // still opens/closes, it is just not remembered. "toggle" does not bubble, hence the capture listener.
+    document.addEventListener('toggle', function (e) {
+        var box = e.target;
+        if (!box || box.tagName !== 'DETAILS' || !box.hasAttribute('data-hint')) {
+            return;
+        }
+        var summary = box.querySelector(':scope > summary');
+        if (summary) {
+            summary.setAttribute('aria-expanded', box.open ? 'true' : 'false');
+        }
+        var url = document.body.dataset.hintsUrl;
+        var token = document.body.dataset.hintsToken;
+        if (!url || !token || !window.fetch || !window.URLSearchParams) {
+            return;
+        }
+        var body = new URLSearchParams();
+        body.append('key', box.dataset.hint);
+        body.append('open', box.open ? '1' : '0');
+        window.fetch(url, {
+            method: 'POST',
+            body: body,
+            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': token },
+            credentials: 'same-origin',
+        }).catch(function () {});
+    }, true);
+
     // Back/forward cache: re-enable forms that were submitted before.
     window.addEventListener('pageshow', function () {
         document.querySelectorAll('form[data-submitted]').forEach(function (form) {

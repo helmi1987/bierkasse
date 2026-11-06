@@ -38,6 +38,21 @@
   Karte "Profil" (Optionen Automatisch/Hell/Dunkel). Fix gewählt: `data-theme` auf `<html>` (Layout `app`) und eine einzelne
   `theme-color`-Meta; automatisch: wie bisher `prefers-color-scheme`. Anmelde-/Registrierungsseiten und Gast-Seiten bleiben
   automatisch (kein Benutzer). Kein Audit-Eintrag (nur Anzeigeeinstellung, wird getrennt vom Profil gespeichert). Mails unverändert.
+- Hilfetexte eingeklappt (1.33.0): erklärende Texte in der Benutzer-Ansicht (Konto, Einstellungen, Statistik, Feedback,
+  Einladen) stecken in der Blade-Komponente `<x-hint key="…">` (`resources/views/components/hint.blade.php`): ein `<details
+  class="hint-box">` mit einem kleinen ⓘ (`summary.hint-toggle`, Trefferfläche 44×44, `aria-label`/`title` «Hilfe anzeigen»,
+  `aria-controls`, `aria-expanded`), standardmässig zu, funktioniert ohne JavaScript. Feste Liste der Schlüssel in
+  `App\Support\Hints::KEYS` (unbekannter Schlüssel in der Komponente = `InvalidArgumentException`, ein Test prüft, dass jeder
+  Schlüssel in den Views vorkommt und umgekehrt). Aufgeklappte Hinweise pro Konto in `users.open_hints` (JSON-Liste, sortiert,
+  null = alles zu, nicht fillable); `POST /konto/hinweise` (`account.hints`, `throttle:60,1`, `key` aus `KEYS`, `open` boolean,
+  Antwort JSON). `app.js` hört auf `toggle` der `details[data-hint]` (Capture, weil `toggle` nicht bubbelt), hält
+  `aria-expanded` nach und speichert per `fetch` (URL und CSRF-Token als `data-hints-url`/`data-hints-token` am `<body>`, nur
+  angemeldet; CSP-konform, kein Inline-JS); Fehler werden ignoriert. Die Partials `partials/twint-message` und `stats/_period`
+  bekommen optional `$hintKey`: nur Konto bzw. Benutzer-Statistik klappen ein, Gast-Seiten und Backend-Statistik zeigen den
+  Text wie bisher. Sichtbar bleiben: Fehler (`@error`, `.alert`), Live-Werte (Rundensumme, Rückgängig-Countdown),
+  «Keine Kollegen», Einzahlungen zurückgehalten, Vorschlag und Hinweis «dann melden», Einträge in Listen. Entscheide:
+  Anmeldung/Registrierung/TOTP, Gast-Seiten, Rechtstexte, Austritt, Setup und Backend unverändert; kein Audit-Eintrag
+  (nur Anzeigeeinstellung); Gäste sehen nie einen offenen Hinweis.
 - Konto sperren (Entscheid 2026-10-24, Status `locked` neben `active`/`left`): Kassier und Admin in der Benutzer-Detailansicht,
   Grund Pflicht (max. 500 Zeichen, `users.locked_reason`, `locked_at`, `locked_by`; angezeigt in der Detailansicht,
   Audit `user.lock`/`user.unlock`). Anders als Deaktivieren auch mit Schulden oder offenen Posten. Kassiers können

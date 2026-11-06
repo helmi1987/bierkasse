@@ -102,6 +102,17 @@ img { max-width: 100%; height: auto; }
 .main.narrow { max-width: 460px; }
 .muted { color: var(--muted); }
 .hint { color: var(--muted); font-size: .875rem; margin-top: .25rem; }
+/* Collapsible help text (1.33.0, <x-hint>): closed by default, a small info circle opens it. The toggle has a
+   44x44 hit area; negative margins keep its visual footprint as small as the icon. */
+.hint-box { display: block; }
+.hint-box > summary.hint-toggle { list-style: none; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin: -.55rem 0 -.55rem -.75rem; cursor: pointer; color: var(--muted); font-weight: 400; border-radius: var(--radius-sm); }
+.hint-box > summary.hint-toggle::-webkit-details-marker { display: none; }
+.hint-box > summary.hint-toggle:hover, .hint-box[open] > summary.hint-toggle { color: var(--accent); }
+.hint-box > summary.hint-toggle:focus-visible { color: var(--accent); outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+.hint-icon { display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; border: 1.5px solid currentColor; border-radius: 50%; font: 700 .75rem/1 ui-serif, Georgia, serif; }
+.hint-box > .hint { margin-top: 0; }
+.hint-box.center { text-align: center; }
+.hint-box.center > summary.hint-toggle { margin-left: 0; }
 /* Page footer (app name, version, copyright): small and muted, wraps on narrow screens. */
 .site-footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: -2rem; padding-bottom: 1rem; overflow-wrap: anywhere; }
 .center { text-align: center; }

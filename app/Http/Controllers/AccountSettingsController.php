@@ -11,9 +11,11 @@ use App\Services\LedgerException;
 use App\Services\Sso;
 use App\Support\AppSettings;
 use App\Support\BackendNav;
+use App\Support\Hints;
 use App\Support\Qr;
 use App\Support\Totp;
 use App\Support\UserRules;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +23,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
 
@@ -111,6 +114,22 @@ class AccountSettingsController extends Controller
         Audit::save('user.settings', $user->forceFill(['stats_opt_out' => ! $request->boolean('show')]));
 
         return back()->with('status', __('account.stats_saved'));
+    }
+
+    /**
+     * Collapsed help texts (1.33.0): remembers whether a hint is open, sent by app.js on every toggle.
+     * Display preference only, no audit entry.
+     */
+    public function hint(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'key' => ['required', 'string', 'max:'.Hints::MAX_KEY_LENGTH, Rule::in(Hints::KEYS)],
+            'open' => ['required', 'boolean'],
+        ]);
+        $open = filter_var($data['open'], FILTER_VALIDATE_BOOLEAN);
+        Hints::set($request->user(), $data['key'], $open);
+
+        return response()->json(['key' => $data['key'], 'open' => $open]);
     }
 
     /**

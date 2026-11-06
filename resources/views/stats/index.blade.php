@@ -6,7 +6,7 @@
 <h1>{{ __('stats.title') }}</h1>
 
 {{-- Period filter (1.30.0): everything below follows it, except the fixed comparison KPIs. --}}
-@include('stats._period', ['period' => $period])
+@include('stats._period', ['period' => $period, 'hintKey' => 'stats.period_custom'])
 
 {{-- Parts switched in Admin > Einstellungen > Funktionen (1.29.0). --}}
 @if ($nothing)
@@ -53,7 +53,7 @@
                     @endforeach
                 </ol>
             @endif
-            <p class="hint">{{ __('stats.ranking_hint') }}</p>
+            <x-hint key="stats.ranking">{{ __('stats.ranking_hint') }}</x-hint>
         </section>
     @endif
 </div>
@@ -63,7 +63,7 @@
     <section class="card" data-testid="stats-disposal-ranking">
         <h2>{{ __('disposal.ranking') }}</h2>
         @include('disposals._ranking', ['ranking' => $disposalRanking])
-        <p class="hint">{{ __('disposal.ranking_hint') }}</p>
+        <x-hint key="stats.disposal_ranking">{{ __('disposal.ranking_hint') }}</x-hint>
     </section>
 @endif
 @endsection

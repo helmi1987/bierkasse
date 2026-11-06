@@ -31,9 +31,9 @@
                 </div>
             </div>
             <div class="field">
-                <div class="label-row"><label for="email">{{ __('account.email') }}</label><x-hint-toggle key="settings.email" /></div>
+                <label for="email">{{ __('account.email') }}</label>
                 <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" autocomplete="email" @required($user->isKassier())>
-                <x-hint key="settings.email">{{ __('account.email_hint') }}</x-hint>
+                <div class="hint">{{ __('account.email_hint') }}</div>
             </div>
             @php($themeNow = old('theme', $user->theme ?? 'auto'))
             <fieldset class="field">
@@ -76,14 +76,11 @@
         <h2>{{ __('account.admin_only') }}</h2>
         <form method="post" action="{{ route('account.admin-only') }}" class="stack">
             @csrf
-            <div class="label-row">
-                <label class="switch">
-                    <input type="checkbox" name="admin_only" value="1" @checked($user->isAdminOnly()) @disabled(! $adminOnlySettled) data-autosubmit>
-                    <span>{{ __('account.admin_only_switch') }}</span>
-                </label>
-                <x-hint-toggle key="settings.admin_only" />
-            </div>
-            <x-hint key="settings.admin_only">{{ __('account.admin_only_hint') }}</x-hint>
+            <label class="switch">
+                <input type="checkbox" name="admin_only" value="1" @checked($user->isAdminOnly()) @disabled(! $adminOnlySettled) data-autosubmit>
+                <span>{{ __('account.admin_only_switch') }}</span>
+            </label>
+            <p class="hint">{{ __('account.admin_only_hint') }}</p>
             @unless ($adminOnlySettled)
                 <p class="alert warn">{{ __('account.admin_only_locked', ['amount' => chf($user->balance())]) }}</p>
             @endunless
@@ -94,11 +91,11 @@
 
 @if ($user->isKassier())
     <section class="card" id="navigation">
-        <h2>{{ __('backend.nav.nav') }} <x-hint-toggle key="settings.nav" /></h2>
+        <h2>{{ __('backend.nav.nav') }}</h2>
         <form method="post" action="{{ route('account.nav') }}" class="stack">
             @csrf
             @method('PUT')
-            <x-hint key="settings.nav">{{ __('backend.nav_own_intro') }}@if ($user->nav_order === null) {{ __('backend.nav_own_default') }}@endif</x-hint>
+            <p class="hint">{{ __('backend.nav_own_intro') }}@if ($user->nav_order === null) {{ __('backend.nav_own_default') }}@endif</p>
             @php($navGroups = \App\Support\BackendNav::groups($user))
             @include('partials.nav-order', ['groups' => $navGroups, 'orders' => collect($navGroups)->mapWithKeys(fn ($g) => [$g => \App\Support\BackendNav::order($g, $user)])->all()])
             <button type="submit" class="btn small">{{ __('account.save') }}</button>
@@ -118,28 +115,22 @@
     <h2>{{ __('account.stats_heading') }}</h2>
     <form method="post" action="{{ route('account.stats') }}" class="stack">
         @csrf
-        <div class="label-row">
-            <label class="switch">
-                <input type="checkbox" name="show" value="1" @checked(! $user->stats_opt_out) data-autosubmit>
-                <span>{{ __('account.stats_show') }}</span>
-            </label>
-            <x-hint-toggle key="settings.stats" />
-        </div>
-        <x-hint key="settings.stats">{{ __('account.stats_hint') }}</x-hint>
+        <label class="switch">
+            <input type="checkbox" name="show" value="1" @checked(! $user->stats_opt_out) data-autosubmit>
+            <span>{{ __('account.stats_show') }}</span>
+        </label>
+        <p class="hint">{{ __('account.stats_hint') }}</p>
         <button type="submit" class="btn small" data-hide-js>{{ __('account.save') }}</button>
     </form>
     {{-- Hidden while the disposal feature is off (1.32.2); the stored value stays. --}}
     @if (\App\Services\Disposals::isEnabled())
     <form method="post" action="{{ route('account.disposal-stats') }}" class="stack" data-testid="disposal-stats-form">
         @csrf
-        <div class="label-row">
-            <label class="switch">
-                <input type="checkbox" name="show" value="1" @checked(! $user->disposal_stats_opt_out) data-autosubmit>
-                <span>{{ __('account.disposal_stats_show') }}</span>
-            </label>
-            <x-hint-toggle key="settings.disposal_stats" />
-        </div>
-        <x-hint key="settings.disposal_stats">{{ __('account.disposal_stats_hint') }}</x-hint>
+        <label class="switch">
+            <input type="checkbox" name="show" value="1" @checked(! $user->disposal_stats_opt_out) data-autosubmit>
+            <span>{{ __('account.disposal_stats_show') }}</span>
+        </label>
+        <p class="hint">{{ __('account.disposal_stats_hint') }}</p>
         <button type="submit" class="btn small" data-hide-js>{{ __('account.save') }}</button>
     </form>
     @endif
@@ -212,7 +203,7 @@
 </section>
 
 <section class="card">
-    <h2>{{ __('account.identities_heading') }}@if (! $ssoActive) <x-hint-toggle key="settings.identities" />@endif</h2>
+    <h2>{{ __('account.identities_heading') }}</h2>
     @error('sso')
         <div class="alert bad">{{ $message }}</div>
     @enderror
@@ -220,10 +211,11 @@
         <p class="muted">{{ __('account.identities_none') }}</p>
     @endif
     @if (! $ssoActive)
-        {{-- One text block for the one toggle in the heading; the wording depends on the role. --}}
-        <x-hint key="settings.identities">{{ $user->isAdmin() ? __('account.identities_admin_hint') : __('account.identities_user_hint') }}</x-hint>
         @if ($user->isAdmin())
+            <p class="muted">{{ __('account.identities_admin_hint') }}</p>
             <p><a class="btn" href="{{ route('backend.sso.index') }}">{{ __('account.identities_admin_link') }}</a></p>
+        @else
+            <p class="muted">{{ __('account.identities_user_hint') }}</p>
         @endif
     @endif
     @if ($identities->isNotEmpty())
@@ -255,9 +247,6 @@
 
 <section class="card" id="eigener-anbieter">
     <h2>{{ __('sso.personal.heading') }}
-        @if ($personalAllowed)
-            <x-hint-toggle key="settings.personal_sso" />
-        @endif
         @if ($personal)
             @if ($personalIdentity)
                 <span class="pill ok">{{ __('sso.personal.connected') }}</span>
@@ -269,7 +258,7 @@
     @if (! $personalAllowed)
         <p class="muted">{{ __('sso.personal.disabled') }}</p>
     @else
-        <x-hint key="settings.personal_sso">{{ __('sso.personal.intro') }}</x-hint>
+        <p class="muted">{{ __('sso.personal.intro') }}</p>
         <p><strong>{{ __('sso.personal.redirect_uri') }}:</strong> <code id="personal-redirect-uri">{{ $personalRedirectUri }}</code>
             <button type="button" class="btn small" data-copy="#personal-redirect-uri" data-copied="{{ __('account.copied') }}">{{ __('account.copy') }}</button></p>
 
@@ -306,26 +295,26 @@
                     <input type="text" id="ps-name" name="name" value="{{ old('name', $personal?->name) }}" maxlength="100" required>
                 </div>
                 <div class="field">
-                    <div class="label-row"><label for="ps-discovery">{{ __('sso.discovery_url') }}</label><x-hint-toggle key="settings.personal_sso_discovery" /></div>
+                    <label for="ps-discovery">{{ __('sso.discovery_url') }}</label>
                     <input type="url" id="ps-discovery" name="discovery_url" value="{{ old('discovery_url', $personal?->discovery_url) }}" maxlength="500" placeholder="https://">
-                    <x-hint key="settings.personal_sso_discovery">{{ __('sso.personal.discovery_hint') }}</x-hint>
+                    <div class="hint">{{ __('sso.personal.discovery_hint') }}</div>
                 </div>
                 <div class="field">
                     <label for="ps-client-id">{{ __('sso.client_id') }}</label>
                     <input type="text" id="ps-client-id" name="client_id" value="{{ old('client_id', $personal?->client_id) }}" maxlength="255" required>
                 </div>
                 <div class="field">
-                    <div class="label-row"><label for="ps-client-secret">{{ __('sso.client_secret') }}</label><x-hint-toggle key="settings.personal_sso_secret" /></div>
+                    <label for="ps-client-secret">{{ __('sso.client_secret') }}</label>
                     <input type="password" id="ps-client-secret" name="client_secret" autocomplete="new-password" placeholder="{{ $personal?->client_secret ? __('sso.secret_stored') : '' }}" @required(! $personal)>
-                    <x-hint key="settings.personal_sso_secret">{{ __('sso.secret_hint') }}</x-hint>
+                    <div class="hint">{{ __('sso.secret_hint') }}</div>
                 </div>
             </div>
             @if ($personal?->discovered_at)
                 <p class="hint">{{ __('sso.discovered_at', ['date' => local_time($personal->discovered_at)]) }}</p>
             @endif
             <details>
-                <summary>{{ __('sso.advanced') }} <x-hint-toggle key="settings.personal_sso_manual" /></summary>
-                <x-hint key="settings.personal_sso_manual">{{ __('sso.personal.manual_hint') }}</x-hint>
+                <summary>{{ __('sso.advanced') }}</summary>
+                <p class="hint">{{ __('sso.personal.manual_hint') }}</p>
                 <div class="grid-2">
                     <div class="field">
                         <label for="ps-issuer">{{ __('sso.issuer') }}</label>
@@ -391,15 +380,15 @@
 @endif
 
 <section class="card">
-    <h2>{{ __('feedback.title') }} <x-hint-toggle key="settings.feedback" /></h2>
-    <x-hint key="settings.feedback">{{ __('feedback.settings_hint') }}</x-hint>
+    <h2>{{ __('feedback.title') }}</h2>
+    <p class="muted">{{ __('feedback.settings_hint') }}</p>
     <p><a class="btn" href="{{ route('account.feedback') }}">{{ __('feedback.link') }} …</a></p>
 </section>
 
 @if ($user->hasBeerAccount())
     <section class="card">
-        <h2>{{ __('account.leave') }} <x-hint-toggle key="settings.leave" /></h2>
-        <x-hint key="settings.leave">{{ __('account.leave_settings_hint') }}</x-hint>
+        <h2>{{ __('account.leave') }}</h2>
+        <p class="muted">{{ __('account.leave_settings_hint') }}</p>
         <p><a class="btn danger" href="{{ route('account.leave') }}">{{ __('account.leave') }} …</a></p>
     </section>
 @endif

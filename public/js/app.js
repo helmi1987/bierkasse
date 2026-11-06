@@ -42,48 +42,6 @@
         }
     });
 
-    // Help toggles (1.33.1, <x-hint-toggle> + <x-hint>): the info button opens/closes the text it controls
-    // (aria-controls) and the state is remembered per account (POST to data-hints-url on <body>, only present when
-    // logged in). Failures are ignored: the hint still opens/closes, it is just not remembered. preventDefault and
-    // stopPropagation keep a click inside a card's <summary> from toggling the card.
-    document.addEventListener('click', function (e) {
-        var button = e.target.closest ? e.target.closest('[data-hint-toggle]') : null;
-        if (!button) {
-            return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-        var text = document.getElementById(button.getAttribute('aria-controls'));
-        if (!text) {
-            return;
-        }
-        var open = text.hidden;
-        text.hidden = !open;
-        button.setAttribute('aria-expanded', open ? 'true' : 'false');
-        var url = document.body.dataset.hintsUrl;
-        var token = document.body.dataset.hintsToken;
-        if (!url || !token || !window.fetch || !window.URLSearchParams) {
-            return;
-        }
-        var body = new URLSearchParams();
-        body.append('key', button.dataset.hintToggle);
-        body.append('open', open ? '1' : '0');
-        window.fetch(url, {
-            method: 'POST',
-            body: body,
-            headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': token },
-            credentials: 'same-origin',
-        }).catch(function () {});
-    });
-
-    // Enter/Space on a help toggle inside a <summary> must not reach the summary (capture phase;
-    // the button's own click still fires as its default action).
-    document.addEventListener('keydown', function (e) {
-        if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-hint-toggle]')) {
-            e.stopPropagation();
-        }
-    }, true);
-
     // Back/forward cache: re-enable forms that were submitted before.
     window.addEventListener('pageshow', function () {
         document.querySelectorAll('form[data-submitted]').forEach(function (form) {

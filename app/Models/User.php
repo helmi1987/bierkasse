@@ -66,7 +66,6 @@ class User extends Authenticatable
             'must_change_password' => 'boolean',
             'admin_only' => 'boolean',
             'nav_order' => 'array',
-            'open_hints' => 'array',
             'last_login_at' => 'datetime',
             'left_at' => 'datetime',
             'consent_accepted_at' => 'datetime',

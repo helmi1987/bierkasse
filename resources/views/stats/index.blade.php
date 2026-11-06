@@ -6,7 +6,7 @@
 <h1>{{ __('stats.title') }}</h1>
 
 {{-- Period filter (1.30.0): everything below follows it, except the fixed comparison KPIs. --}}
-@include('stats._period', ['period' => $period, 'hintKey' => 'stats.period_custom'])
+@include('stats._period', ['period' => $period])
 
 {{-- Parts switched in Admin > Einstellungen > Funktionen (1.29.0). --}}
 @if ($nothing)
@@ -37,7 +37,7 @@
     @endif
     @if ($show['ranking'])
         <section class="card">
-            <h2>{{ __('stats.ranking') }} <x-hint-toggle key="stats.ranking" /></h2>
+            <h2>{{ __('stats.ranking') }}</h2>
             @if (empty($stats['ranking']))
                 <p class="muted">{{ __('stats.ranking_empty') }}</p>
             @else
@@ -53,7 +53,7 @@
                     @endforeach
                 </ol>
             @endif
-            <x-hint key="stats.ranking">{{ __('stats.ranking_hint') }}</x-hint>
+            <p class="hint">{{ __('stats.ranking_hint') }}</p>
         </section>
     @endif
 </div>
@@ -61,9 +61,9 @@
 
 @if ($disposalRanking !== null)
     <section class="card" data-testid="stats-disposal-ranking">
-        <h2>{{ __('disposal.ranking') }} <x-hint-toggle key="stats.disposal_ranking" /></h2>
+        <h2>{{ __('disposal.ranking') }}</h2>
         @include('disposals._ranking', ['ranking' => $disposalRanking])
-        <x-hint key="stats.disposal_ranking">{{ __('disposal.ranking_hint') }}</x-hint>
+        <p class="hint">{{ __('disposal.ranking_hint') }}</p>
     </section>
 @endif
 @endsection

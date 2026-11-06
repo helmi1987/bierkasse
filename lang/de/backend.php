@@ -9,6 +9,7 @@ return [
         'users' => 'Benutzer',
         'bookings' => 'Buchungen',
         'stats' => 'Statistik',
+        'disposals' => 'Entsorgung',
         'qr' => 'QR-Codes',
         'audit' => 'Protokoll',
         'settings' => 'Einstellungen',

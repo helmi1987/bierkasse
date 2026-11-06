@@ -127,8 +127,10 @@ return [
     'theme_dark' => 'Dunkel',
     'profile_saved' => 'Profil gespeichert.',
     'stats_heading' => 'Statistik',
-    'stats_show' => 'In Statistik anzeigen',
-    'stats_hint' => 'Aus: Dein Name erscheint nirgends für andere; in der Rangliste stehst du als «Anonym n».',
+    'stats_show' => 'Name in Statistik Konsum zeigen',
+    'stats_hint' => 'Gilt nur für die Bier-Statistik. Aus: Dein Name erscheint dort nirgends für andere; in der Rangliste stehst du als «Anonym n».',
+    'disposal_stats_show' => 'Name in Statistik Entsorgung zeigen',
+    'disposal_stats_hint' => 'Aus: In der Rangliste der Entsorgungen stehst du als «Anonym n».',
     'stats_saved' => 'Gespeichert.',
 
     'recovery_heading' => 'Wiederherstellungscodes',

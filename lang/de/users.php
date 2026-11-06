@@ -20,6 +20,7 @@ return [
     'role_email_required' => 'Rolle Kassier/Admin nur mit E-Mail-Adresse. Der Benutzer muss sie zuerst im Profil eintragen.',
     'totp' => 'TOTP',
     'stats_opt_out' => 'Nicht in Statistik',
+    'disposal_stats_opt_out' => 'Nicht in Statistik Entsorgung',
     'last_login' => 'Letzte Anmeldung',
     'personal_sso' => 'Eigener Anbieter: :name (:host)',
 

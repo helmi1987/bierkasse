@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\AuditLog;
 use App\Models\CashEntry;
+use App\Models\Disposal;
 use App\Models\Feedback;
 use App\Models\GuestSale;
 use App\Models\Invitation;
@@ -36,14 +37,15 @@ class AuditPresenter
     ];
 
     /** Value keys holding user ids (int or list of int). */
-    private const USER_KEYS = ['user_id', 'created_by', 'confirmed_by', 'booked_by', 'used_by', 'recipients', 'locked_by'];
+    private const USER_KEYS = ['user_id', 'created_by', 'confirmed_by', 'booked_by', 'used_by', 'recipients', 'locked_by', 'reported_by', 'withdrawn_by'];
 
     /** Value keys holding a date (Y-m-d) or a date and time. */
-    private const DATE_KEYS = ['date', 'expires_at', 'confirmed_at', 'edited_at', 'left_at', 'used_at', 'last_login_at', 'discovered_at'];
+    private const DATE_KEYS = ['date', 'expires_at', 'confirmed_at', 'edited_at', 'left_at', 'used_at', 'last_login_at', 'discovered_at', 'disposal_enabled_at'];
 
     /** Subject types (class basename as stored) that are resolved to a name. */
     private const SUBJECT_CLASSES = [
         'CashEntry' => CashEntry::class,
+        'Disposal' => Disposal::class,
         'Feedback' => Feedback::class,
         'GuestSale' => GuestSale::class,
         'Invitation' => Invitation::class,
@@ -97,7 +99,7 @@ class AuditPresenter
         foreach ($ids as $type => $set) {
             $class = self::SUBJECT_CLASSES[$type];
             $subjects[$type] = $class::query()->whereKey(array_keys($set))->get()->keyBy(fn (Model $m) => (int) $m->getKey())->all();
-            if ($type === 'Transaction' || $type === 'UserIdentity') {
+            if ($type === 'Transaction' || $type === 'UserIdentity' || $type === 'Disposal') {
                 foreach ($subjects[$type] as $m) {
                     $userIds[(int) $m->user_id] = true;
                 }
@@ -161,6 +163,7 @@ class AuditPresenter
             $m instanceof QrCode => self::typeLabel('QrCode').' '.$m->displayName(),
             $m instanceof RegistrationCode, $m instanceof SsoProvider => self::typeLabel($e->subject_type).' '.($m->label ?? $m->name),
             $m instanceof UserIdentity => self::typeLabel('UserIdentity').' · '.$this->userLabel((int) $m->user_id),
+            $m instanceof Disposal => self::typeLabel('Disposal').' · '.$this->userLabel((int) $m->user_id),
             default => $fallback,
         };
 

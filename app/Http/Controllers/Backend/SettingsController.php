@@ -39,7 +39,8 @@ class SettingsController extends Controller
             'defaultLimit' => Money::plain(AppSettings::defaultLimit()),
             'appName' => (string) AppSettings::get(AppSettings::APP_NAME, ''),
             'copyright' => AppSettings::copyright(),
-            'undoMinutes' => array_map(fn (string $kind) => AppSettings::undoMinutes($kind), array_combine(array_keys(AppSettings::UNDO_DEFAULTS), array_keys(AppSettings::UNDO_DEFAULTS))),
+            // Without "disposal": edited on the page "Entsorgung".
+            'undoMinutes' => array_map(fn (string $kind) => AppSettings::undoMinutes($kind), array_combine(AppSettings::ADMIN_UNDO_KINDS, AppSettings::ADMIN_UNDO_KINDS)),
             'twintRecipients' => AppSettings::twintRecipients(),
             'twintEnabled' => AppSettings::twintSwitch(),
             'twintMessage' => AppSettings::twintMessageTemplate(),
@@ -180,7 +181,7 @@ class SettingsController extends Controller
             'default_limit' => ['required', 'string', 'max:10'],
             'app_name' => ['nullable', 'string', 'max:60'],
             'copyright' => ['nullable', 'string', 'max:'.AppSettings::COPYRIGHT_MAX],
-            'undo_minutes' => ['nullable', 'array:'.implode(',', array_keys(AppSettings::UNDO_DEFAULTS))],
+            'undo_minutes' => ['nullable', 'array:'.implode(',', AppSettings::ADMIN_UNDO_KINDS)],
             'undo_minutes.*' => ['required', 'integer', 'between:0,'.AppSettings::UNDO_MAX],
             'twint' => ['nullable', 'array', 'max:'.AppSettings::TWINT_MAX],
             'twint.*.name' => ['nullable', 'string', 'max:100'],
@@ -234,6 +235,7 @@ class SettingsController extends Controller
             AppSettings::DEFAULT_LIMIT => $limit,
             AppSettings::APP_NAME => trim((string) ($data['app_name'] ?? '')),
             AppSettings::COPYRIGHT => trim((string) ($data['copyright'] ?? '')),
+            // All kinds: "disposal" is not in the form and keeps its stored value.
             AppSettings::UNDO_MINUTES => array_map(fn (string $kind) => (int) ($data['undo_minutes'][$kind] ?? AppSettings::undoMinutes($kind)), array_combine(array_keys(AppSettings::UNDO_DEFAULTS), array_keys(AppSettings::UNDO_DEFAULTS))),
             AppSettings::TWINT_RECIPIENTS => $twint,
             AppSettings::TWINT_ENABLED => $request->boolean('twint_enabled'),

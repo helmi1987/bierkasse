@@ -174,9 +174,47 @@ class AppSettings
     /** Undo windows in minutes per booking kind (admin settings). */
     public const UNDO_MINUTES = 'undo_minutes';
 
-    public const UNDO_DEFAULTS = ['consume' => 10, 'round' => 10, 'guest' => 10, 'gift' => 5];
+    public const UNDO_DEFAULTS = ['consume' => 10, 'round' => 10, 'guest' => 10, 'gift' => 5, 'disposal' => 10];
+
+    /** Undo kinds edited in Admin > Einstellungen ("disposal" is edited on the page "Entsorgung"). */
+    public const ADMIN_UNDO_KINDS = ['consume', 'round', 'guest', 'gift'];
 
     public const UNDO_MAX = 60;
+
+    /** "Entsorgungsbonus" (1.32.0, kassier page "Entsorgung"): on/off. */
+    public const DISPOSAL_ENABLED = 'disposal_enabled';
+
+    /** Set to now() whenever the switch goes from off to on ("restart"): earlier disposals are ignored. */
+    public const DISPOSAL_ENABLED_AT = 'disposal_enabled_at';
+
+    /** Bonus mode, one of DISPOSAL_MODES: fixed number of beers or a random draw 1..DISPOSAL_RANDOM_MAX. */
+    public const DISPOSAL_MODE = 'disposal_mode';
+
+    public const DISPOSAL_MODE_FIXED = 'fixed';
+
+    public const DISPOSAL_MODE_RANDOM = 'random';
+
+    public const DISPOSAL_MODES = [self::DISPOSAL_MODE_FIXED, self::DISPOSAL_MODE_RANDOM];
+
+    public const DISPOSAL_FIXED = 'disposal_fixed';
+
+    public const DISPOSAL_RANDOM_MAX = 'disposal_random_max';
+
+    /** Bonus beers per disposal: 1..DISPOSAL_BEERS_MAX (fixed number and random maximum). */
+    public const DISPOSAL_BEERS_MAX = 20;
+
+    /** Global lock after a disposal in days (0 = none). */
+    public const DISPOSAL_LOCK_DAYS = 'disposal_lock_days';
+
+    public const DISPOSAL_LOCK_DAYS_MAX = 365;
+
+    /** Beers that must have left the stock since the last disposal (0 = none). */
+    public const DISPOSAL_MIN_BEERS = 'disposal_min_beers';
+
+    public const DISPOSAL_MIN_BEERS_MAX = 1000;
+
+    /** Public disposal ranking on "/statistik" (default off). */
+    public const DISPOSAL_RANKING_PUBLIC = 'disposal_ranking_public';
 
     /** Preselected deposit proposal in Rappen; null = first proposal. */
     public const DEPOSIT_DEFAULT = 'deposit_suggestion_default';
@@ -501,6 +539,58 @@ class AppSettings
         $default = $kind === 'gift' ? self::get(self::GIFT_UNDO_MINUTES, self::UNDO_DEFAULTS['gift']) : self::UNDO_DEFAULTS[$kind];
 
         return max(0, min(self::UNDO_MAX, (int) ($stored[$kind] ?? $default)));
+    }
+
+    /** "Entsorgungsbonus" is switched on (default off). */
+    public static function disposalEnabled(): bool
+    {
+        return (bool) self::get(self::DISPOSAL_ENABLED, false);
+    }
+
+    /** Time of the last switch-on ("restart"); null when never switched on or unreadable. */
+    public static function disposalEnabledAt(): ?Carbon
+    {
+        $value = self::get(self::DISPOSAL_ENABLED_AT);
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+        try {
+            return Carbon::parse($value)->setTimezone((string) config('app.timezone'));
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    public static function disposalMode(): string
+    {
+        $mode = self::get(self::DISPOSAL_MODE, self::DISPOSAL_MODE_FIXED);
+
+        return in_array($mode, self::DISPOSAL_MODES, true) ? $mode : self::DISPOSAL_MODE_FIXED;
+    }
+
+    public static function disposalFixed(): int
+    {
+        return max(1, min(self::DISPOSAL_BEERS_MAX, (int) self::get(self::DISPOSAL_FIXED, 1)));
+    }
+
+    public static function disposalRandomMax(): int
+    {
+        return max(1, min(self::DISPOSAL_BEERS_MAX, (int) self::get(self::DISPOSAL_RANDOM_MAX, 3)));
+    }
+
+    public static function disposalLockDays(): int
+    {
+        return max(0, min(self::DISPOSAL_LOCK_DAYS_MAX, (int) self::get(self::DISPOSAL_LOCK_DAYS, 7)));
+    }
+
+    public static function disposalMinBeers(): int
+    {
+        return max(0, min(self::DISPOSAL_MIN_BEERS_MAX, (int) self::get(self::DISPOSAL_MIN_BEERS, 24)));
+    }
+
+    public static function disposalRankingPublic(): bool
+    {
+        return (bool) self::get(self::DISPOSAL_RANKING_PUBLIC, false);
     }
 
     /** Minimum beer stock (low-stock mail and warning); 0 = off. */

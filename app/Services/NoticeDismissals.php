@@ -19,9 +19,15 @@ class NoticeDismissals
         return DB::table('notice_dismissals')->where('user_id', $user->id)->select('transaction_id');
     }
 
-    /** Transactions the user may get a notice for: his gift recipient row or a round that contains a beer for him. */
+    /**
+     * Transactions the user may get a notice for: his gift recipient row, a round that contains a beer for him
+     * or his disposal bonus.
+     */
     public static function isNoticeFor(User $user, Transaction $tx): bool
     {
+        if ($tx->type === Transaction::TYPE_DISPOSAL) {
+            return $tx->user_id === $user->id;
+        }
         if ($tx->type === Transaction::TYPE_GIFT) {
             return $tx->parent_id !== null && $tx->user_id === $user->id;
         }

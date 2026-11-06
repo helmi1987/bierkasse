@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Disposals;
 use App\Services\Stats;
 use App\Support\AppSettings;
 use App\Support\BarChart;
@@ -42,6 +43,8 @@ class StatsController extends Controller
             // Only the charts that are shown are rendered.
             'courseChart' => $show['months'] ? BarChart::render(array_column($stats['course'], 'label'), array_column($stats['course'], 'beers'), $period->chartTitle()) : null,
             'weekdayChart' => $show['weekdays'] ? BarChart::render(array_column($stats['weekdays'], 'label'), array_column($stats['weekdays'], 'beers'), __('stats.chart_weekdays')) : null,
+            // "Rangliste Entsorgungen" (1.32.0): all time, only if public, the feature is on and the ranking is shown.
+            'disposalRanking' => $show['ranking'] && AppSettings::disposalRankingPublic() && Disposals::isEnabled() ? Disposals::ranking() : null,
             'nothing' => ! ($show['totals'] || $show['months'] || $show['weekdays'] || $show['ranking']),
         ];
     }

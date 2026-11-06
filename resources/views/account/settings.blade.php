@@ -122,6 +122,15 @@
         <p class="hint">{{ __('account.stats_hint') }}</p>
         <button type="submit" class="btn small" data-hide-js>{{ __('account.save') }}</button>
     </form>
+    <form method="post" action="{{ route('account.disposal-stats') }}" class="stack" data-testid="disposal-stats-form">
+        @csrf
+        <label class="switch">
+            <input type="checkbox" name="show" value="1" @checked(! $user->disposal_stats_opt_out) data-autosubmit>
+            <span>{{ __('account.disposal_stats_show') }}</span>
+        </label>
+        <p class="hint">{{ __('account.disposal_stats_hint') }}</p>
+        <button type="submit" class="btn small" data-hide-js>{{ __('account.save') }}</button>
+    </form>
 </section>
 
 @endif

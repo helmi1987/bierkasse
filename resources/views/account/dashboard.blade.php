@@ -28,6 +28,13 @@
         @include('account.notice-dismiss', ['transaction' => $gift])
     </div>
 @endforeach
+@foreach ($disposalsBooked as $bonus)
+    {{-- "Entsorgungsbonus" booked for the user in the last day. --}}
+    <div class="alert ok round-notice" data-testid="disposal-notice">
+        <span>{{ trans_choice('disposal.notice', $bonus->quantity, ['count' => $bonus->quantity]) }}</span>
+        @include('account.notice-dismiss', ['transaction' => $bonus])
+    </div>
+@endforeach
 @foreach ($roundsReceived as $round)
     {{-- A colleague paid the user a beer in the last days ("Runde spendieren"). --}}
     <div class="alert ok round-notice" data-testid="round-notice">
@@ -289,6 +296,36 @@
     </section>
 @endif
 
+@if ($disposalCanReport || $disposalPending)
+    {{-- "Entsorgungsbonus": only while a report is possible or the own one is pending; never a number or a reason. --}}
+    <section class="card" data-testid="disposal">
+        <h2>{{ __('disposal.heading') }}</h2>
+        @if ($disposalPending)
+            <p data-testid="disposal-registered">{{ __('disposal.registered') }}</p>
+            @if ($disposalPending->isWithdrawable($user))
+                <div class="undo-group" data-undo-group>
+                    <ul class="undo-list">
+                        <li data-expires="{{ $disposalPending->bookingAt()->getTimestampMs() }}">
+                            <span>{{ local_time($disposalPending->reported_at, 'H:i') }}</span>
+                            <form method="post" action="{{ route('account.disposal.withdraw', $disposalPending) }}" class="inline">
+                                @csrf
+                                <button type="submit" class="btn small ghost" data-testid="disposal-withdraw">{{ __('disposal.withdraw') }}</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            @endif
+        @else
+            <p class="muted">{{ __('disposal.intro') }}</p>
+            <form method="post" action="{{ route('account.disposal.report') }}">
+                @csrf
+                {!! \App\Support\FormToken::field('disposal') !!}
+                <button type="submit" class="btn primary big">{{ __('disposal.report') }}</button>
+            </form>
+        @endif
+    </section>
+@endif
+
 <section class="card" data-testid="deposit">
     <details @if ($errors->hasAny(['amount', 'method', 'note']) || old('amount')) open @endif>
     <summary><h2>{{ __('account.deposit_heading') }}</h2></summary>
@@ -425,6 +462,9 @@
             @endif
             @if ($stats['gift_received'] > 0)
                 <div class="kpi" data-testid="gift-received"><span>{{ __('gift.received_kpi') }}</span><strong>{{ $stats['gift_received'] }}</strong></div>
+            @endif
+            @if ($stats['disposals']['count'] > 0)
+                <div class="kpi" data-testid="disposals"><span>{{ __('disposal.kpi') }}</span><strong>{{ $stats['disposals']['count'] }}</strong><small>{{ trans_choice('disposal.kpi_beers', $stats['disposals']['beers'], ['count' => $stats['disposals']['beers']]) }}</small></div>
             @endif
         </div>
         @include('stats._compare', ['comparison' => $comparison])

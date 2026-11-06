@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use App\Models\Disposal;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\AppSettings;
@@ -343,11 +344,11 @@ class Ledger
         BeerStock::rearm();
     }
 
-    /** Bookings a kassier/admin can cancel (storno): beers, rounds and given gifts, confirmed. */
+    /** Bookings a kassier/admin can cancel (storno): beers, rounds, given gifts and disposal bonuses, confirmed. */
     public static function canStorno(Transaction $tx): bool
     {
         return $tx->status === Transaction::STATUS_CONFIRMED
-            && (in_array($tx->type, Transaction::BEER_TYPES, true) || $tx->isGiftGiven());
+            && (in_array($tx->type, Transaction::BEER_TYPES, true) || $tx->isGiftGiven() || $tx->type === Transaction::TYPE_DISPOSAL);
     }
 
     /**
@@ -394,11 +395,15 @@ class Ledger
             } elseif ($locked->type === Transaction::TYPE_GIFT) {
                 $old['recipients'] = $locked->giftParts()->pluck('user_id')->all();
                 $locked->giftParts()->delete();
+            } elseif ($locked->type === Transaction::TYPE_DISPOSAL) {
+                // The disposal stays "booked" (it happened), only its credit row is gone.
+                Disposal::query()->where('transaction_id', $locked->id)->update(['transaction_id' => null]);
             }
             $locked->delete();
             $action = match ($locked->type) {
                 Transaction::TYPE_ROUND => 'round.storno',
                 Transaction::TYPE_GIFT => 'gift.storno',
+                Transaction::TYPE_DISPOSAL => 'disposal.storno',
                 default => 'consume.storno',
             };
             Audit::log($action, $locked, $old, ['note' => $note, 'user_id' => $locked->user_id], $by);

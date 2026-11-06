@@ -10,6 +10,8 @@
         <span class="tx-note">{{ __('gift.tx_to', ['names' => \App\Services\Gifts::recipientsText($tx)]) }}</span>
     @elseif ($tx->type === 'gift')
         {{ trans_choice('gift.tx_received', (int) $tx->quantity, ['count' => $tx->quantity, 'giver' => $tx->giftParent?->user?->displayName() ?? '?']) }}
+    @elseif ($tx->type === 'disposal')
+        {{ trans_choice('disposal.tx_label', (int) $tx->quantity, ['count' => $tx->quantity, 'price' => chf((int) $tx->unit_price)]) }}
     @elseif ($tx->type === 'carryover')
         {{ __('ledger.type.carryover') }}@if ($tx->quantity && $tx->unit_price) · {{ trans_choice('ledger.beers', $tx->quantity, ['count' => $tx->quantity, 'price' => chf((int) $tx->unit_price)]) }}@endif
     @else

@@ -30,6 +30,9 @@
    Laravel-Scheduler verschickt aber täglich um 08:00 die Erinnerungen zum Ablauf der SSO-Client-Secrets
    (`sso:secret-reminders`, siehe "SSO-Anbieter einrichten"). Plesk "Geplante Aufgaben", jede Minute
    `php -d open_basedir= artisan schedule:run` im Projektordner.
+   Seit 1.32.0 bucht der Scheduler damit auch jede Minute die fälligen Entsorgungsboni (`disposals:book`). Läuft der
+   Cron nicht, holen Seitenaufrufe das nach (höchstens einmal pro Minute); die Buchung kommt dann erst mit dem
+   nächsten Aufruf.
 6. Setup:
    - `bootstrap/ensure-env.php` wird nur von `public/index.php` geladen, also erst beim ersten
      Web-Aufruf. Dabei entstehen `.env` (aus `.env.example`, mit generiertem `APP_KEY`) und das

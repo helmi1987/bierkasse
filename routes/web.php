@@ -91,6 +91,9 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/konto/gast/{sale}/rueckgaengig', [AccountController::class, 'undoGuest'])->whereNumber('sale')->name('account.guest.undo');
             Route::post('/konto/runde', [AccountController::class, 'round'])->middleware('throttle:20,1')->name('account.round');
             Route::post('/konto/verschenken', [AccountController::class, 'gift'])->middleware('throttle:20,1')->name('account.gift');
+            // "Entsorgungsbonus" (1.32.0): report the empties as taken out, withdraw inside the window.
+            Route::post('/konto/entsorgung', [AccountController::class, 'reportDisposal'])->middleware('throttle:10,1')->name('account.disposal.report');
+            Route::post('/konto/entsorgung/{disposal}/zurueckziehen', [AccountController::class, 'withdrawDisposal'])->whereNumber('disposal')->middleware('throttle:20,1')->name('account.disposal.withdraw');
             Route::post('/konto/hinweis/{transaction}', [AccountController::class, 'dismissNotice'])->whereNumber('transaction')->middleware('throttle:60,1')->name('account.notice.dismiss');
             Route::post('/konto/favorit/{list}/{colleague}', [AccountController::class, 'toggleFavorite'])->whereNumber('colleague')->middleware('throttle:60,1')->name('account.favorite');
             Route::post('/konto/einzahlung', [AccountController::class, 'deposit'])->middleware('throttle:10,1')->name('account.deposit');
@@ -115,6 +118,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::delete('/konto/navigation', [AccountSettingsController::class, 'navReset'])->middleware('role:kassier')->name('account.nav.reset');
         Route::put('/konto/passwort', [AccountSettingsController::class, 'password'])->name('account.password');
         Route::post('/konto/statistik', [AccountSettingsController::class, 'stats'])->name('account.stats');
+        Route::post('/konto/statistik-entsorgung', [AccountSettingsController::class, 'disposalStats'])->name('account.disposal-stats');
         Route::post('/konto/nur-verwaltung', [AccountSettingsController::class, 'adminOnly'])->name('account.admin-only');
         Route::post('/konto/totp', [AccountSettingsController::class, 'enableTotp'])->name('account.totp.enable');
         Route::post('/konto/totp/neu', [AccountSettingsController::class, 'restartTotp'])->name('account.totp.restart');
@@ -189,6 +193,12 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             // Backend statistics (1.31.0, read-only; until 1.30 /admin/statistik redirected to /statistik).
             Route::get('/statistik', [Backend\StatsController::class, 'index'])->name('stats');
             Route::get('/statistik/export', [Backend\StatsController::class, 'export'])->name('stats.export');
+
+            // "Entsorgungsbonus" (1.32.0): guide, settings, status, report for a user, list.
+            Route::get('/entsorgung', [Backend\DisposalController::class, 'index'])->name('disposals');
+            Route::put('/entsorgung/einstellungen', [Backend\DisposalController::class, 'settings'])->name('disposals.settings');
+            Route::post('/entsorgung', [Backend\DisposalController::class, 'report'])->middleware('throttle:20,1')->name('disposals.report');
+            Route::post('/entsorgung/{disposal}/zurueckziehen', [Backend\DisposalController::class, 'withdraw'])->whereNumber('disposal')->name('disposals.withdraw');
 
             // Audit log (tab "Fassungen" = legal text revisions, ?tab=fassungen; Livewire component).
             // Read-only: no route changes or deletes entries.

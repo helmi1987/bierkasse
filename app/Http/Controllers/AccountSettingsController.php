@@ -112,6 +112,15 @@ class AccountSettingsController extends Controller
         return back()->with('status', __('account.stats_saved'));
     }
 
+    /** "Name in Statistik Entsorgung zeigen" (1.32.0): own switch for the disposal ranking, separate from stats(). */
+    public function disposalStats(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        Audit::save('user.settings', $user->forceFill(['disposal_stats_opt_out' => ! $request->boolean('show')]));
+
+        return back()->with('status', __('account.stats_saved'));
+    }
+
     /** "Nur Verwaltung" on/off for the own account (kassiers and admins only). */
     public function adminOnly(Request $request): RedirectResponse
     {

@@ -33,6 +33,8 @@ class Audit
      * @param  array<string, mixed>  $old  Only changed fields
      * @param  array<string, mixed>  $new  Only changed fields
      * @param  User|null  $actor  Default: the logged-in user (null = system / guest)
+     * @param  string|null  $actorName  Name of a non-user actor (e.g. "cli", "System"); with $actor null the
+     *                                  logged-in user is then not taken (background work during a page view)
      */
     public static function log(
         string $action,
@@ -42,7 +44,9 @@ class Audit
         ?User $actor = null,
         ?string $actorName = null,
     ): void {
-        $actor ??= Auth::user();
+        if ($actor === null && $actorName === null) {
+            $actor = Auth::user();
+        }
         $request = app()->runningInConsole() && ! app()->runningUnitTests() ? null : request();
 
         $entry = [

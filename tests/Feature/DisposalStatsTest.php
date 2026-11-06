@@ -168,7 +168,7 @@ class DisposalStatsTest extends TestCase
         $this->assertSame('Bea Bierscheu', $ranking[1]['name']);
 
         $page = $this->actingAs($viewer)->get('/statistik')->assertOk()->assertDontSee('Heiri')->getContent();
-        $this->assertMatchesRegularExpression('/data-testid="disposal-ranking">\s*<li class="rank-1">\s*<span class="rank">1<\/span>\s*<span class="name">Anonym 1<\/span>/', $page);
+        $this->assertMatchesRegularExpression('/data-testid="disposal-ranking">(?:\s|<!--\[if \w+\]><!\[endif\]-->)*<li class="rank-1">\s*<span class="rank">1<\/span>\s*<span class="name">Anonym 1<\/span>/', $page);
         $this->assertStringContainsString('<span class="name">Bea Bierscheu</span>', $page);
         // Beer ranking: Bea is anonymous there (stats_opt_out), but named in the disposal ranking.
         $this->assertSame('Anonym 1', Stats::global()['ranking'][0]['name']);
@@ -245,7 +245,7 @@ class DisposalStatsTest extends TestCase
         $this->assertTrue($user->fresh()->disposal_stats_opt_out);
 
         $page = $this->actingAs($viewer)->get('/statistik')->assertOk()->assertDontSee('Heiri')->getContent();
-        $this->assertMatchesRegularExpression('/data-testid="disposal-ranking">\s*<li class="rank-1">\s*<span class="rank">1<\/span>\s*<span class="name">Anonym 1<\/span>/', $page);
+        $this->assertMatchesRegularExpression('/data-testid="disposal-ranking">(?:\s|<!--\[if \w+\]><!\[endif\]-->)*<li class="rank-1">\s*<span class="rank">1<\/span>\s*<span class="name">Anonym 1<\/span>/', $page);
     }
 
     public function test_backend_unchanged_while_feature_off(): void

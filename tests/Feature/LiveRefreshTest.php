@@ -57,10 +57,11 @@ class LiveRefreshTest extends TestCase
     public function test_logged_in_pages_carry_live_markers_and_render_for_live_requests(): void
     {
         $user = $this->user();
-        $this->actingAs($user);
+        $this->actingAs($this->kassier());
 
-        // The dashboard is a Livewire page since 1.34.0 (polls itself); the statistics page still uses the live refresh.
-        $response = $this->get('/statistik', ['X-Live-Refresh' => '1'])->assertOk()
+        // The user pages are Livewire pages since 1.34.0/1.35.0 (poll themselves); classic admin pages like the
+        // stock still use the live refresh.
+        $response = $this->get('/admin/lager', ['X-Live-Refresh' => '1'])->assertOk()
             ->assertSee('data-live="'.route('live', [], false).'"', false)
             ->assertSee('data-live-fp="'.LiveFingerprint::current().'"', false)
             ->assertSee('data-live-assets="'.AssetVersion::current().'"', false)
@@ -68,7 +69,7 @@ class LiveRefreshTest extends TestCase
             ->assertSee('js/live.js', false)
             ->assertSee('id="main"', false)
             ->assertSee('data-live-keep="alerts"', false)
-            ->assertSee('data-testid="stats-total"', false);
+            ->assertSee('name="counted"', false);
         $this->assertStringContainsString('text/html', (string) $response->headers->get('Content-Type'));
 
         $kassier = $this->kassier();
@@ -90,11 +91,11 @@ class LiveRefreshTest extends TestCase
     {
         $this->get('/')->assertOk()->assertDontSee('data-live="', false)->assertSee('<meta name="server-now"', false);
 
-        $this->actingAs($this->user());
-        $this->post('/konto/feedback', $this->tokened('feedback', ['message' => 'x']))->assertSessionHasErrors('message');
+        $this->actingAs($this->kassier());
+        $this->from('/admin/lager')->put('/admin/lager/mindestbestand', ['minimum' => '-1'])->assertSessionHasErrors('minimum');
         // Page after the validation error keeps old input: no live swap for this view.
-        $this->get('/konto/feedback')->assertOk()->assertDontSee('data-live="', false);
-        $this->get('/konto/feedback')->assertOk()->assertSee('data-live="', false);
+        $this->get('/admin/lager')->assertOk()->assertDontSee('data-live="', false);
+        $this->get('/admin/lager')->assertOk()->assertSee('data-live="', false);
     }
 
     public function test_undo_items_carry_their_expiry_in_server_time(): void
@@ -134,15 +135,16 @@ class LiveRefreshTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_live_refresh_is_off_while_totp_setup_secret_is_shown(): void
+    public function test_live_refresh_is_off_on_the_settings_page(): void
     {
+        // Off since 1.35.0 in any case (nothing there is changed by others), with and without the TOTP setup secret.
         $user = $this->user();
         $this->actingAs($user)->get('/konto/einstellungen')->assertOk()
             ->assertSee('totp-setup', false)
             ->assertDontSee('data-live="', false);
 
         $this->actingAs($this->withTotp($this->user(['username' => 'anna'])))->get('/konto/einstellungen')->assertOk()
-            ->assertSee('data-live="', false);
+            ->assertDontSee('data-live="', false);
     }
 
     public function test_live_refresh_is_off_on_sso_provider_form(): void
@@ -154,14 +156,14 @@ class LiveRefreshTest extends TestCase
     public function test_fingerprint_is_taken_before_the_page_content(): void
     {
         $user = $this->user();
-        $this->actingAs($user);
+        $this->actingAs($this->kassier());
         $start = LiveFingerprint::current();
 
         // A change while the page is being built must not be hidden by the rendered fingerprint.
-        View::composer('stats.index', function () use ($user) {
+        View::composer('backend.stock', function () use ($user) {
             Ledger::reportDeposit($user, 500, 'cash');
         });
-        $html = $this->get('/statistik')->getContent();
+        $html = $this->get('/admin/lager')->getContent();
         preg_match('/data-live-fp="([^"]+)"/', $html, $m);
         $this->assertSame($start, $m[1]);
         $this->assertNotSame(LiveFingerprint::current(), $m[1]);

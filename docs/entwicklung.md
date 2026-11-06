@@ -542,7 +542,9 @@
   ist reserviert (Registrierung und Setup, Gross-/Kleinschreibung egal; `UserRules::RESERVED_USERNAMES`).
   Benutzername-Eingabe bei Registrierung/Setup ist gross-/kleinschreibungsunabhängig, gespeichert wird klein.
 - Live-Aktualisierung (Entscheid 2026-10-23): alle Seiten für angemeldete Benutzer (Konto, Kassier, Admin,
-  Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Keine Websockets:
+  Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Seit 1.34.0/1.35.0 sind
+  die Benutzerseiten Livewire-Komponenten, die sich selbst aktualisieren (siehe Livewire); `live.js` bedient nur noch die
+  übrigen klassischen Kassier- und Admin-Seiten. Keine Websockets:
   `public/js/live.js` fragt alle 10 Sekunden `/live` ab (JSON `fp`, `App\Support\LiveFingerprint`: eine Abfrage mit
   MAX(id)/COUNT/MAX(updated_at) der relevanten Tabellen, global für alle). Nur wenn sich `fp` geändert hat (oder alle
   5 Minuten), wird die aktuelle Seite mit Header `X-Live-Refresh` neu geladen und die geänderten direkten Kinder von
@@ -606,6 +608,11 @@
     auf dem `<details>` (offen bleibt offen), `wire:ignore` auf dem Bearbeiten-Formular. Livewire setzt in Komponenten-
     Ansichten Morph-Marker (`<!--[if BLOCK]>…`) um Blade-Bedingungen; Tests, die Text über eine Bedingung hinweg prüfen,
     prüfen die Teile einzeln. Fehlt dem Konto das Bierkonto, antwortet die Komponente mit 403.
+  - Benutzerseiten (1.35.0): Statistik `/statistik` (`App\Livewire\Stats`, Zeitraum als Eigenschaften, ganze Komponente
+    rendert bei geändertem Fingerprint neu, Datumsformular `wire:ignore`), Verlauf `/konto/verlauf` (`Account\History`,
+    `WithPagination`, Seite in der URL), Konto verlassen (`Account\Leave`, Insel `status` für Saldo/Sperre, Formular
+    statisch). Ohne Live-Aktualisierung (nichts, was andere ändern): Einstellungen, Feedback, Einladen, Rechtliches
+    (`@section('live_off')`).
   - Livewire-Aktionen sind öffentliche Endpunkte: jede Komponente prüft bei jeder Anfrage die Rolle
     (`App\Livewire\Concerns\AuthorizesAdminArea`, Boot-Hook) und Admin-Aktionen zusätzlich `authorizeAdmin()`. Die
     Admin-Formulare auf der QR-Seite senden an die bisherigen `role:admin`-Routen.

@@ -7,7 +7,6 @@ use App\Services\Stats;
 use App\Support\AppSettings;
 use App\Support\BarChart;
 use App\Support\StatsPeriod;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
@@ -17,12 +16,13 @@ use Illuminate\View\View;
  */
 class StatsController extends Controller
 {
-    public function index(Request $request): View
+    /** The page is the Livewire component App\Livewire\Stats (1.35.0), which uses data() and checks the switch too. */
+    public function index(): View
     {
         // Off for everyone, admins included; kassiers and admins keep the backend page Kassier > Statistik (1.31.0).
         abort_unless(AppSettings::statsEnabled(), 404);
 
-        return view('stats.index', self::data(StatsPeriod::fromQuery($request->query())));
+        return view('stats.index');
     }
 
     /**

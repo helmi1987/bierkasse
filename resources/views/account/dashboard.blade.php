@@ -427,7 +427,11 @@
                 <div class="kpi" data-testid="gift-received"><span>{{ __('gift.received_kpi') }}</span><strong>{{ $stats['gift_received'] }}</strong></div>
             @endif
         </div>
+        @include('stats._compare', ['comparison' => $comparison])
         {!! $chart !!}
+        @if ($statsLink)
+            <p><a href="{{ route('stats') }}" data-testid="stats-link">{{ __('account.to_stats') }} →</a></p>
+        @endif
     @endif
     {{-- Latest bookings below the statistics (no own card since 1.14). --}}
     <div @class(['card-sep' => $stats !== null])>

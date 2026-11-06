@@ -336,6 +336,16 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .kpi strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 .kpi.big strong { font-size: 2.4rem; }
 .kpi small { color: var(--muted); font-size: .8rem; }
+/* Comparison KPIs (statistics page and dashboard, 1.30.0). */
+.kpis-heading { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; margin: 0 0 .5rem; }
+
+/* Period bar of the statistics (1.30.0): tabs, previous/next, custom dates. */
+.period-bar { margin-bottom: 1rem; }
+.period-bar .period-tabs { margin-bottom: .75rem; }
+.period-nav { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.period-nav .period-label { margin: 0; flex: 1 1 auto; justify-content: center; text-align: center; }
+.period-form { margin-top: .75rem; }
+.period-form input[type=date] { width: auto; }
 
 /* Charts (inline SVG) */
 .chart { width: 100%; height: auto; display: block; margin-top: .5rem; }

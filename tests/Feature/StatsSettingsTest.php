@@ -36,7 +36,7 @@ class StatsSettingsTest extends TestCase
         $this->actingAs($user)->get('/konto')->assertOk()->assertSee(self::NAV_LINK, false)
             ->assertSee(__('account.bookings_stats'))->assertSee(__('account.total_amount'));
         $this->get('/statistik')->assertOk()
-            ->assertSee(__('stats.total_beers'))->assertSee('<h2>'.__('stats.per_month').'</h2>', false)
+            ->assertSee(__('stats.total_beers'))->assertSee('<h2>'.__('stats.course').'</h2>', false)
             ->assertSee('<h2>'.__('stats.per_weekday').'</h2>', false)->assertSee('<h2>'.__('stats.ranking').'</h2>', false)
             ->assertSee('<strong>2</strong>', false)->assertDontSee(__('stats.nothing_enabled'));
     }
@@ -93,7 +93,7 @@ class StatsSettingsTest extends TestCase
         Ledger::consume($user, 3);
         $sections = [
             'stats_show_totals' => __('stats.total_beers'),
-            'stats_show_months' => '<h2>'.__('stats.per_month').'</h2>',
+            'stats_show_months' => '<h2>'.__('stats.course').'</h2>',
             'stats_show_weekdays' => '<h2>'.__('stats.per_weekday').'</h2>',
             'stats_show_ranking' => '<h2>'.__('stats.ranking').'</h2>',
         ];

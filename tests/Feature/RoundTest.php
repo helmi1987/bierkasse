@@ -227,7 +227,7 @@ class RoundTest extends TestCase
         $global = Stats::global();
         // 2 consumed + 1 guest sale + 5 round beers, nothing counted twice.
         $this->assertSame(8, $global['total_beers']);
-        $this->assertSame(8, array_sum(array_column($global['months'], 'beers')));
+        $this->assertSame(8, array_sum(array_column($global['course'], 'beers')));
         $this->assertSame(8, array_sum(array_column($global['weekdays'], 'beers')));
         $ranking = collect($global['ranking'])->keyBy('user_id');
         $this->assertSame(['Gäste (eingeladen)', 3], [$ranking[-1]['name'], $ranking[-1]['beers']]);

@@ -23,7 +23,7 @@ class StatsTest extends TestCase
         $this->assertSame(7, $stats['total_beers']);
         // Since 1.29.0 opt-out users are ranked as "Anonym n" (never with their name).
         $this->assertSame(['Vreni Sichtbar', 'Anonym 1'], array_column($stats['ranking'], 'name'));
-        $this->assertSame(7, array_sum(array_column($stats['months'], 'beers')));
+        $this->assertSame(7, array_sum(array_column($stats['course'], 'beers')));
         $this->assertSame(7, array_sum(array_column($stats['weekdays'], 'beers')));
 
         $this->actingAs($visible)->get('/statistik')->assertOk()

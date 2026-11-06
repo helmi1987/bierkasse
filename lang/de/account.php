@@ -84,6 +84,7 @@ return [
     'bookings' => 'Meine Buchungen',
     'notice_dismiss' => 'Hinweis ausblenden',
     'total_beers' => 'Biere total',
+    'to_stats' => 'Zur Statistik',
     'total_amount' => 'Total ausgegeben',
     'per_week' => 'Bier pro Woche',
     'leave' => 'Haus verlassen',

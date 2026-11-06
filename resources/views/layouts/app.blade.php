@@ -42,7 +42,7 @@
         @livewireStyles(['nonce' => $nonce])
     @endif
 </head>
-<body class="@yield('body_class')" @if ($livewirePage) data-livewire-page @endif @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ app()->bound(\App\Http\Middleware\CaptureLiveFingerprint::KEY) ? app(\App\Http\Middleware\CaptureLiveFingerprint::KEY) : \App\Support\LiveFingerprint::current() }}" @endif>
+<body class="@yield('body_class')" @if ($livewirePage) data-livewire-page @endif @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ app()->bound(\App\Http\Middleware\CaptureLiveFingerprint::KEY) ? app(\App\Http\Middleware\CaptureLiveFingerprint::KEY) : \App\Support\LiveFingerprint::current() }}" @endif @auth data-hints-url="{{ route('account.hints') }}" data-hints-token="{{ csrf_token() }}" @endauth>
 <a class="skip-link" href="#main">{{ __('site.skip_to_content') }}</a>
 @if ($authUser)
     <header class="topbar">

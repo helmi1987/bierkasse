@@ -86,7 +86,7 @@
                         </li>
                     @endforeach
                 </ul>
-                <p class="hint">{{ __('account.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('consume')]) }}</p>
+                <x-hint key="consume.undo">{{ __('account.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('consume')]) }}</x-hint>
             </div>
         @endif
     </section>
@@ -106,7 +106,7 @@
     <section class="card round-card" data-testid="round">
         <details @if ($roundUndoable->isNotEmpty() || $errors->hasAny(['recipients', 'recipients.*', 'extra', 'message']) || old('round_form')) open @endif>
             <summary><h2>{{ __('round.heading') }}</h2></summary>
-            <p class="muted">{{ __('round.intro') }}</p>
+            <x-hint key="round.intro">{{ __('round.intro') }}</x-hint>
             <form method="post" action="{{ route('account.round') }}" class="stack" data-round data-price="{{ $price }}" data-max="{{ \App\Services\Rounds::MAX_BEERS }}"
                 data-one="{{ trans_choice('round.beers', 1, ['count' => 1]) }}" data-many="{{ trans_choice('round.beers', 2, ['count' => ':count']) }}">
                 @csrf
@@ -145,13 +145,13 @@
                         <input type="number" id="round-extra" name="extra" value="{{ $roundExtra }}" min="0" max="{{ \App\Services\Rounds::MAX_EXTRA }}" inputmode="numeric">
                         <button type="button" class="btn round" data-step="1" aria-label="{{ __('account.more') }}">+</button>
                     </div>
-                    <p class="hint center">{{ __('round.extra_hint', ['max' => \App\Services\Rounds::MAX_EXTRA]) }}</p>
+                    <x-hint key="round.extra" class="center">{{ __('round.extra_hint', ['max' => \App\Services\Rounds::MAX_EXTRA]) }}</x-hint>
                 </div>
                 <div class="field">
                     <label for="round-message">{{ __('round.message') }}</label>
                     <input type="text" id="round-message" name="message" value="{{ old('message') }}" maxlength="{{ \App\Services\Rounds::MESSAGE_MAX }}" placeholder="{{ __('round.message_placeholder') }}" autocomplete="off">
                 </div>
-                <p class="hint center">{{ __('round.total_hint', ['max' => \App\Services\Rounds::MAX_BEERS, 'price' => chf($price)]) }}</p>
+                <x-hint key="round.total" class="center">{{ __('round.total_hint', ['max' => \App\Services\Rounds::MAX_BEERS, 'price' => chf($price)]) }}</x-hint>
             </form>
 
             @if ($roundUndoable->isNotEmpty())
@@ -167,7 +167,7 @@
                             </li>
                         @endforeach
                     </ul>
-                    <p class="hint">{{ __('round.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('round')]) }}</p>
+                    <x-hint key="round.undo">{{ __('round.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('round')]) }}</x-hint>
                 </div>
             @endif
         </details>
@@ -181,7 +181,7 @@
     <section class="card round-card" data-testid="gift">
         <details @if ($giftUndoable->isNotEmpty() || $errors->hasAny(['gift_recipients', 'gift_recipients.*', 'gift_quantity', 'gift_message']) || old('gift_quantity')) open @endif>
             <summary><h2>{{ __('gift.heading') }}</h2></summary>
-            <p class="muted">{{ __('gift.intro') }}</p>
+            <x-hint key="gift.intro">{{ __('gift.intro') }}</x-hint>
             <form method="post" action="{{ route('account.gift') }}" class="stack" data-gift data-price="{{ $price }}"
                 data-one="{{ trans_choice('round.beers', 1, ['count' => 1]) }}" data-many="{{ trans_choice('round.beers', 2, ['count' => ':count']) }}">
                 @csrf
@@ -234,7 +234,7 @@
                             </li>
                         @endforeach
                     </ul>
-                    <p class="hint">{{ __('gift.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('gift')]) }}</p>
+                    <x-hint key="gift.undo">{{ __('gift.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('gift')]) }}</x-hint>
                 </div>
             @endif
         </details>
@@ -246,7 +246,7 @@
     <section class="card guest-card" data-testid="guest-booking">
         <details @if ($guestUndoable->isNotEmpty() || $errors->hasAny(['guest_quantity', 'guest_method', 'guest_name']) || old('guest_quantity')) open @endif>
             <summary><h2>{{ __('guest.book_heading') }}</h2></summary>
-            <p class="muted">{{ __('guest.book_intro') }}</p>
+            <x-hint key="guest.intro">{{ __('guest.book_intro') }}</x-hint>
             <form method="post" action="{{ route('account.guest') }}" class="stack">
                 @csrf
                 {!! \App\Support\FormToken::field('guest-booking') !!}
@@ -270,7 +270,7 @@
                 @if ($twintEnabled)
                     <p>{!! __('guest.twint_to', ['name' => $twintHtml]) !!}</p>
                     @include('partials.twint-number')
-                    <p class="hint">{{ __('guest.twint_hint') }}</p>
+                    <x-hint key="guest.twint">{{ __('guest.twint_hint') }}</x-hint>
                 @endif
                 <div class="field">
                     <label for="guest_name">{{ __('guest.name') }}</label>
@@ -292,7 +292,7 @@
                             </li>
                         @endforeach
                     </ul>
-                    <p class="hint">{{ __('guest.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('guest')]) }}</p>
+                    <x-hint key="guest.undo">{{ __('guest.undo_hint', ['minutes' => \App\Support\AppSettings::undoMinutes('guest')]) }}</x-hint>
                 </div>
             @endif
         </details>
@@ -319,7 +319,7 @@
                 </div>
             @endif
         @else
-            <p class="muted">{{ __('disposal.intro') }}</p>
+            <x-hint key="disposal.intro">{{ __('disposal.intro') }}</x-hint>
             <form method="post" action="{{ route('account.disposal.report') }}">
                 @csrf
                 {!! \App\Support\FormToken::field('disposal') !!}
@@ -343,10 +343,10 @@
                 <p class="muted">{{ __('account.twint_then_report') }}</p>
             @endif
             @include('partials.twint-number')
-            @include('partials.twint-message', ['username' => auth()->user()->username])
+            @include('partials.twint-message', ['username' => auth()->user()->username, 'hintKey' => 'deposit.twint_message'])
         </div>
     @endif
-    <p class="muted">{{ __('account.deposit_intro') }}</p>
+    <x-hint key="deposit.intro">{{ __('account.deposit_intro') }}</x-hint>
     <form method="post" action="{{ route('account.deposit') }}" class="stack">
         @csrf
         {!! \App\Support\FormToken::field('deposit') !!}
@@ -389,7 +389,7 @@
                 {{-- Decision 2026-10-24: after a rejected deposit, reported deposits are not part of $balance. --}}
                 <p class="hint" data-testid="deposit-on-hold">{{ __('account.deposit_on_hold') }}</p>
             @endif
-            <p class="hint">{{ __('account.pending_tap_hint') }}</p>
+            <x-hint key="deposit.pending">{{ __('account.pending_tap_hint') }}</x-hint>
         @endif
         <ul class="list">
             @foreach ($pending as $tx)

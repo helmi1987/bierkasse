@@ -26,11 +26,11 @@
         <div class="field">
             <label for="message">{{ __('feedback.message') }}</label>
             <textarea id="message" name="message" rows="6" minlength="{{ \App\Models\Feedback::MESSAGE_MIN }}" maxlength="{{ \App\Models\Feedback::MESSAGE_MAX }}" required>{{ old('message') }}</textarea>
-            <div class="hint">{{ __('feedback.message_hint', ['min' => \App\Models\Feedback::MESSAGE_MIN, 'max' => \App\Models\Feedback::MESSAGE_MAX]) }}</div>
+            <x-hint key="feedback.message">{{ __('feedback.message_hint', ['min' => \App\Models\Feedback::MESSAGE_MIN, 'max' => \App\Models\Feedback::MESSAGE_MAX]) }}</x-hint>
         </div>
         @if ($hasEmail)
             <label class="check"><input type="checkbox" name="wants_reply" value="1" @checked(old('wants_reply'))> <span>{{ __('feedback.wants_reply') }}</span></label>
-            <p class="hint">{{ __('feedback.wants_reply_hint', ['email' => auth()->user()->email]) }}</p>
+            <x-hint key="feedback.reply">{{ __('feedback.wants_reply_hint', ['email' => auth()->user()->email]) }}</x-hint>
         @else
             <p class="hint">{{ __('feedback.no_email_hint') }}</p>
         @endif

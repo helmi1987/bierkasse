@@ -2,7 +2,8 @@
     Period bar of the statistics (1.30.0): tabs, previous/next for week/month/quarter/year, date form for "frei".
     Plain GET links and form (no JS). Expects $period (App\Support\StatsPeriod); optional $periodRoute
     (route name, default "stats") so a backend page can reuse it, and optional $extraQuery (GET parameters of
-    other filters, 1.31.0) merged into every link and sent as hidden fields with the custom form.
+    other filters, 1.31.0) merged into every link and sent as hidden fields with the custom form; optional
+    $hintKey (1.33.0): collapsible custom-period hint (user page only, the backend keeps the plain hint).
 --}}
 @php
     $periodRoute ??= 'stats';
@@ -37,6 +38,10 @@
             <input type="date" id="period-to" name="bis" value="{{ $period->to->format('Y-m-d') }}">
             <button type="submit" class="btn small primary">{{ __('stats.period.show') }}</button>
         </form>
-        <p class="hint">{{ __('stats.period.custom_hint', ['years' => \App\Support\StatsPeriod::MAX_YEARS, 'days' => \App\Support\StatsPeriod::DAILY_MAX_DAYS]) }}</p>
+        @if ($hintKey ?? null)
+            <x-hint :key="$hintKey">{{ __('stats.period.custom_hint', ['years' => \App\Support\StatsPeriod::MAX_YEARS, 'days' => \App\Support\StatsPeriod::DAILY_MAX_DAYS]) }}</x-hint>
+        @else
+            <p class="hint">{{ __('stats.period.custom_hint', ['years' => \App\Support\StatsPeriod::MAX_YEARS, 'days' => \App\Support\StatsPeriod::DAILY_MAX_DAYS]) }}</p>
+        @endif
     @endif
 </nav>

@@ -121,6 +121,7 @@ return [
     'email_missing' => 'Als Kassier/Admin ist eine E-Mail-Adresse Pflicht.',
     'email_missing_link' => 'Jetzt eintragen',
     'save' => 'Speichern',
+    'help_show' => 'Hilfe anzeigen',
     'theme' => 'Darstellung',
     'theme_auto' => 'Automatisch (wie Gerät)',
     'theme_light' => 'Hell',

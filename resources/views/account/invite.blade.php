@@ -29,7 +29,7 @@
     <section class="card invite">
         <details>
             <summary><h2>{{ __('account.invite_flyer_title') }}</h2></summary>
-            <p class="muted">{{ __('account.invite_flyer_intro') }}</p>
+            <x-hint key="invite.flyer">{{ __('account.invite_flyer_intro') }}</x-hint>
             <img src="{{ $flyerQr }}" alt="QR" width="480" height="480" class="qr invite-qr">
             <div class="row-buttons">
                 <button type="button" class="btn primary" data-share="#invite-flyer-url"
@@ -55,7 +55,7 @@
     @else
         <div class="alert warn">{{ __('account.invitation_limit', ['max' => $max]) }}</div>
     @endif
-    <p class="hint">{{ __('account.invitation_hash_note') }}</p>
+    <x-hint key="invite.hash">{{ __('account.invitation_hash_note') }}</x-hint>
 </section>
 
 <section class="card">

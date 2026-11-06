@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
+use App\Models\Disposal;
 use App\Models\Setting;
+use App\Services\BackendStats;
+use App\Services\Disposals;
 use App\Services\Ledger;
 use App\Services\Stats;
 use App\Support\AppSettings;
@@ -168,23 +171,58 @@ class StatsSettingsTest extends TestCase
         Ledger::consume($second, 2);
 
         $ranking = Stats::global()['ranking'];
-        $this->assertSame(['Vreni Sichtbar', 'Anonym 1', 'Anonym 2'], array_column($ranking, 'name'));
+        $this->assertSame('Vreni Sichtbar', $ranking[0]['name']);
+        $this->assertEqualsCanonicalizing(['Anonym 1', 'Anonym 2'], [$ranking[1]['name'], $ranking[2]['name']]);
         $this->assertSame([false, true, true], array_column($ranking, 'anonymous'));
         $this->assertSame([6, 4, 2], array_column($ranking, 'beers'));
 
-        // Numbering follows the list order, not the user: more beers move Rösli to "Anonym 1".
-        Ledger::consume($second, 3);
-        $ranking = Stats::global()['ranking'];
-        $this->assertSame([$visible->id, $second->id, $first->id], array_column($ranking, 'user_id'));
-        $this->assertSame(['Vreni Sichtbar', 'Anonym 1', 'Anonym 2'], array_column($ranking, 'name'));
-
         $this->actingAs($visible)->get('/statistik')->assertOk()
-            ->assertSeeInOrder(['Vreni Sichtbar', 'Anonym 1', 'Anonym 2'])
+            ->assertSee('Vreni Sichtbar')->assertSee('Anonym 1')->assertSee('Anonym 2')
             ->assertDontSee('Versteckt')->assertDontSee('Geheim')->assertDontSee('Heiri');
         // The opt-out user sees the own (anonymous) row highlighted, still without the name.
-        $this->actingAs($first)->get('/statistik')->assertOk()
-            ->assertSeeInOrder(['<li class="me rank-3">', '<span class="name">Anonym 2</span>'], false)
-            ->assertDontSee('Versteckt');
+        $html = $this->actingAs($first)->get('/statistik')->assertOk()->assertDontSee('Versteckt')->getContent();
+        $this->assertMatchesRegularExpression('/<li class="me rank-2">\s*<span class="rank">2<\/span>\s*<span class="name">Anonym [12]<\/span>/', $html);
+    }
+
+    /** Numbers are shuffled on every call in all three rankings (1.38.1), so none of them points to a person. */
+    public function test_anonymous_numbers_rotate_in_every_ranking(): void
+    {
+        $this->setPrice(150);
+        $first = $this->user(['first_name' => 'Heiri', 'stats_opt_out' => true, 'disposal_stats_opt_out' => true]);
+        $second = $this->user(['first_name' => 'Rösli', 'stats_opt_out' => true, 'disposal_stats_opt_out' => true]);
+        Ledger::consume($first, 4);
+        Ledger::consume($second, 2);
+        $kassier = $this->kassier();
+        foreach ([$first, $first, $second] as $user) {
+            Disposal::query()->create(['user_id' => $user->id, 'reported_by' => $kassier->id, 'reported_at' => now(), 'booked_at' => now(), 'quantity' => 1, 'status' => Disposal::STATUS_BOOKED]);
+        }
+        $rankings = [
+            'statistik' => fn () => Stats::global()['ranking'],
+            'entsorgung' => fn () => Disposals::ranking(),
+            'admin' => fn () => BackendStats::byUser(BackendStats::rows(null, BackendStats::DEFAULTS)),
+        ];
+
+        foreach ($rankings as $list => $ranking) {
+            $seen = [];
+            for ($i = 0; $i < 60; $i++) {
+                $names = array_column(array_filter($ranking(), fn (array $row) => $row['anonymous']), 'name');
+                $this->assertEqualsCanonicalizing(['Anonym 1', 'Anonym 2'], $names, $list);
+                $seen[implode(',', $names)] = true;
+            }
+            $this->assertCount(2, $seen, $list.': both orders must appear');
+        }
+    }
+
+    public function test_number_anonymous_leaves_other_rows_alone(): void
+    {
+        $rows = [
+            ['name' => 'Anna', 'anonymous' => false],
+            ['name' => 'Heiri', 'anonymous' => true],
+            ['name' => 'Gäste', 'anonymous' => false],
+        ];
+
+        $this->assertSame(['Anna', 'Anonym 1', 'Gäste'], array_column(Stats::numberAnonymous($rows), 'name'));
+        $this->assertSame([], Stats::numberAnonymous([]));
     }
 
     public function test_opt_out_stays_effective_with_any_switches(): void

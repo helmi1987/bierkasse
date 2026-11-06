@@ -9,12 +9,13 @@ use App\Models\User;
 use App\Support\StatsPeriod;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
  * Consumption statistics. Users with stats_opt_out are never named for other users: in the ranking
- * they appear as "Anonym n", numbered by their position in the shown list (not fixed per user, 1.29.0).
+ * they appear as "Anonym n", the numbers newly shuffled on every render (numberAnonymous(), 1.38.1).
  *
  * Beers count at the drinker: own consumption, beers received in a round (at the round's time) and
  * guest sales ("Gäste"). Beers without a name in a round count as "Gäste (eingeladen)". The round
@@ -247,8 +248,7 @@ class Stats
     /**
      * Ranking with standard competition ranking ("1224"): equal beers share the rank, the next rank skips
      * the tied places (1, 1, 3). All entries tied with place $top are shown too. Users with stats_opt_out
-     * are listed as "Anonym 1", "Anonym 2", … from top to bottom of the shown list; user_id stays for the
-     * own-row highlight (never rendered).
+     * are listed as "Anonym n" (numberAnonymous()); user_id stays for the own-row highlight (never rendered).
      *
      * @param  Collection<int, Transaction>  $rows
      * @return list<array{rank:int, user_id:int, name:string, beers:int, anonymous:bool}>
@@ -269,12 +269,24 @@ class Stats
             'anonymous' => ! isset($pseudo[(int) $id]) && (bool) $users[$id]->stats_opt_out,
         ])->values(), 'beers', $top);
 
-        // Numbered after sorting and cutting, so the shown list reads Anonym 1, 2, … top to bottom.
-        $n = 0;
-        foreach ($ranked as $i => $row) {
-            if ($row['anonymous']) {
-                $ranked[$i]['name'] = __('stats.anonymous', ['n' => ++$n]);
-            }
+        return self::numberAnonymous($ranked);
+    }
+
+    /**
+     * Names the anonymous rows of a sorted and cut list "Anonym 1" to "Anonym n", the numbers randomly assigned on
+     * every call (1.38.1): neither a position nor a number across page views or lists points to the same person.
+     *
+     * @template TRow of array{name:string, anonymous:bool}
+     *
+     * @param  list<TRow>  $ranked
+     * @return list<TRow>
+     */
+    public static function numberAnonymous(array $ranked): array
+    {
+        $rows = array_keys(array_filter($ranked, fn (array $row) => $row['anonymous']));
+        $numbers = Arr::shuffle(array_keys($rows));
+        foreach ($rows as $position => $i) {
+            $ranked[$i]['name'] = __('stats.anonymous', ['n' => $numbers[$position] + 1]);
         }
 
         return $ranked;

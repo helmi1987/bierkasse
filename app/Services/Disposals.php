@@ -304,8 +304,8 @@ class Disposals
      * Ranking of the booked disposals per recipient (all time, independent of any statistics period): sorted by
      * the number of disposals (not by beers, the bonus may be random), then beers, then user id; competition
      * ranks via Stats::ranked() ("1224", every row tied with place $top is kept). Only existing users with a
-     * beer account. Users with disposal_stats_opt_out (never stats_opt_out) are listed as "Anonym 1", "Anonym 2",
-     * … from top to bottom of the shown list; user_id stays for the own-row highlight (never rendered).
+     * beer account. Users with disposal_stats_opt_out (never stats_opt_out) are listed as "Anonym n"
+     * (Stats::numberAnonymous()); user_id stays for the own-row highlight (never rendered).
      *
      * @return list<array{rank:int, user_id:int, name:string, count:int, beers:int, anonymous:bool}>
      */
@@ -325,17 +325,8 @@ class Disposals
             ])
             ->sort(fn (array $a, array $b) => [$b['count'], $b['beers'], $a['user_id']] <=> [$a['count'], $a['beers'], $b['user_id']])
             ->values();
-        $ranked = Stats::ranked($rows, 'count', $top);
 
-        // Numbered after sorting and cutting, so the shown list reads Anonym 1, 2, … top to bottom.
-        $n = 0;
-        foreach ($ranked as $i => $row) {
-            if ($row['anonymous']) {
-                $ranked[$i]['name'] = __('stats.anonymous', ['n' => ++$n]);
-            }
-        }
-
-        return $ranked;
+        return Stats::numberAnonymous(Stats::ranked($rows, 'count', $top));
     }
 
     /**

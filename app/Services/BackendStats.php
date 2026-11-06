@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
  * only reachable with type "geschenke" and never mixed into "alle". Period, user and type are filtered in SQL;
  * grouping by time bucket or by drinker happens in PHP on the rows of the period.
  *
- * Opt-out users (stats_opt_out) are shown as "Anonym n", numbered top to bottom of the shown list, and cannot be
+ * Opt-out users (stats_opt_out) are shown as "Anonym n" (Stats::numberAnonymous()) and cannot be
  * selected individually (assumption 1.31.0: the filter must not reveal them either). Accounts without beer account
  * ("Nur Verwaltung") are merged into one row "Ohne Bierkonto".
  */
@@ -258,7 +258,7 @@ final class BackendStats
 
     /**
      * One row per drinker (all rows, no top-N cut), sorted by beers desc with competition ranks (Stats::ranked()).
-     * Opt-out users become "Anonym n" top to bottom; accounts without beer account (and unknown ids) are merged
+     * Opt-out users become "Anonym n" (Stats::numberAnonymous()); accounts without beer account (and unknown ids) are merged
      * into "Ohne Bierkonto"; the pseudo rows "Gäste" and "Gäste (eingeladen)" stay as they are.
      *
      * @param  Collection<int, object>  $rows
@@ -291,16 +291,8 @@ final class BackendStats
 
         // Beers desc, then CHF desc, then the key: stable, and independent of the (maybe anonymous) names.
         usort($groups, fn ($a, $b) => [$b['beers'], $b['amount'], $a['key']] <=> [$a['beers'], $a['amount'], $b['key']]);
-        $ranked = Stats::ranked(collect($groups), 'beers', PHP_INT_MAX);
 
-        $n = 0;
-        foreach ($ranked as $i => $row) {
-            if ($row['anonymous']) {
-                $ranked[$i]['name'] = __('stats.anonymous', ['n' => ++$n]);
-            }
-        }
-
-        return $ranked;
+        return Stats::numberAnonymous(Stats::ranked(collect($groups), 'beers', PHP_INT_MAX));
     }
 
     private static function selectableQuery(): Builder

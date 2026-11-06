@@ -308,6 +308,10 @@
   zusätzlich 1 Bier für den Spender selbst (`round_items` mit `user_id` = Spender; zählt in Betrag, Limit und max. 30).
   Dieses Bier zählt in der Statistik als eigenes Bier des Spenders, nicht bei "Spendiert" (= Runden-Biere minus
   eigenes Bier); keine Hinweis-Karte und keine Mail an sich selbst. "inkl. mir" allein = 1 eigenes Bier.
+  Seit 1.32.1 stehen Total und beide Knöpfe oben im Runden-Bereich (vor der Kollegen-Liste), nebeneinander in
+  zwei gleich breiten Spalten (auch ab 320 px) und beim Scrollen fixiert direkt unter der Kopfzeile (`.round-bar`,
+  `position: sticky`, `top: var(--topbar-h)`; die Höhe setzt `app.js` aus der echten Kopfzeile). Grund: Die Knöpfe
+  ganz unten wurden nicht gefunden.
   - Buchung wie "Bier abstreichen" (eine DB-Transaktion mit Zeilensperre, gleiche Limit-Regel "Bitte zuerst
     einzahlen", gesperrt bei beantragter Auszahlung, Einmal-Token): Spender zahlt Anzahl × aktueller Preis als
     Buchung Typ `round` (Betrag negativ, Anzahl, Preis gespeichert, Nachricht als Bemerkung). Die Biere stehen in

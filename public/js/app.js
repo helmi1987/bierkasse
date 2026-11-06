@@ -581,6 +581,21 @@
         }
     })();
 
+    // Real height of the sticky topbar (varies with the safe-area inset and wrapping) as --topbar-h,
+    // so sticky elements below it (round total and buttons) sit just under it. CSSOM, so CSP-clean.
+    (function () {
+        var bar = document.querySelector('.topbar');
+        if (!bar) {
+            return;
+        }
+        var update = function () {
+            document.documentElement.style.setProperty('--topbar-h', bar.offsetHeight + 'px');
+        };
+        update();
+        window.addEventListener('resize', update);
+        window.addEventListener('orientationchange', update);
+    })();
+
     // PWA: register the (network-only) service worker.
     if ('serviceWorker' in navigator && window.isSecureContext) {
         navigator.serviceWorker.register('/sw.js').catch(function () {});

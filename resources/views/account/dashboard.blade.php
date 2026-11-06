@@ -112,6 +112,14 @@
                 @csrf
                 {!! \App\Support\FormToken::field('round') !!}
                 <input type="hidden" name="round_form" value="1">
+                {{-- Total and both buttons at the top, sticky below the topbar while scrolling (findability, 1.32.1). --}}
+                <div class="round-bar">
+                    <p class="round-total center" aria-live="polite">{{ __('round.total') }}: <strong data-round-count>{{ trans_choice('round.beers', $roundCount, ['count' => $roundCount]) }}</strong> · <strong data-round-amount>{{ chf($roundCount * $price) }}</strong></p>
+                    <div class="round-buttons">
+                        <button type="submit" class="btn primary big" data-round-submit data-label="{{ __('round.submit') }}" @disabled($roundCount < 1)>{{ __('round.submit', ['count' => $roundCount]) }}</button>
+                        <button type="submit" name="include_self" value="1" class="btn big" data-round-submit-self data-label="{{ __('round.submit_self') }}" @disabled($roundCount < 1)>{{ __('round.submit_self', ['count' => $roundCount + 1]) }}</button>
+                    </div>
+                </div>
                 <fieldset class="field">
                     <legend>{{ __('round.colleagues') }}</legend>
                     @if ($colleagues->isEmpty())
@@ -143,12 +151,7 @@
                     <label for="round-message">{{ __('round.message') }}</label>
                     <input type="text" id="round-message" name="message" value="{{ old('message') }}" maxlength="{{ \App\Services\Rounds::MESSAGE_MAX }}" placeholder="{{ __('round.message_placeholder') }}" autocomplete="off">
                 </div>
-                <p class="round-total center" aria-live="polite">{{ __('round.total') }}: <strong data-round-count>{{ trans_choice('round.beers', $roundCount, ['count' => $roundCount]) }}</strong> · <strong data-round-amount>{{ chf($roundCount * $price) }}</strong></p>
                 <p class="hint center">{{ __('round.total_hint', ['max' => \App\Services\Rounds::MAX_BEERS, 'price' => chf($price)]) }}</p>
-                <div class="row-buttons">
-                    <button type="submit" class="btn primary big" data-round-submit data-label="{{ __('round.submit') }}" @disabled($roundCount < 1)>{{ __('round.submit', ['count' => $roundCount]) }}</button>
-                    <button type="submit" name="include_self" value="1" class="btn big" data-round-submit-self data-label="{{ __('round.submit_self') }}" @disabled($roundCount < 1)>{{ __('round.submit_self', ['count' => $roundCount + 1]) }}</button>
-                </div>
             </form>
 
             @if ($roundUndoable->isNotEmpty())

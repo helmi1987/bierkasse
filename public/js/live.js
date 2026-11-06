@@ -358,6 +358,15 @@
             if (!doc.body || !doc.body.hasAttribute('data-live')) {
                 return;
             }
+            // New CSS/JS on the server (deploy): swapping the new markup into this document would render it
+            // with the old stylesheet. Load the page once instead; with user input on screen, wait for a later tick.
+            var assets = doc.body.getAttribute('data-live-assets');
+            if (assets && assets !== body.getAttribute('data-live-assets')) {
+                if (!contentChildren(main).some(isBlocked)) {
+                    stop(true);
+                }
+                return;
+            }
             apply(doc);
             fp = doc.body.getAttribute('data-live-fp') || fp;
             lastRender = Date.now();

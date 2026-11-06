@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\GuestSale;
 use App\Models\Transaction;
 use App\Services\Ledger;
+use App\Support\AssetVersion;
 use App\Support\FormToken;
 use App\Support\LiveFingerprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -61,6 +62,7 @@ class LiveRefreshTest extends TestCase
         $response = $this->get('/konto', ['X-Live-Refresh' => '1'])->assertOk()
             ->assertSee('data-live="'.route('live', [], false).'"', false)
             ->assertSee('data-live-fp="'.LiveFingerprint::current().'"', false)
+            ->assertSee('data-live-assets="'.AssetVersion::current().'"', false)
             ->assertSee('<meta name="server-now" content="', false)
             ->assertSee('js/live.js', false)
             ->assertSee('id="main"', false)

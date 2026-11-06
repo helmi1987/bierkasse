@@ -568,6 +568,10 @@
   werden aktualisiert. Aus bei Seiten nach POST, mit Validierungsfehlern/alten Eingaben oder einmalig gezeigten
   Geheimnissen (Wiederherstellungscodes, Wartungsausgabe) sowie per `@section('live_off')`. Abgemeldet: `/live` und
   `X-Live-Refresh`-Anfragen liefern 401 statt Weiterleitung, dann (wie bei 503/Weiterleitung) einmal neu laden.
+  Seit 1.33.1 trägt `<body data-live-assets>` eine Version der ausgelieferten CSS/JS (`App\Support\AssetVersion`, Hash der
+  Dateidaten von `app.css`, `app.js`, `live.js`). Liefert der Server eine andere, lädt `live.js` die Seite einmal neu statt
+  das neue Markup in ein Dokument mit alter CSS zu tauschen (Befund nach dem Deploy 1.33.0: Knöpfe untereinander, ⓘ ohne
+  Kreis bei offener Seite); mit Eingaben auf dem Bildschirm wartet es auf einen späteren Durchgang.
   Entscheid 2026-10-24: Die Abfrage hielte die Session eines sichtbaren Tabs ewig am Leben. Darum stoppt sie (samt
   Neuladen der Seite) nach 30 Minuten ohne Benutzeraktivität (Konstante `IDLE_LIMIT` in `public/js/live.js`;
   Aktivität = echtes pointerdown, keydown, touchstart, wheel, scroll, input). Danach läuft die Session normal ab

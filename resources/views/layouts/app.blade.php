@@ -4,13 +4,8 @@
     $openItems ??= 0;
     $authUser = auth()->user();
     $theme = $authUser?->fixedTheme();
-    // Live refresh (public/js/live.js) only for logged-in GET pages without one-time content: after a
-    // POST render, validation errors/old input or flashed secrets the page must stay as rendered.
-    // Pages with Livewire components (@section('livewire')) refresh their data parts with wire:poll instead.
+    // Pages with Livewire components (@section('livewire')) refresh their data parts with wire:poll.
     $livewirePage = $__env->hasSection('livewire');
-    $live = $authUser && ! $livewirePage && request()->isMethod('GET') && ! $__env->hasSection('live_off')
-        && ! (isset($errors) && $errors->any()) && ! session()->hasOldInput()
-        && ! session()->has('totp.recovery_codes') && ! session()->has('maintenance_output');
 @endphp
 <!DOCTYPE html>
 <html lang="de-CH"@if ($theme) data-theme="{{ $theme }}"@endif>
@@ -42,7 +37,7 @@
         @livewireStyles(['nonce' => $nonce])
     @endif
 </head>
-<body class="@yield('body_class')" @if ($livewirePage) data-livewire-page data-update-text="{{ __('site.update_available') }}" data-update-button="{{ __('site.update_reload') }}" @endif @if ($live) data-live="{{ route('live', [], false) }}" data-live-fp="{{ app()->bound(\App\Http\Middleware\CaptureLiveFingerprint::KEY) ? app(\App\Http\Middleware\CaptureLiveFingerprint::KEY) : \App\Support\LiveFingerprint::current() }}" @endif @if ($authUser) data-live-assets="{{ \App\Support\AssetVersion::current() }}" @endif>
+<body class="@yield('body_class')" @if ($livewirePage) data-livewire-page data-update-text="{{ __('site.update_available') }}" data-update-button="{{ __('site.update_reload') }}" @endif>
 <a class="skip-link" href="#main">{{ __('site.skip_to_content') }}</a>
 @if ($authUser)
     <header class="topbar">
@@ -94,7 +89,7 @@
     @if ($authUser?->isKassier() && (string) $authUser->email === '')
         <div class="alert warn" role="alert">{{ __('account.email_missing') }} <a href="{{ route('account.settings') }}">{{ __('account.email_missing_link') }}</a></div>
     @endif
-    <div class="live-keep" data-live-keep="alerts">@include('partials.alerts')</div>
+    @include('partials.alerts')
     @yield('content')
 </main>
 @php($footerVersion = \App\Support\SystemInfo::appVersion()['version'] ?? null)

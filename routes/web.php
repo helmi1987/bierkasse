@@ -11,7 +11,6 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\GuestController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LegalController;
-use App\Http\Controllers\LiveController;
 use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\PersonalSsoController;
 use App\Http\Controllers\SetupController;
@@ -136,9 +135,6 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::get('/konto/eigener-anbieter/verbinden', [PersonalSsoController::class, 'connect'])->middleware('throttle:10,1')->name('account.personal-sso.connect');
 
         Route::get('/statistik', [StatsController::class, 'index'])->name('stats');
-
-        // Live page refresh (public/js/live.js): cheap change marker, polled every 10 seconds per open tab.
-        Route::get('/live', LiveController::class)->middleware('throttle:120,1')->name('live');
 
         // Admin area (URL prefix /admin, until 1.19 /backend; route names stay "backend.*").
         // Kassier pages: kassiers and admins; see App\Support\BackendNav for the tab groups.

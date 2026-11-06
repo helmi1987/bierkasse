@@ -4,9 +4,9 @@ namespace App\Support;
 
 /**
  * Version marker of the delivered CSS/JS (1.33.1): a short hash of the file dates of app.css, app.js and live.js,
- * the same dates that bust the asset URLs (?v=filemtime). The layout puts it on <body data-live-assets>; the live
- * refresh (public/js/live.js) reloads the page when it changes, instead of swapping new markup into a document that
- * still has the old stylesheet (seen after the 1.33.0 deploy: buttons stacked, info icon without its circle).
+ * the same dates that bust the asset URLs (?v=filemtime). The polling Livewire components compare it
+ * (App\Livewire\Concerns\WatchesAssets); when it changes, public/js/live.js offers to reload the page instead of
+ * morphing new markup into a document that still has the old stylesheet (seen after the 1.33.0 deploy).
  */
 final class AssetVersion
 {

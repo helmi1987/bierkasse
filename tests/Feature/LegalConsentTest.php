@@ -133,9 +133,8 @@ class LegalConsentTest extends TestCase
         $this->post('/konto/feedback', ['type' => 'feedback', 'message' => 'Hallo Welt'])->assertRedirect(route('consent.show'));
         $this->assertSame(0, Feedback::query()->count());
         $this->assertSame(0, Transaction::query()->count());
-        $this->get('/live', ['X-Live-Refresh' => '1'])->assertRedirect(route('consent.show'));
-        $this->getJson('/live', ['X-Live-Refresh' => '1'])->assertRedirect(route('consent.show'));
-        // Live/POST requests do not become the page to return to (still the last page view).
+        $this->postJson('/livewire/update', ['components' => []], ['X-Livewire' => '1'])->assertRedirect(route('consent.show'));
+        // POST/JSON requests (e.g. Livewire updates) do not become the page to return to (still the last page view).
         $this->assertSame(route('stats'), session('url.intended'));
         // Public pages stay reachable.
         $this->get('/datenschutz')->assertOk();

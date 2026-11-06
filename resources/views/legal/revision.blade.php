@@ -1,7 +1,6 @@
 @extends('layouts.app')
 
 @section('title', $title)
-@section('live_off', '1')
 
 @section('content')
 <article class="card legal-text" data-testid="legal-revision-{{ $revision->id }}">

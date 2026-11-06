@@ -15,7 +15,6 @@ use Symfony\Component\HttpFoundation\Response;
  *     (the consent page comes after the password change);
  *  3. a user who has not accepted the current privacy policy / terms of use only reaches the consent
  *     page (plus logout and the public legal pages, which are outside this middleware).
- * Like 2, live refresh requests are redirected too (public/js/live.js treats redirects as "reload").
  */
 class EnsureActiveUser
 {
@@ -51,7 +50,7 @@ class EnsureActiveUser
 
         if ($user->needsConsent() && ! $request->routeIs(...self::CONSENT_ROUTES)) {
             // Back to the requested page after accepting (plain page views only).
-            $remember = $request->isMethod('GET') && ! $request->hasHeader('X-Live-Refresh') && ! $request->expectsJson();
+            $remember = $request->isMethod('GET') && ! $request->expectsJson();
 
             return $remember ? redirect()->guest(route('consent.show')) : redirect()->route('consent.show');
         }

@@ -7,7 +7,6 @@ use App\Livewire\TopNav;
 use App\Models\Setting;
 use App\Services\Ledger;
 use App\Support\AppSettings;
-use App\Support\AssetVersion;
 use App\Support\LiveFingerprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -28,7 +27,6 @@ class LiveDashboardTest extends TestCase
 
         $this->assertStringContainsString('data-livewire-page', $html);
         $this->assertStringContainsString('data-update-text="Neue Version verfügbar."', $html);
-        $this->assertStringContainsString('data-live-assets="'.AssetVersion::current().'"', $html);
         $this->assertStringNotContainsString('data-live="', $html);
         $this->assertStringContainsString('wire:poll.10s.visible="tick"', $html);
         $this->assertMatchesRegularExpression('/data-update-uri="[^"]*\/livewire\/update"/', $html);

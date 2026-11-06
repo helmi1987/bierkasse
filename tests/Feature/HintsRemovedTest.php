@@ -63,11 +63,11 @@ class HintsRemovedTest extends TestCase
         $this->assertFalse(Schema::hasColumn('users', 'open_hints'));
     }
 
-    public function test_round_buttons_and_asset_version_stay(): void
+    public function test_round_buttons_and_livewire_page_marker_stay(): void
     {
         $this->user(['first_name' => 'Anna']);
         $this->actingAs($this->giver)->get('/konto')->assertOk()
             ->assertSeeInOrder(['data-round-submit', 'name="recipients[]"'], false)
-            ->assertSee('data-live-assets="', false);
+            ->assertSee('data-livewire-page', false);
     }
 }

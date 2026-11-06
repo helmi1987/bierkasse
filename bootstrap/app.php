@@ -36,8 +36,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', MaintenanceMode::class);
         // "Entsorgungsbonus": page views book due disposals when the cron does not run (at most once a minute).
         $middleware->appendToGroup('web', \App\Http\Middleware\BookDueDisposals::class);
-        // Live refresh fingerprint, taken before the page content is built.
-        $middleware->appendToGroup('web', \App\Http\Middleware\CaptureLiveFingerprint::class);
         $middleware->alias([
             'active' => EnsureActiveUser::class,
             'beer' => EnsureBeerAccount::class,
@@ -57,8 +55,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // SSO client secrets / Apple private keys never go into the old-input flash.
         $exceptions->dontFlash(['client_secret']);
-        // Live refresh requests (public/js/live.js) get 401 instead of a redirect to the login page.
+        // API and JSON requests (e.g. Livewire updates) get 401 instead of a redirect to the login page.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson() || $request->hasHeader('X-Live-Refresh'),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
     })->create();

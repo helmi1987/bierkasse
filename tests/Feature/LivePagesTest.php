@@ -12,32 +12,47 @@ use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
- * Live page refresh (public/js/live.js) and undo buttons that expire on the open page.
- *
- * 1.36.0: no page uses the live refresh any more (Livewire pages poll themselves, the rest is live_off); the
- * tests of the page markers are removed, the mechanism is removed in the next step. The fingerprint endpoint
- * (/live), the undo expiry and the form tokens are still tested here.
+ * Live data on the pages (1.37.0): the Livewire components poll themselves (change marker LiveFingerprint);
+ * the old full-page live refresh (/live, X-Live-Refresh, swapping the children of <main>) is gone.
+ * public/js/live.js still removes undo buttons when their window ends (server time); form tokens stay per tab.
  */
-class LiveRefreshTest extends TestCase
+class LivePagesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_fingerprint_endpoint_requires_login(): void
+    public function test_old_live_refresh_is_gone(): void
     {
-        $this->getJson('/live')->assertUnauthorized();
-        $this->get('/live', ['X-Live-Refresh' => '1'])->assertUnauthorized();
-        $this->get('/live')->assertRedirect('/');
+        $this->actingAs($this->user());
+        $this->get('/live')->assertNotFound();
+        $this->getJson('/live')->assertNotFound();
+
+        $html = (string) $this->get('/konto')->assertOk()->getContent();
+        $this->assertStringNotContainsString('data-live="', $html);
+        $this->assertStringNotContainsString('data-live-fp', $html);
+        $this->assertStringNotContainsString('data-live-keep', $html);
+        $this->assertStringContainsString('<meta name="server-now"', $html);
+        $this->assertStringContainsString('js/live.js', $html);
     }
 
-    public function test_fingerprint_changes_with_data_but_not_by_rendering_pages(): void
+    public function test_live_refresh_header_is_not_special_any_more(): void
+    {
+        // Logged out: redirected to the login page like any other page view (no 401 for that header).
+        $this->get('/konto', ['X-Live-Refresh' => '1'])->assertRedirect('/');
+        $this->get('/admin', ['X-Live-Refresh' => '1'])->assertRedirect('/');
+        // JSON requests (e.g. Livewire updates) still get 401.
+        $this->getJson('/konto')->assertUnauthorized();
+    }
+
+    public function test_change_marker_changes_with_data_but_not_by_rendering_pages(): void
     {
         $this->setDefaultLimit(1000);
         $user = $this->user();
         $kassier = $this->kassier();
-        $fp = $this->actingAs($user)->getJson('/live')->assertOk()->assertHeader('Cache-Control', 'no-store, private')->json('fp');
+        $this->actingAs($user);
+        $fp = LiveFingerprint::current();
         $this->assertIsString($fp);
 
-        // Rendering pages writes nothing that the fingerprint sees (no endless refresh).
+        // Rendering pages writes nothing that the marker sees (no endless re-render).
         $this->get('/konto')->assertOk();
         $this->get('/statistik')->assertOk();
         $this->get('/konto/einstellungen')->assertOk();
@@ -54,13 +69,6 @@ class LiveRefreshTest extends TestCase
         $withDeposit = LiveFingerprint::current();
         Ledger::cancelDeposit($tx, $user);
         $this->assertNotSame($withDeposit, LiveFingerprint::current());
-    }
-
-    public function test_live_request_when_logged_out_gets_401_instead_of_redirect(): void
-    {
-        $this->get('/konto', ['X-Live-Refresh' => '1'])->assertUnauthorized();
-        $this->get('/admin', ['X-Live-Refresh' => '1'])->assertUnauthorized();
-        $this->get('/konto')->assertRedirect('/');
     }
 
     public function test_undo_items_carry_their_expiry_in_server_time(): void

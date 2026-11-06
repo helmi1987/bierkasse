@@ -1,8 +1,6 @@
 @extends('layouts.app')
 
 @section('title', __('guest.title'))
-{{-- No live refresh (1.36.0: no page uses live.js any more). --}}
-@section('live_off', '1')
 @section('main_class', 'narrow')
 
 @section('content')
@@ -11,7 +9,6 @@
     <h1>{{ __('guest.title') }}</h1>
     <p class="muted">{{ __('guest.intro') }}</p>
 </div>
-
 
 <form method="post" action="{{ route('guest.store') }}" class="card stack">
     @csrf

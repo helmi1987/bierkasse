@@ -1,7 +1,6 @@
 @extends('layouts.app')
 
 @section('title', __('legal.consent_title'))
-@section('live_off', '1')
 
 @section('content')
 <h1>{{ __('legal.consent_title') }}</h1>

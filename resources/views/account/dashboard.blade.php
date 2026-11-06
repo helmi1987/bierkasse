@@ -466,7 +466,8 @@
             @if ($stats['gift_received'] > 0)
                 <div class="kpi" data-testid="gift-received"><span>{{ __('gift.received_kpi') }}</span><strong>{{ $stats['gift_received'] }}</strong></div>
             @endif
-            @if ($stats['disposals']['count'] > 0)
+            {{-- Hidden while the disposal feature is off (1.32.2). --}}
+            @if ($stats['disposals']['count'] > 0 && \App\Services\Disposals::isEnabled())
                 <div class="kpi" data-testid="disposals"><span>{{ __('disposal.kpi') }}</span><strong>{{ $stats['disposals']['count'] }}</strong><small>{{ trans_choice('disposal.kpi_beers', $stats['disposals']['beers'], ['count' => $stats['disposals']['beers']]) }}</small></div>
             @endif
         </div>

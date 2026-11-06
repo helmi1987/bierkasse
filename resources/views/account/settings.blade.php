@@ -122,6 +122,8 @@
         <p class="hint">{{ __('account.stats_hint') }}</p>
         <button type="submit" class="btn small" data-hide-js>{{ __('account.save') }}</button>
     </form>
+    {{-- Hidden while the disposal feature is off (1.32.2); the stored value stays. --}}
+    @if (\App\Services\Disposals::isEnabled())
     <form method="post" action="{{ route('account.disposal-stats') }}" class="stack" data-testid="disposal-stats-form">
         @csrf
         <label class="switch">
@@ -131,6 +133,7 @@
         <p class="hint">{{ __('account.disposal_stats_hint') }}</p>
         <button type="submit" class="btn small" data-hide-js>{{ __('account.save') }}</button>
     </form>
+    @endif
 </section>
 
 @endif

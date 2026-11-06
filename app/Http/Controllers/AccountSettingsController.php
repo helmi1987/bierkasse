@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\SsoProvider;
 use App\Models\UserIdentity;
 use App\Services\Audit;
+use App\Services\Disposals;
 use App\Services\Ledger;
 use App\Services\LedgerException;
 use App\Services\Sso;
@@ -112,9 +113,13 @@ class AccountSettingsController extends Controller
         return back()->with('status', __('account.stats_saved'));
     }
 
-    /** "Name in Statistik Entsorgung zeigen" (1.32.0): own switch for the disposal ranking, separate from stats(). */
+    /**
+     * "Name in Statistik Entsorgung zeigen" (1.32.0): own switch for the disposal ranking, separate from stats().
+     * 404 while the feature is off (1.32.2); the stored value stays and applies again once it is switched on.
+     */
     public function disposalStats(Request $request): RedirectResponse
     {
+        abort_unless(Disposals::isEnabled(), 404);
         $user = $request->user();
         Audit::save('user.settings', $user->forceFill(['disposal_stats_opt_out' => ! $request->boolean('show')]));
 

@@ -12,13 +12,13 @@ use Illuminate\View\View;
 /**
  * Statistics for all logged-in users. Users with stats_opt_out are not named ("Anonym n").
  * Master switch and shown parts: Admin > Einstellungen > Funktionen (AppSettings::STATS_SWITCHES).
- * Period via GET (1.30.0): ?zeitraum=gesamt|woche|monat|jahr|frei&von=YYYY-MM-DD&bis=YYYY-MM-DD (StatsPeriod).
+ * Period via GET (1.30.0): ?zeitraum=gesamt|woche|monat|quartal|jahr|frei&von=YYYY-MM-DD&bis=YYYY-MM-DD (StatsPeriod).
  */
 class StatsController extends Controller
 {
     public function index(Request $request): View
     {
-        // Off for everyone, admins included (a backend statistics page follows later).
+        // Off for everyone, admins included; kassiers and admins keep the backend page Kassier > Statistik (1.31.0).
         abort_unless(AppSettings::statsEnabled(), 404);
 
         return view('stats.index', self::data(StatsPeriod::fromQuery($request->query())));

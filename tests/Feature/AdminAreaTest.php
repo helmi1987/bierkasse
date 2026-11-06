@@ -44,7 +44,6 @@ class AdminAreaTest extends TestCase
     {
         $this->actingAs($this->kassier());
         $moved = [
-            '/admin/statistik' => route('stats'),
             '/admin/runden' => route('backend.bookings', ['tab' => 'runden']),
             '/admin/verschenkt' => route('backend.bookings', ['tab' => 'geschenke']),
             '/admin/gaeste' => route('backend.bookings', ['tab' => 'gaeste']),
@@ -66,7 +65,7 @@ class AdminAreaTest extends TestCase
         $this->actingAs($this->kassier());
         $this->get('/admin')->assertOk()->assertSeeText('Kassier')->assertDontSee(route('backend.settings'))
             ->assertSee(route('backend.bookings'))->assertSee(route('backend.qr-codes.index'))->assertSee(route('backend.audit'))
-            ->assertDontSee('href="'.url('/admin/statistik').'"', false);
+            ->assertSee('href="'.url('/admin/statistik').'"', false);
 
         $this->actingAs($this->admin());
         $this->get('/admin/einstellungen')->assertOk()->assertSee('>'."\n                        Admin", false)

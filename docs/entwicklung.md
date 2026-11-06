@@ -367,7 +367,7 @@
   Rangliste mit Sport-Platzierung (1.28.1): gleich viele Biere = gleicher Rang, danach Lücke (1, 1, 3); der Rang
   kommt aus `Stats::ranked()`, nicht aus der View. Die Top-10-Grenze zeigt alle mit dem Rang von Platz 10 mit.
   **Annahme:** Wer "In Statistik anzeigen" ausschaltet, wird für andere nirgends namentlich gezeigt
-  (auch nicht in der Rangliste im Admin-Bereich). Seit 1.29.0 steht er in der Rangliste als «Anonym 1»,
+  (im Admin-Bereich ebenfalls als «Anonym n»). Seit 1.29.0 steht er in der Rangliste als «Anonym 1»,
   «Anonym 2» … (`stats.anonymous`, Zeile mit `anonymous => true`). **Entscheid 2026-11-06:** nummeriert wird
   nach der Reihenfolge in der angezeigten Liste (nach Sortierung und Top-10-Schnitt, von oben nach unten), nicht
   fest pro Benutzer, damit niemand über die Zeit wiedererkennbar ist. Die `user_id` bleibt serverseitig in der
@@ -386,9 +386,11 @@
     getauscht, höchstens 5 Jahre (sonst wird `von` gekürzt). Bis 62 Tage pro Tag, länger pro Monat.
     Formular mit zwei Datumsfeldern (GET, verstecktes `zeitraum=frei`). Titel «2.11.2026 – 6.11.2026».
   Daten nur als `JJJJ-MM-TT` (streng, «2026-02-31» gilt als ungültig). Zeitraumleiste in
-  `resources/views/stats/_period.blade.php` (Reiter Gesamt | Woche | Monat | Jahr | Frei, aktiver Reiter `primary`;
+  `resources/views/stats/_period.blade.php` (Reiter Gesamt | Woche | Monat | Quartal | Jahr | Frei, aktiver Reiter `primary`;
   bei Woche/Monat/Jahr «← Zurück», Titel, «Weiter →»; «Weiter» fehlt, wenn der nächste Zeitraum nach heute begänne),
-  wiederverwendbar mit `$periodRoute` für eine spätere Backend-Statistik.
+  wiederverwendbar mit `$periodRoute` (seit 1.31.0 von der Backend-Statistik genutzt, dazu `$extraQuery` für deren Filter).
+  Seit 1.31.0 auch `zeitraum=quartal&von=…`: Kalenderquartal mit `von`, Titel «Q4 2026», Diagramm pro Monat, Vor/Zurück
+  um ein Quartal (auch auf `/statistik`).
   Alles auf der Seite folgt dem Zeitraum: «Biere total», "Verlauf" (Schalter `stats_show_months`), Wochentage
   (`stats_show_weekdays`) und Rangliste (`stats_show_ranking`, mit «Anonym n», Sport-Platzierung, Top 10 mit Gleichstand).
   Gefiltert wird in SQL (`whereBetween('created_at', …)` auf Abstreichen, Gäste-Verkäufe und Runden, Runden nach dem
@@ -405,11 +407,46 @@
 - Konto (1.30.0): In «Meine Buchungen & Statistik» (nur mit `stats_dashboard_enabled`) stehen unter den Kennzahlen
   die gleichen fünf Vergleichswerte für den eigenen Benutzer, unter dem Diagramm «Zur Statistik →» (nur wenn
   `stats_enabled` an ist). Keine Zeitraumleiste im Konto.
+- Backend-Statistik (1.31.0) `/admin/statistik` (Reiter «Statistik» in der Kassier-Leiste nach «Buchungen»;
+  Kassier und Admin, Benutzer 403). Bis 1.30.0 war `/admin/statistik` eine 301-Umleitung auf `/statistik`, das ist
+  sie nicht mehr. Unabhängig von den Statistik-Schaltern (`stats_enabled` aus = `/statistik` 404, die Backend-Seite
+  bleibt). Gespeicherte Reiter-Reihenfolgen bekommen den neuen Reiter hinten angehängt (`BackendNav::normalize()`);
+  enthält eine alte Reihenfolge von vor 1.20.0 noch den Schlüssel `stats`, steht er an dieser Stelle.
+  Controller `App\Http\Controllers\Backend\StatsController`, Abfragen in `App\Services\BackendStats`.
+  GET-Parameter (teilbare URL, ungültige Werte fallen still auf den Standard zurück):
+  - Zeitraum wie `/statistik` (`zeitraum`, `von`, `bis`, inkl. Quartal); die Zeitraumleiste behält die Filter.
+  - `benutzer`: `alle` (Standard), eine Benutzer-ID, `gaeste` (Gäste-Verkäufe), `eingeladen` (Runden-Biere ohne Namen).
+    Wählbar sind nur Benutzer mit Bierkonto und «In Statistik anzeigen» an (aktiv und inaktiv, nach Name).
+    **Annahme:** Opt-out-Benutzer sind nicht einzeln wählbar (eine ID eines solchen Benutzers gilt als `alle`), damit
+    auch der Filter niemanden verrät; sie erscheinen als «Anonym n».
+  - `typ`: `alle` (Standard: eigener Konsum + Runden-Biere + Gäste-Verkäufe, also die getrunkenen Biere wie
+    `Stats::global()`), `konsum`, `runden`, `gaeste`, `geschenke`. Geschenke («Bier verschenken», Zeile des Schenkers,
+    Biere = verschenkte Biere, CHF = Wert) sind Guthaben, keine getrunkenen Biere: nur beim Typ `geschenke`, nie in `alle`.
+  - `gruppe`: `zeit` (Standard) mit `raster` `auto` (Standard: Tag für Woche/Monat/frei bis 62 Tage, sonst Monat;
+    «Gesamt» = Monate der letzten 12 Monate wie `/statistik`), `tag`, `woche` (ISO-Wochen, «KW 45 (2.–8.11.2026)»; am
+    Rand angeschnittene Wochen zählen nur die Tage im Zeitraum), `monat`, `jahr`; «Gesamt» mit gewähltem Raster läuft
+    von der ersten Buchung bis heute. Oder `benutzer`: eine Zeile pro Trinker (alle, kein Top-N), Sport-Platzierung
+    (`Stats::ranked()`), Opt-out als «Anonym n» von oben nach unten, «Gäste», «Gäste (eingeladen)», Konten ohne
+    Bierkonto zusammen als «Ohne Bierkonto».
+  Kennzahlen: Biere, Umsatz in CHF (was die Biere gekostet haben: Runden zum Rundenpreis, Gäste zum bezahlten Betrag;
+  bei `geschenke` der Wert), Vorperiode (gleich lange Periode direkt davor: Woche/Monat/Quartal/Jahr = `previous()`,
+  frei = gleich viele Tage vor `von`, Gesamt = «–») mit Veränderung in % («–», wenn die Vorperiode 0 ist).
+  Tabelle `Zeitraum | Biere | CHF` bzw. `Rang | Name | Biere | CHF` mit Total-Zeile (Summe der gezeigten Zeilen; bei
+  «Gesamt»/«Automatisch» nur die letzten 12 Monate, die Kennzahlen zählen alles), darunter bei Zeit-Gruppierung ein
+  Balkendiagramm (`BarChart`) bis 62 Zeilen, sonst ein Hinweis.
+  Zeitraum, Benutzer und Typ werden in SQL gefiltert (`StatsPeriod::dbBounds()`), gruppiert wird in PHP auf den Zeilen
+  des Zeitraums. Die Zeilenquellen kommen aus `Stats` (`consumptions()`, `roundRows()` mit optionalem Filter auf die
+  Runden-Positionen, `guestRows()`), damit die Zählregeln nur an einer Stelle stehen.
+  CSV-Export `/admin/statistik/export?…` mit denselben Parametern und Zeilen wie die Tabelle: Spalten
+  `zeitraum,biere,chf` bzw. `rang,name,biere,chf` (CHF als `4.50`), letzte Zeile `Total`, gleiche Anonymisierung,
+  Datei `statistik-JJJJ-MM-TT-HHMMSS.csv`, Schutz gegen Formel-Injektion (`App\Support\Csv::safe()`, auch im
+  Protokoll-Export). Kein Audit-Eintrag (nur lesend, wie der Protokoll-Export).
 - Statistik-Schalter (1.29.0) unter Admin > Einstellungen > Funktionen, Block "Statistik" (nur Admin, gleiches
   Formular `#funktionen`, Audit wie die übrigen Funktionen). Alle Settings Standard an (nicht gesetzt = an),
   Liste `AppSettings::STATS_SWITCHES`, Getter `statsEnabled()`, `statsShows($teil)`, `statsDashboardEnabled()`:
   - `stats_enabled` (Hauptschalter): aus = Menüpunkt "Statistik" für alle weg, `GET /statistik` gibt 404,
-    auch für Admins (eine Backend-Statistik folgt später). Die alte Umleitung `/admin/statistik` bleibt.
+    auch für Admins. Kassier und Admin sehen die Statistik weiterhin unter Kassier > Statistik (`/admin/statistik`,
+    seit 1.31.0, unabhängig von allen Statistik-Schaltern; keine Umleitung mehr).
   - `stats_show_totals` (seit 1.30.0 inkl. Vergleich), `stats_show_months` (Verlauf, seit 1.30.0 pro Zeitraum), `stats_show_weekdays`,
     `stats_show_ranking`: blenden den jeweiligen Teil aus; Diagramme werden nur gerechnet, wenn sichtbar.
     Ist kein Teil an, erscheint «Die Statistik ist zurzeit ausgeschaltet.».

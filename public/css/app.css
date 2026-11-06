@@ -346,6 +346,9 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .period-nav .period-label { margin: 0; flex: 1 1 auto; justify-content: center; text-align: center; }
 .period-form { margin-top: .75rem; }
 .period-form input[type=date] { width: auto; }
+/* Backend statistics (1.31.0): filter form and totals row. */
+.stats-filters { margin-top: 0; }
+.table tfoot td { font-weight: 600; border-bottom: 0; }
 
 /* Charts (inline SVG) */
 .chart { width: 100%; height: auto; display: block; margin-top: .5rem; }

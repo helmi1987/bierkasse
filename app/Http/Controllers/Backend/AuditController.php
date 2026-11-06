@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Services\Audit;
 use App\Support\AuditPresenter;
 use App\Support\AuditQuery;
+use App\Support\Csv;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -50,20 +51,12 @@ class AuditController extends Controller
             $out = fopen('php://output', 'w');
             fputcsv($out, ['id', 'created_at_utc', 'actor_id', 'actor_name', 'action', 'subject_type', 'subject_id', 'old', 'new', 'ip', 'user_agent', 'prev_hash', 'hash'], escape: '');
             foreach ($query->lazyById(500) as $e) {
-                fputcsv($out, array_map(fn ($v) => self::csvSafe($v), [
+                fputcsv($out, array_map(fn ($v) => Csv::safe($v), [
                     $e->id, $e->created_at, $e->actor_ref, $e->actor_name, $e->action, $e->subject_type, $e->subject_id,
                     $e->old_values, $e->new_values, $e->ip, $e->user_agent, $e->prev_hash, $e->hash,
                 ]), escape: '');
             }
             fclose($out);
         }, 'protokoll-'.now()->format('Y-m-d-His').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8', 'Cache-Control' => 'no-store, private']);
-    }
-
-    /** Against formula injection in spreadsheet programs. */
-    private static function csvSafe(mixed $value): string
-    {
-        $value = (string) $value;
-
-        return $value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true) ? "'".$value : $value;
     }
 }

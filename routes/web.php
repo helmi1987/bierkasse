@@ -186,6 +186,10 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::get('/registrierung-qr', [Backend\SettingsController::class, 'registrationQr'])->name('registration.qr');
             Route::get('/registrierung-qr/flyer-bild', [Backend\SettingsController::class, 'flyerSvg'])->name('registration.flyer-svg');
 
+            // Backend statistics (1.31.0, read-only; until 1.30 /admin/statistik redirected to /statistik).
+            Route::get('/statistik', [Backend\StatsController::class, 'index'])->name('stats');
+            Route::get('/statistik/export', [Backend\StatsController::class, 'export'])->name('stats.export');
+
             // Audit log (tab "Fassungen" = legal text revisions, ?tab=fassungen; Livewire component).
             // Read-only: no route changes or deletes entries.
             Route::get('/protokoll', [Backend\AuditController::class, 'index'])->name('audit');
@@ -194,7 +198,6 @@ Route::middleware(EnsureInstalled::class)->group(function () {
             Route::post('/protokoll/pruefen', [Backend\AuditController::class, 'verify'])->name('audit.verify');
 
             // Pages moved in 1.20.0 (old names kept so links and bookmarks keep working): 301 to the new place.
-            Route::get('/statistik', Backend\MovedPageController::class)->defaults('target', 'stats')->name('stats');
             Route::get('/runden', Backend\MovedPageController::class)->defaults('target', 'backend.bookings')->defaults('tab', 'runden')->name('rounds');
             Route::get('/verschenkt', Backend\MovedPageController::class)->defaults('target', 'backend.bookings')->defaults('tab', 'geschenke')->name('gifts');
             Route::get('/gaeste', Backend\MovedPageController::class)->defaults('target', 'backend.bookings')->defaults('tab', 'gaeste')->name('guests');

@@ -60,7 +60,7 @@ class Stats
     }
 
     /**
-     * @return array{total_beers:int, months: list<array{label:string, beers:int, amount:int}>, weekdays: list<array{label:string, beers:int}>, ranking: list<array{user_id:int, name:string, beers:int}>}
+     * @return array{total_beers:int, months: list<array{label:string, beers:int, amount:int}>, weekdays: list<array{label:string, beers:int}>, ranking: list<array{rank:int, user_id:int, name:string, beers:int}>}
      */
     public static function global(int $top = 10): array
     {
@@ -146,8 +146,11 @@ class Stats
     }
 
     /**
+     * Ranking with standard competition ranking ("1224"): equal beers share the rank, the next rank skips
+     * the tied places (1, 1, 3). All entries tied with place $top are shown too.
+     *
      * @param  Collection<int, Transaction>  $rows
-     * @return list<array{user_id:int, name:string, beers:int}>
+     * @return list<array{rank:int, user_id:int, name:string, beers:int}>
      */
     private static function ranking(Collection $rows, int $top): array
     {
@@ -157,9 +160,35 @@ class Stats
         $pseudo = [self::GUESTS_ID => __('stats.guests'), self::INVITED_ID => __('stats.guests_invited')];
         $name = fn ($id) => $pseudo[(int) $id] ?? $users[$id]->displayName();
 
-        return $sums->filter(fn ($beers, $id) => (isset($pseudo[(int) $id]) || $users->has($id)) && $beers > 0)
-            ->sortDesc()->take($top)
-            ->map(fn ($beers, $id) => ['user_id' => (int) $id, 'name' => $name($id), 'beers' => $beers])
-            ->values()->all();
+        $sorted = $sums->filter(fn ($beers, $id) => (isset($pseudo[(int) $id]) || $users->has($id)) && $beers > 0)
+            ->sortDesc();
+
+        return self::ranked($sorted->map(fn ($beers, $id) => ['user_id' => (int) $id, 'name' => $name($id), 'beers' => $beers])->values(), 'beers', $top);
+    }
+
+    /**
+     * Adds "rank" to rows sorted descending by $field (ties share the rank, 1224) and cuts after place $top,
+     * keeping every row tied with it.
+     *
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @return list<array<string, mixed>>
+     */
+    public static function ranked(Collection $rows, string $field, int $top): array
+    {
+        $out = [];
+        $rank = 0;
+        $previous = null;
+        foreach ($rows->values() as $i => $row) {
+            if ($previous === null || $row[$field] !== $previous) {
+                $rank = $i + 1;
+                $previous = $row[$field];
+            }
+            if ($rank > $top) {
+                break;
+            }
+            $out[] = ['rank' => $rank] + $row;
+        }
+
+        return $out;
     }
 }

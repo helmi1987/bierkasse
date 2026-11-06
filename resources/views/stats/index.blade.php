@@ -26,8 +26,8 @@
         @else
             <ol class="ranking">
                 @foreach ($stats['ranking'] as $row)
-                    <li @class(['me' => $row['user_id'] === auth()->id()])>
-                        <span class="rank">{{ $loop->iteration }}</span>
+                    <li @class(['me' => $row['user_id'] === auth()->id(), 'rank-'.$row['rank'] => $row['rank'] <= 3])>
+                        <span class="rank">{{ $row['rank'] }}</span>
                         <span class="name">{{ $row['name'] }}</span>
                         <strong>{{ $row['beers'] }}</strong>
                     </li>

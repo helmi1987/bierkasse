@@ -8,7 +8,9 @@ return [
     'ranking' => 'Rangliste',
     'guests' => 'Gäste',
     'guests_invited' => 'Gäste (eingeladen)',
-    'ranking_hint' => 'Wer «In Statistik anzeigen» ausgeschaltet hat, erscheint hier nicht; die Biere zählen nur im Total.',
+    'ranking_hint' => 'Wer «In Statistik anzeigen» ausgeschaltet hat, erscheint als «Anonym».',
+    'anonymous' => 'Anonym :n',
+    'nothing_enabled' => 'Die Statistik ist zurzeit ausgeschaltet.',
     'ranking_empty' => 'Noch niemand in der Rangliste.',
     'rank' => 'Rang',
     'name' => 'Name',
@@ -17,5 +19,22 @@ return [
     'chart_weekdays' => 'Biere pro Wochentag',
     'chart_my_months' => 'Meine Biere pro Monat',
     'month_short' => [1 => 'Jan', 2 => 'Feb', 3 => 'Mär', 4 => 'Apr', 5 => 'Mai', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Dez'],
+    // Switches in Admin > Einstellungen > Funktionen (1.29.0).
+    'settings_heading' => 'Statistik',
+    'settings_hint' => 'Gilt für Benutzer. «In Statistik anzeigen» aus im Konto bleibt in jedem Fall wirksam.',
+    'switch' => [
+        'stats_enabled' => 'Statistik-Seite für Benutzer',
+        'stats_show_totals' => 'Gesamtzahlen anzeigen',
+        'stats_show_months' => 'Monats- und Wochenverlauf anzeigen',
+        'stats_show_weekdays' => 'Wochentage anzeigen',
+        'stats_show_ranking' => 'Rangliste anzeigen',
+        'stats_ranking_counts' => 'Rangliste mit Anzahl Biere (aus: nur Plätze)',
+        'stats_show_amounts' => 'Beträge in CHF anzeigen',
+        'stats_dashboard_enabled' => 'Eigene Statistik im Konto',
+    ],
+    'switch_hint' => [
+        'stats_enabled' => 'Aus: der Menüpunkt «Statistik» ist für alle ausgeblendet, die Seite nicht erreichbar (auch für Admins). Die Teile unten gelten unabhängig davon.',
+        'stats_dashboard_enabled' => 'Aus: im Konto erscheinen nur die letzten Buchungen («Meine Buchungen»), ohne Kennzahlen und Diagramm.',
+    ],
     'weekday_short' => [1 => 'Mo', 2 => 'Di', 3 => 'Mi', 4 => 'Do', 5 => 'Fr', 6 => 'Sa', 7 => 'So'],
 ];

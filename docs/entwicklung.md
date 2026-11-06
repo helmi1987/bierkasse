@@ -367,8 +367,28 @@
   Rangliste mit Sport-Platzierung (1.28.1): gleich viele Biere = gleicher Rang, danach Lücke (1, 1, 3); der Rang
   kommt aus `Stats::ranked()`, nicht aus der View. Die Top-10-Grenze zeigt alle mit dem Rang von Platz 10 mit.
   **Annahme:** Wer "In Statistik anzeigen" ausschaltet, wird für andere nirgends namentlich gezeigt
-  (auch nicht in der Rangliste im Admin-Bereich); die Biere zählen nur in den anonymen Totals.
+  (auch nicht in der Rangliste im Admin-Bereich). Seit 1.29.0 steht er in der Rangliste als «Anonym 1»,
+  «Anonym 2» … (`stats.anonymous`, Zeile mit `anonymous => true`). **Entscheid 2026-11-06:** nummeriert wird
+  nach der Reihenfolge in der angezeigten Liste (nach Sortierung und Top-10-Schnitt, von oben nach unten), nicht
+  fest pro Benutzer, damit niemand über die Zeit wiedererkennbar ist. Die `user_id` bleibt serverseitig in der
+  Zeile, damit der Opt-out-Benutzer seine eigene Zeile fett (`.me`) sieht; sie wird nie ausgegeben.
+  "Nur Verwaltung"-Konten bleiben aussen vor, "Gäste" und "Gäste (eingeladen)" unverändert.
   Kassiers sehen in der Benutzerverwaltung trotzdem Saldo und Buchungen aller Konten.
+- Statistik-Schalter (1.29.0) unter Admin > Einstellungen > Funktionen, Block "Statistik" (nur Admin, gleiches
+  Formular `#funktionen`, Audit wie die übrigen Funktionen). Alle Settings Standard an (nicht gesetzt = an),
+  Liste `AppSettings::STATS_SWITCHES`, Getter `statsEnabled()`, `statsShows($teil)`, `statsDashboardEnabled()`:
+  - `stats_enabled` (Hauptschalter): aus = Menüpunkt "Statistik" für alle weg, `GET /statistik` gibt 404,
+    auch für Admins (eine Backend-Statistik folgt später). Die alte Umleitung `/admin/statistik` bleibt.
+  - `stats_show_totals`, `stats_show_months` (Monats-, später auch Wochenverlauf), `stats_show_weekdays`,
+    `stats_show_ranking`: blenden den jeweiligen Teil aus; Diagramme werden nur gerechnet, wenn sichtbar.
+    Ist kein Teil an, erscheint «Die Statistik ist zurzeit ausgeschaltet.».
+  - `stats_ranking_counts`: aus = Rangliste nur mit Platz und Name, ohne Anzahl Biere.
+  - `stats_show_amounts`: alle CHF-Beträge, die ein Benutzer in Statistiken sieht (heute nur "Total ausgegeben"
+    im Konto; `/statistik` zeigt noch keine Beträge).
+  - `stats_dashboard_enabled`: eigene Statistik im Konto; aus = die Karte heisst "Meine Buchungen" und zeigt nur
+    die letzten Buchungen (keine Kennzahlen inkl. spendiert/verschenkt/erhalten, kein Diagramm,
+    `Stats::forUser()` wird nicht gerechnet).
+  Die Teile sind unabhängig vom Hauptschalter. "In Statistik anzeigen" aus im Konto wirkt in jedem Fall.
 - Einzahlungsvorschläge (Kasse > Reiter "Einzahlungsvorschläge", `/admin/kasse?tab=vorschlaege`, Kassier und Admin,
   Livewire; `/admin/einzahlungsvorschlaege` leitet um): eigene CHF-Beträge
   (z. B. "30, 60, 90", max. 6, aufsteigend, je durch den Bierpreis teilbar) oder automatisch: kleinstes

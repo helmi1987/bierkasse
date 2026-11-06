@@ -59,7 +59,7 @@ class GuestBookingTest extends TestCase
 
         // Statistics: guests, not the booking user.
         $stats = Stats::global();
-        $this->assertSame([['rank' => 1, 'user_id' => 0, 'name' => 'Gäste', 'beers' => 4]], $stats['ranking']);
+        $this->assertSame([['rank' => 1, 'user_id' => 0, 'name' => 'Gäste', 'beers' => 4, 'anonymous' => false]], $stats['ranking']);
         $this->assertSame(0, Stats::forUser($user)['total_beers']);
 
         $this->get('/konto')->assertOk()->assertSee('Fritz');

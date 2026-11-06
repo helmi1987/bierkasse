@@ -48,6 +48,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.29.0 | Neue Funktion | Statistik für Benutzer in den Funktionen ein-/ausschaltbar (ganz oder einzelne Teile); Opt-out-Benutzer in der Rangliste als «Anonym n» |
 | 1.28.1 | Bugfix | Rangliste mit Sport-Platzierung: gleich viele Biere = gleicher Rang, danach Lücke (1, 1, 3) |
 | 1.28.0 | Neue Funktion | Ablaufdatum des Client-Secrets pro SSO-Anbieter mit Banner und Mail-Erinnerungen an Admins (90 bis 0 Tage) |
 | 1.27.0 | Verbesserung | SSO-Anbieter: Redirect-URI in der Liste und live beim Anlegen, Reihenfolge der Login-Knöpfe per Pfeile im Backend |

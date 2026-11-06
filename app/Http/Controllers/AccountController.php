@@ -40,7 +40,9 @@ class AccountController extends Controller
         // Pending deposits are left out while on hold (decision 2026-10-24, Ledger::depositsOnHold()).
         $balance = $user->availableBalance();
         $price = AppSettings::beerPrice();
-        $stats = Stats::forUser($user);
+        // Own statistics only when switched on (Admin > Einstellungen > Funktionen): cheap page otherwise.
+        $statsDashboard = AppSettings::statsDashboardEnabled();
+        $stats = $statsDashboard ? Stats::forUser($user) : null;
 
         $undoable = Transaction::query()->where('user_id', $user->id)
             ->where('type', Transaction::TYPE_CONSUMPTION)
@@ -110,12 +112,13 @@ class AccountController extends Controller
             'suggested' => $suggested,
             'recent' => Transaction::query()->with(['roundItems.user', 'giftParts.user', 'giftParent.user'])->where('user_id', $user->id)->latest('id')->limit(5)->get(),
             'stats' => $stats,
+            'statsAmounts' => AppSettings::statsShows('amounts'),
             'canInvite' => AppSettings::invitationsAllowed(),
-            'chart' => BarChart::render(
+            'chart' => $stats !== null ? BarChart::render(
                 array_column($stats['months'], 'label'),
                 array_column($stats['months'], 'beers'),
                 __('stats.chart_my_months'),
-            ),
+            ) : null,
         ]);
     }
 

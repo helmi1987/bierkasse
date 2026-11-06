@@ -60,7 +60,7 @@ class SettingsController extends Controller
                 'guest_enabled' => (bool) AppSettings::get(AppSettings::GUEST_ENABLED, false),
                 'guest_password' => AppSettings::guestPassword(),
                 'cashbox_qr_enabled' => (bool) AppSettings::get(AppSettings::CASHBOX_QR_ENABLED, false),
-            ],
+            ] + array_combine(AppSettings::STATS_SWITCHES, array_map(fn (string $key) => AppSettings::statsSwitch($key), AppSettings::STATS_SWITCHES)),
             'legal' => [
                 'name' => AppSettings::legalName(),
                 'email' => AppSettings::legalEmail(),
@@ -75,7 +75,8 @@ class SettingsController extends Controller
     /**
      * Feature switches (section "Funktionen", admins only since 1.20.0; before, kassiers switched rounds, gifts
      * and guest booking on their pages): rounds, gifts, guest booking by users, carryover on registration,
-     * public guest page with guest password, cashbox QR. The guest page can only be enabled together with a guest password.
+     * public guest page with guest password, cashbox QR, statistics for users (1.29.0, STATS_SWITCHES).
+     * The guest page can only be enabled together with a guest password.
      */
     public function features(Request $request): RedirectResponse
     {
@@ -91,7 +92,7 @@ class SettingsController extends Controller
             AppSettings::GUEST_ENABLED => $request->boolean('guest_enabled'),
             AppSettings::GUEST_PASSWORD => (string) ($data['guest_password'] ?? ''),
             AppSettings::CASHBOX_QR_ENABLED => $request->boolean('cashbox_qr_enabled'),
-        ]);
+        ] + array_combine(AppSettings::STATS_SWITCHES, array_map(fn (string $key) => $request->boolean($key), AppSettings::STATS_SWITCHES)));
         // Switching a QR page on: make sure its first code exists (admin path).
         QrCode::ensureFirstForAdmin($request->user());
 

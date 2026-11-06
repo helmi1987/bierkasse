@@ -16,12 +16,13 @@ class StatsTest extends TestCase
         $this->setDefaultLimit(100000);
         $visible = $this->user(['first_name' => 'Vreni', 'last_name' => 'Sichtbar']);
         $hidden = $this->user(['first_name' => 'Heiri', 'last_name' => 'Versteckt', 'stats_opt_out' => true]);
-        Ledger::consume($visible, 2);
-        Ledger::consume($hidden, 5);
+        Ledger::consume($visible, 5);
+        Ledger::consume($hidden, 2);
 
         $stats = Stats::global();
         $this->assertSame(7, $stats['total_beers']);
-        $this->assertSame(['Vreni Sichtbar'], array_column($stats['ranking'], 'name'));
+        // Since 1.29.0 opt-out users are ranked as "Anonym n" (never with their name).
+        $this->assertSame(['Vreni Sichtbar', 'Anonym 1'], array_column($stats['ranking'], 'name'));
         $this->assertSame(7, array_sum(array_column($stats['months'], 'beers')));
         $this->assertSame(7, array_sum(array_column($stats['weekdays'], 'beers')));
 

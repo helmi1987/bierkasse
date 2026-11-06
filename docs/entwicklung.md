@@ -364,6 +364,8 @@
   Abstreichen durch Benutzer wird bei Bestand 0 nicht blockiert; negativer Bestand wird so angezeigt.
   Gäste-Verkäufe (alle Wege) ebenfalls nie blockiert (Entscheid 2026-10-22).
 - Statistik `/statistik`: Biere total, pro Monat, pro Wochentag, Rangliste (Diagramme als SVG vom Server).
+  Rangliste mit Sport-Platzierung (1.28.1): gleich viele Biere = gleicher Rang, danach Lücke (1, 1, 3); der Rang
+  kommt aus `Stats::ranked()`, nicht aus der View. Die Top-10-Grenze zeigt alle mit dem Rang von Platz 10 mit.
   **Annahme:** Wer "In Statistik anzeigen" ausschaltet, wird für andere nirgends namentlich gezeigt
   (auch nicht in der Rangliste im Admin-Bereich); die Biere zählen nur in den anonymen Totals.
   Kassiers sehen in der Benutzerverwaltung trotzdem Saldo und Buchungen aller Konten.

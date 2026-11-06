@@ -350,9 +350,9 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .ranking li { display: flex; align-items: center; gap: .75rem; padding: .55rem 0; border-bottom: 1px solid var(--border); }
 .ranking li.me { font-weight: 700; }
 .ranking .rank { width: 2rem; height: 2rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--surface-2); font-weight: 700; flex: none; }
-.ranking li:nth-child(1) .rank { background: #fbbf24; color: #1f1a14; }
-.ranking li:nth-child(2) .rank { background: #d6d3d1; color: #1f1a14; }
-.ranking li:nth-child(3) .rank { background: #d97706; color: #fff; }
+.ranking li.rank-1 .rank { background: #fbbf24; color: #1f1a14; }
+.ranking li.rank-2 .rank { background: #d6d3d1; color: #1f1a14; }
+.ranking li.rank-3 .rank { background: #d97706; color: #fff; }
 .ranking .name { flex: 1; }
 
 /* TOTP */

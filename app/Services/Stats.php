@@ -10,8 +10,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * Consumption statistics. Users with stats_opt_out are never named for other users:
- * their beers count only in the anonymous totals.
+ * Consumption statistics. Users with stats_opt_out are never named for other users: in the ranking
+ * they appear as "Anonym n", numbered by their position in the shown list (not fixed per user, 1.29.0).
  *
  * Beers count at the drinker: own consumption, beers received in a round (at the round's time) and
  * guest sales ("Gäste"). Beers without a name in a round count as "Gäste (eingeladen)". The round
@@ -60,7 +60,7 @@ class Stats
     }
 
     /**
-     * @return array{total_beers:int, months: list<array{label:string, beers:int, amount:int}>, weekdays: list<array{label:string, beers:int}>, ranking: list<array{rank:int, user_id:int, name:string, beers:int}>}
+     * @return array{total_beers:int, months: list<array{label:string, beers:int, amount:int}>, weekdays: list<array{label:string, beers:int}>, ranking: list<array{rank:int, user_id:int, name:string, beers:int, anonymous:bool}>}
      */
     public static function global(int $top = 10): array
     {
@@ -147,23 +147,38 @@ class Stats
 
     /**
      * Ranking with standard competition ranking ("1224"): equal beers share the rank, the next rank skips
-     * the tied places (1, 1, 3). All entries tied with place $top are shown too.
+     * the tied places (1, 1, 3). All entries tied with place $top are shown too. Users with stats_opt_out
+     * are listed as "Anonym 1", "Anonym 2", … from top to bottom of the shown list; user_id stays for the
+     * own-row highlight (never rendered).
      *
      * @param  Collection<int, Transaction>  $rows
-     * @return list<array{rank:int, user_id:int, name:string, beers:int}>
+     * @return list<array{rank:int, user_id:int, name:string, beers:int, anonymous:bool}>
      */
     private static function ranking(Collection $rows, int $top): array
     {
         $sums = $rows->groupBy('user_id')->map(fn ($g) => (int) $g->sum('quantity'));
         // "Nur Verwaltung" accounts are never ranked (older beers count in the totals only).
-        $users = User::query()->whereIn('id', $sums->keys())->where('stats_opt_out', false)->hasBeerAccount()->get()->keyBy('id');
+        $users = User::query()->whereIn('id', $sums->keys())->hasBeerAccount()->get()->keyBy('id');
         $pseudo = [self::GUESTS_ID => __('stats.guests'), self::INVITED_ID => __('stats.guests_invited')];
-        $name = fn ($id) => $pseudo[(int) $id] ?? $users[$id]->displayName();
 
         $sorted = $sums->filter(fn ($beers, $id) => (isset($pseudo[(int) $id]) || $users->has($id)) && $beers > 0)
             ->sortDesc();
+        $ranked = self::ranked($sorted->map(fn ($beers, $id) => [
+            'user_id' => (int) $id,
+            'name' => $pseudo[(int) $id] ?? $users[$id]->displayName(),
+            'beers' => $beers,
+            'anonymous' => ! isset($pseudo[(int) $id]) && (bool) $users[$id]->stats_opt_out,
+        ])->values(), 'beers', $top);
 
-        return self::ranked($sorted->map(fn ($beers, $id) => ['user_id' => (int) $id, 'name' => $name($id), 'beers' => $beers])->values(), 'beers', $top);
+        // Numbered after sorting and cutting, so the shown list reads Anonym 1, 2, … top to bottom.
+        $n = 0;
+        foreach ($ranked as $i => $row) {
+            if ($row['anonymous']) {
+                $ranked[$i]['name'] = __('stats.anonymous', ['n' => ++$n]);
+            }
+        }
+
+        return $ranked;
     }
 
     /**

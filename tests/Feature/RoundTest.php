@@ -234,8 +234,8 @@ class RoundTest extends TestCase
         $this->assertSame(2, $ranking[$this->giver->id]['beers']);
         $this->assertSame(1, $ranking[$anna->id]['beers']);
         $this->assertSame(1, $ranking[0]['beers']);
-        // Opt-out: not named, but in the totals.
-        $this->assertFalse($ranking->has($hidden->id));
+        // Opt-out: not named, ranked as "Anonym n" since 1.29.0.
+        $this->assertSame(['Anonym 1', true, 1], [$ranking[$hidden->id]['name'], $ranking[$hidden->id]['anonymous'], $ranking[$hidden->id]['beers']]);
 
         $giverStats = Stats::forUser($this->giver);
         $this->assertSame([2, 5, 300 + 750], [$giverStats['total_beers'], $giverStats['given'], $giverStats['total_amount']]);

@@ -125,6 +125,49 @@ class AppSettings
     /** "Bier verschenken" on/off. */
     public const GIFTS_ENABLED = 'gifts_enabled';
 
+    /** Statistics page "/statistik" for users (master switch, default on): off = nav item hidden, page 404. */
+    public const STATS_ENABLED = 'stats_enabled';
+
+    /** Parts of the statistics shown to users (default on, independent of STATS_ENABLED). */
+    public const STATS_SHOW_TOTALS = 'stats_show_totals';
+
+    public const STATS_SHOW_MONTHS = 'stats_show_months';
+
+    public const STATS_SHOW_WEEKDAYS = 'stats_show_weekdays';
+
+    public const STATS_SHOW_RANKING = 'stats_show_ranking';
+
+    /** Ranking with the beer count per row (on) or only places and names (off). */
+    public const STATS_RANKING_COUNTS = 'stats_ranking_counts';
+
+    /** CHF amounts in the statistics a user sees (today: "Total ausgegeben" on the dashboard). */
+    public const STATS_SHOW_AMOUNTS = 'stats_show_amounts';
+
+    /** Own statistics (KPIs and month chart) in the dashboard card "Meine Buchungen & Statistik". */
+    public const STATS_DASHBOARD_ENABLED = 'stats_dashboard_enabled';
+
+    /** Parts for statsShows() => setting key. */
+    public const STATS_PARTS = [
+        'totals' => self::STATS_SHOW_TOTALS,
+        'months' => self::STATS_SHOW_MONTHS,
+        'weekdays' => self::STATS_SHOW_WEEKDAYS,
+        'ranking' => self::STATS_SHOW_RANKING,
+        'ranking_counts' => self::STATS_RANKING_COUNTS,
+        'amounts' => self::STATS_SHOW_AMOUNTS,
+    ];
+
+    /** All statistics switches in the order of the feature form (checkbox name = setting key). */
+    public const STATS_SWITCHES = [
+        self::STATS_ENABLED,
+        self::STATS_SHOW_TOTALS,
+        self::STATS_SHOW_MONTHS,
+        self::STATS_SHOW_WEEKDAYS,
+        self::STATS_SHOW_RANKING,
+        self::STATS_RANKING_COUNTS,
+        self::STATS_SHOW_AMOUNTS,
+        self::STATS_DASHBOARD_ENABLED,
+    ];
+
     /** Former undo window of a gift (1.7.0), read as fallback for UNDO_MINUTES['gift']. */
     public const GIFT_UNDO_MINUTES = 'gift_undo_minutes';
 
@@ -425,6 +468,30 @@ class AppSettings
     public static function carryoverAllowed(): bool
     {
         return (bool) self::get(self::CARRYOVER_ENABLED, true);
+    }
+
+    /** A statistics switch (one of STATS_SWITCHES); unset = on. */
+    public static function statsSwitch(string $key): bool
+    {
+        return (bool) self::get($key, true);
+    }
+
+    /** The statistics page "/statistik" is available (nav item and route). */
+    public static function statsEnabled(): bool
+    {
+        return self::statsSwitch(self::STATS_ENABLED);
+    }
+
+    /** A part of the statistics (key of STATS_PARTS) is shown to users. */
+    public static function statsShows(string $part): bool
+    {
+        return self::statsSwitch(self::STATS_PARTS[$part]);
+    }
+
+    /** Own statistics (KPIs and month chart) on the account dashboard. */
+    public static function statsDashboardEnabled(): bool
+    {
+        return self::statsSwitch(self::STATS_DASHBOARD_ENABLED);
     }
 
     /** Undo window of a booking kind (key of UNDO_DEFAULTS) in minutes, 0–UNDO_MAX; 0 = no undo. */

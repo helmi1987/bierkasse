@@ -58,7 +58,9 @@
                     {{-- Accounts without beer account have no dashboard: invite from the top bar. --}}
                     <a href="{{ route('account.invite') }}" @class(['active' => request()->routeIs('account.invite*')])>{{ __('site.nav.invite') }}</a>
                 @endif
-                <a href="{{ route('stats') }}" @class(['active' => request()->routeIs('stats')])>{{ __('site.nav.stats') }}</a>
+                @if (\App\Support\AppSettings::statsEnabled())
+                    <a href="{{ route('stats') }}" @class(['active' => request()->routeIs('stats')])>{{ __('site.nav.stats') }}</a>
+                @endif
                 @if ($authUser->isKassier())
                     <a href="{{ route('backend.dashboard') }}" @class(['active' => \App\Support\BackendNav::isKassierPage()])>
                         {{ __('site.nav.kassier') }}

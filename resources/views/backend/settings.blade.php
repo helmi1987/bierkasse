@@ -192,6 +192,17 @@
         </div>
         <label class="switch"><input type="checkbox" name="cashbox_qr_enabled" value="1" @checked(old('cashbox_qr_enabled', $features['cashbox_qr_enabled']))> <span>{{ __('guest.cashbox_enabled') }}</span></label>
         <p class="hint"><a href="{{ route('backend.qr-codes.index') }}">{{ __('settings.features_qr') }} →</a></p>
+        {{-- Statistics for users (1.29.0): master switch and parts, all default on. --}}
+        <div class="card-sep stack" data-testid="settings-features-stats">
+            <h3>{{ __('stats.settings_heading') }}</h3>
+            <p class="hint">{{ __('stats.settings_hint') }}</p>
+            @foreach (\App\Support\AppSettings::STATS_SWITCHES as $key)
+                <label class="switch"><input type="checkbox" name="{{ $key }}" value="1" @checked(old($key, $features[$key]))> <span>{{ __('stats.switch.'.$key) }}</span></label>
+                @if (\Illuminate\Support\Facades\Lang::has('stats.switch_hint.'.$key))
+                    <div class="hint">{{ __('stats.switch_hint.'.$key) }}</div>
+                @endif
+            @endforeach
+        </div>
         <button type="submit" class="btn primary">{{ __('settings.features_save') }}</button>
     </section>
 </form>

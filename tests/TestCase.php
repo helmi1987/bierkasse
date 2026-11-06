@@ -53,12 +53,13 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * Form of Admin > Einstellungen > Funktionen: rounds, gifts, guest booking by users and carryover on (defaults),
-     * public guest page and cashbox QR off, unless overridden ("0" = off).
+     * Form of Admin > Einstellungen > Funktionen: rounds, gifts, guest booking by users, carryover and all statistics
+     * switches on (defaults), public guest page and cashbox QR off, unless overridden ("0" = off).
      */
     protected function featureForm(array $values = []): array
     {
-        $form = array_merge(['rounds_enabled' => '1', 'gifts_enabled' => '1', 'guest_user_booking' => '1', 'carryover_enabled' => '1'], $values);
+        $stats = array_fill_keys(AppSettings::STATS_SWITCHES, '1');
+        $form = array_merge(['rounds_enabled' => '1', 'gifts_enabled' => '1', 'guest_user_booking' => '1', 'carryover_enabled' => '1'], $stats, $values);
 
         return array_filter($form, fn ($v) => $v !== '0' && $v !== false && $v !== null);
     }

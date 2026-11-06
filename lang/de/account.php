@@ -81,6 +81,7 @@ return [
     'history' => 'Ganzer Verlauf',
     'history_title' => 'Verlauf',
     'bookings_stats' => 'Meine Buchungen & Statistik',
+    'bookings' => 'Meine Buchungen',
     'notice_dismiss' => 'Hinweis ausblenden',
     'total_beers' => 'Biere total',
     'total_amount' => 'Total ausgegeben',
@@ -126,7 +127,7 @@ return [
     'profile_saved' => 'Profil gespeichert.',
     'stats_heading' => 'Statistik',
     'stats_show' => 'In Statistik anzeigen',
-    'stats_hint' => 'Aus: Dein Name erscheint nirgends für andere (auch nicht in der Rangliste); deine Biere zählen nur anonym im Total.',
+    'stats_hint' => 'Aus: Dein Name erscheint nirgends für andere; in der Rangliste stehst du als «Anonym n».',
     'stats_saved' => 'Gespeichert.',
 
     'recovery_heading' => 'Wiederherstellungscodes',

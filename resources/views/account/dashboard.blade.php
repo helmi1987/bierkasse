@@ -408,24 +408,29 @@
 
 <section class="card" data-testid="bookings">
     <details>
-    <summary><h2>{{ __('account.bookings_stats') }}</h2></summary>
-    <div class="kpis">
-        <div class="kpi"><span>{{ __('account.total_beers') }}</span><strong>{{ $stats['total_beers'] }}</strong></div>
-        <div class="kpi"><span>{{ __('account.total_amount') }}</span><strong>{{ chf($stats['total_amount']) }}</strong></div>
-        <div class="kpi"><span>{{ __('account.per_week') }}</span><strong>{{ number_format($stats['per_week'], 1, '.', "'") }}</strong></div>
-        @if ($stats['given'] > 0)
-            <div class="kpi" data-testid="round-given"><span>{{ __('round.given_kpi') }}</span><strong>{{ $stats['given'] }}</strong></div>
-        @endif
-        @if ($stats['gifted'] > 0)
-            <div class="kpi" data-testid="gift-given"><span>{{ __('gift.given_kpi') }}</span><strong>{{ $stats['gifted'] }}</strong></div>
-        @endif
-        @if ($stats['gift_received'] > 0)
-            <div class="kpi" data-testid="gift-received"><span>{{ __('gift.received_kpi') }}</span><strong>{{ $stats['gift_received'] }}</strong></div>
-        @endif
-    </div>
-    {!! $chart !!}
+    <summary><h2>{{ $stats !== null ? __('account.bookings_stats') : __('account.bookings') }}</h2></summary>
+    {{-- Own statistics switched in Admin > Einstellungen > Funktionen (1.29.0). --}}
+    @if ($stats !== null)
+        <div class="kpis">
+            <div class="kpi"><span>{{ __('account.total_beers') }}</span><strong>{{ $stats['total_beers'] }}</strong></div>
+            @if ($statsAmounts)
+                <div class="kpi"><span>{{ __('account.total_amount') }}</span><strong>{{ chf($stats['total_amount']) }}</strong></div>
+            @endif
+            <div class="kpi"><span>{{ __('account.per_week') }}</span><strong>{{ number_format($stats['per_week'], 1, '.', "'") }}</strong></div>
+            @if ($stats['given'] > 0)
+                <div class="kpi" data-testid="round-given"><span>{{ __('round.given_kpi') }}</span><strong>{{ $stats['given'] }}</strong></div>
+            @endif
+            @if ($stats['gifted'] > 0)
+                <div class="kpi" data-testid="gift-given"><span>{{ __('gift.given_kpi') }}</span><strong>{{ $stats['gifted'] }}</strong></div>
+            @endif
+            @if ($stats['gift_received'] > 0)
+                <div class="kpi" data-testid="gift-received"><span>{{ __('gift.received_kpi') }}</span><strong>{{ $stats['gift_received'] }}</strong></div>
+            @endif
+        </div>
+        {!! $chart !!}
+    @endif
     {{-- Latest bookings below the statistics (no own card since 1.14). --}}
-    <div class="card-sep">
+    <div @class(['card-sep' => $stats !== null])>
         @include('account.tx-list', ['transactions' => $recent])
         <p><a href="{{ route('account.history') }}">{{ __('account.history') }} →</a></p>
     </div>

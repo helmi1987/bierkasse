@@ -47,7 +47,7 @@
     <div class="alert warn">{{ __('account.payout_pending') }}</div>
 @else
     <section class="card beer-card">
-        <h2>{{ __('account.beer') }}</h2>
+        <h2>{{ __('account.beer') }}@if ($undoable->isNotEmpty()) <x-hint-toggle key="consume.undo" />@endif</h2>
         <form method="post" action="{{ route('account.consume') }}" class="beer-form">
             @csrf
             {!! \App\Support\FormToken::field('consume') !!}
@@ -105,7 +105,7 @@
     @php($roundCount = count($roundOld) + $roundExtra)
     <section class="card round-card" data-testid="round">
         <details @if ($roundUndoable->isNotEmpty() || $errors->hasAny(['recipients', 'recipients.*', 'extra', 'message']) || old('round_form')) open @endif>
-            <summary><h2>{{ __('round.heading') }}</h2></summary>
+            <summary><h2>{{ __('round.heading') }} <x-hint-toggle key="round.intro" />@if ($roundUndoable->isNotEmpty()) <x-hint-toggle key="round.undo" />@endif</h2></summary>
             <x-hint key="round.intro">{{ __('round.intro') }}</x-hint>
             <form method="post" action="{{ route('account.round') }}" class="stack" data-round data-price="{{ $price }}" data-max="{{ \App\Services\Rounds::MAX_BEERS }}"
                 data-one="{{ trans_choice('round.beers', 1, ['count' => 1]) }}" data-many="{{ trans_choice('round.beers', 2, ['count' => ':count']) }}">
@@ -114,7 +114,7 @@
                 <input type="hidden" name="round_form" value="1">
                 {{-- Total and both buttons at the top, sticky below the topbar while scrolling (findability, 1.32.1). --}}
                 <div class="round-bar">
-                    <p class="round-total center" aria-live="polite">{{ __('round.total') }}: <strong data-round-count>{{ trans_choice('round.beers', $roundCount, ['count' => $roundCount]) }}</strong> · <strong data-round-amount>{{ chf($roundCount * $price) }}</strong></p>
+                    <p class="round-total center" aria-live="polite">{{ __('round.total') }}: <strong data-round-count>{{ trans_choice('round.beers', $roundCount, ['count' => $roundCount]) }}</strong> · <strong data-round-amount>{{ chf($roundCount * $price) }}</strong> <x-hint-toggle key="round.total" /></p>
                     <div class="round-buttons">
                         <button type="submit" class="btn primary big" data-round-submit data-label="{{ __('round.submit') }}" @disabled($roundCount < 1)>{{ __('round.submit', ['count' => $roundCount]) }}</button>
                         <button type="submit" name="include_self" value="1" class="btn big" data-round-submit-self data-label="{{ __('round.submit_self') }}" @disabled($roundCount < 1)>{{ __('round.submit_self', ['count' => $roundCount + 1]) }}</button>
@@ -138,7 +138,7 @@
                     @endif
                 </fieldset>
                 <div class="field">
-                    <span class="label">{{ __('round.extra') }}</span>
+                    <span class="label">{{ __('round.extra') }} <x-hint-toggle key="round.extra" /></span>
                     <div class="stepper" data-stepper>
                         <button type="button" class="btn round" data-step="-1" aria-label="{{ __('account.less') }}">−</button>
                         <label class="sr-only" for="round-extra">{{ __('round.extra') }}</label>
@@ -180,7 +180,7 @@
     @php($giftQty = min(\App\Services\Gifts::MAX_PER_RECIPIENT, max(1, (int) old('gift_quantity', 1))))
     <section class="card round-card" data-testid="gift">
         <details @if ($giftUndoable->isNotEmpty() || $errors->hasAny(['gift_recipients', 'gift_recipients.*', 'gift_quantity', 'gift_message']) || old('gift_quantity')) open @endif>
-            <summary><h2>{{ __('gift.heading') }}</h2></summary>
+            <summary><h2>{{ __('gift.heading') }} <x-hint-toggle key="gift.intro" />@if ($giftUndoable->isNotEmpty()) <x-hint-toggle key="gift.undo" />@endif</h2></summary>
             <x-hint key="gift.intro">{{ __('gift.intro') }}</x-hint>
             <form method="post" action="{{ route('account.gift') }}" class="stack" data-gift data-price="{{ $price }}"
                 data-one="{{ trans_choice('round.beers', 1, ['count' => 1]) }}" data-many="{{ trans_choice('round.beers', 2, ['count' => ':count']) }}">
@@ -245,7 +245,7 @@
     {{-- Beers for a guest: paid by the guest right away, the own balance stays unchanged. --}}
     <section class="card guest-card" data-testid="guest-booking">
         <details @if ($guestUndoable->isNotEmpty() || $errors->hasAny(['guest_quantity', 'guest_method', 'guest_name']) || old('guest_quantity')) open @endif>
-            <summary><h2>{{ __('guest.book_heading') }}</h2></summary>
+            <summary><h2>{{ __('guest.book_heading') }} <x-hint-toggle key="guest.intro" />@if ($guestUndoable->isNotEmpty()) <x-hint-toggle key="guest.undo" />@endif</h2></summary>
             <x-hint key="guest.intro">{{ __('guest.book_intro') }}</x-hint>
             <form method="post" action="{{ route('account.guest') }}" class="stack">
                 @csrf
@@ -268,7 +268,7 @@
                     @endforeach
                 </fieldset>
                 @if ($twintEnabled)
-                    <p>{!! __('guest.twint_to', ['name' => $twintHtml]) !!}</p>
+                    <p>{!! __('guest.twint_to', ['name' => $twintHtml]) !!} <x-hint-toggle key="guest.twint" /></p>
                     @include('partials.twint-number')
                     <x-hint key="guest.twint">{{ __('guest.twint_hint') }}</x-hint>
                 @endif
@@ -302,7 +302,7 @@
 @if ($disposalCanReport || $disposalPending)
     {{-- "Entsorgungsbonus": only while a report is possible or the own one is pending; never a number or a reason. --}}
     <section class="card" data-testid="disposal">
-        <h2>{{ __('disposal.heading') }}</h2>
+        <h2>{{ __('disposal.heading') }}@unless ($disposalPending) <x-hint-toggle key="disposal.intro" />@endunless</h2>
         @if ($disposalPending)
             <p data-testid="disposal-registered">{{ __('disposal.registered') }}</p>
             @if ($disposalPending->isWithdrawable($user))
@@ -331,7 +331,8 @@
 
 <section class="card" data-testid="deposit">
     <details @if ($errors->hasAny(['amount', 'method', 'note']) || old('amount')) open @endif>
-    <summary><h2>{{ __('account.deposit_heading') }}</h2></summary>
+    <summary><h2>{{ __('account.deposit_heading') }} <x-hint-toggle key="deposit.intro" /></h2></summary>
+    <x-hint key="deposit.intro">{{ __('account.deposit_intro') }}</x-hint>
     @if ($twintEnabled)
         {{-- TWINT recipients and number: pay first, then report below. --}}
         <div class="twint">
@@ -346,7 +347,6 @@
             @include('partials.twint-message', ['username' => auth()->user()->username, 'hintKey' => 'deposit.twint_message'])
         </div>
     @endif
-    <x-hint key="deposit.intro">{{ __('account.deposit_intro') }}</x-hint>
     <form method="post" action="{{ route('account.deposit') }}" class="stack">
         @csrf
         {!! \App\Support\FormToken::field('deposit') !!}
@@ -383,7 +383,7 @@
     </form>
     </details>
     @if ($pending->isNotEmpty())
-        <h3>{{ __('account.pending_heading') }}</h3>
+        <h3>{{ __('account.pending_heading') }}@if ($pending->where('type', \App\Models\Transaction::TYPE_DEPOSIT)->isNotEmpty()) <x-hint-toggle key="deposit.pending" />@endif</h3>
         @if ($pending->where('type', \App\Models\Transaction::TYPE_DEPOSIT)->isNotEmpty())
             @if ($depositsOnHold)
                 {{-- Decision 2026-10-24: after a rejected deposit, reported deposits are not part of $balance. --}}

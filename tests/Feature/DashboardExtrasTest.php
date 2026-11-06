@@ -85,7 +85,7 @@ class DashboardExtrasTest extends TestCase
     public function test_deposit_and_twint_cards_are_merged(): void
     {
         $this->actingAs($this->user())->get('/konto')->assertOk()
-            ->assertSee('<h2>Einzahlen</h2>', false)
+            ->assertSee('<h2>Einzahlen <button', false)
             ->assertDontSee('<h2>Einzahlung melden</h2>', false)
             ->assertDontSee('<h2>TWINT</h2>', false);
     }

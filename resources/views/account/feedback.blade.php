@@ -24,12 +24,12 @@
             @endforeach
         </fieldset>
         <div class="field">
-            <label for="message">{{ __('feedback.message') }}</label>
+            <div class="label-row"><label for="message">{{ __('feedback.message') }}</label><x-hint-toggle key="feedback.message" /></div>
             <textarea id="message" name="message" rows="6" minlength="{{ \App\Models\Feedback::MESSAGE_MIN }}" maxlength="{{ \App\Models\Feedback::MESSAGE_MAX }}" required>{{ old('message') }}</textarea>
             <x-hint key="feedback.message">{{ __('feedback.message_hint', ['min' => \App\Models\Feedback::MESSAGE_MIN, 'max' => \App\Models\Feedback::MESSAGE_MAX]) }}</x-hint>
         </div>
         @if ($hasEmail)
-            <label class="check"><input type="checkbox" name="wants_reply" value="1" @checked(old('wants_reply'))> <span>{{ __('feedback.wants_reply') }}</span></label>
+            <div class="label-row"><label class="check"><input type="checkbox" name="wants_reply" value="1" @checked(old('wants_reply'))> <span>{{ __('feedback.wants_reply') }}</span></label><x-hint-toggle key="feedback.reply" /></div>
             <x-hint key="feedback.reply">{{ __('feedback.wants_reply_hint', ['email' => auth()->user()->email]) }}</x-hint>
         @else
             <p class="hint">{{ __('feedback.no_email_hint') }}</p>

@@ -3,7 +3,8 @@
     Plain GET links and form (no JS). Expects $period (App\Support\StatsPeriod); optional $periodRoute
     (route name, default "stats") so a backend page can reuse it, and optional $extraQuery (GET parameters of
     other filters, 1.31.0) merged into every link and sent as hidden fields with the custom form; optional
-    $hintKey (1.33.0): collapsible custom-period hint (user page only, the backend keeps the plain hint).
+    $hintKey (1.33.0/1.33.1): help toggle after the submit button and collapsible custom-period hint below the form
+    (user page only, the backend keeps the plain hint).
 --}}
 @php
     $periodRoute ??= 'stats';
@@ -37,6 +38,9 @@
             <label for="period-to">{{ __('stats.period.to') }}</label>
             <input type="date" id="period-to" name="bis" value="{{ $period->to->format('Y-m-d') }}">
             <button type="submit" class="btn small primary">{{ __('stats.period.show') }}</button>
+            @if ($hintKey ?? null)
+                <x-hint-toggle :key="$hintKey" />
+            @endif
         </form>
         @if ($hintKey ?? null)
             <x-hint :key="$hintKey">{{ __('stats.period.custom_hint', ['years' => \App\Support\StatsPeriod::MAX_YEARS, 'days' => \App\Support\StatsPeriod::DAILY_MAX_DAYS]) }}</x-hint>

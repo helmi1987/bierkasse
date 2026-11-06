@@ -15,8 +15,9 @@ use InvalidArgumentException;
 use Tests\TestCase;
 
 /**
- * Collapsed help texts (1.33.0): <x-hint> renders a closed <details> with an info toggle, the open keys are
- * remembered per account (users.open_hints) via POST /konto/hinweise. Errors, alerts, auth and backend stay as they were.
+ * Collapsed help texts (1.33.0, markup since 1.33.1): <x-hint-toggle> renders an info button at the end of a title or
+ * label, <x-hint> the hidden text block below it; the open keys are remembered per account (users.open_hints) via
+ * POST /konto/hinweise. Errors, alerts, auth and backend stay as they were.
  */
 class HintsTest extends TestCase
 {
@@ -35,16 +36,29 @@ class HintsTest extends TestCase
         $this->user(['first_name' => 'Kurt', 'last_name' => 'Kollege']);
     }
 
-    /** The <details> tag of one hint key, or null. */
+    /** The opening tag of the text block of one hint key, or null. */
     private function hintTag(string $html, string $key): ?string
     {
-        return preg_match('/<details class="hint-box[^"]*" data-hint="'.preg_quote($key, '/').'"[^>]*>/', $html, $m) ? $m[0] : null;
+        return preg_match('/<div class="hint hint-text[^"]*" id="[^"]+" data-hint="'.preg_quote($key, '/').'"[^>]*>/', $html, $m) ? $m[0] : null;
     }
 
-    /** Whether $text appears inside any hint box. */
+    /** The toggle button of one hint key (up to its opening tag), or null. */
+    private function toggleTag(string $html, string $key): ?string
+    {
+        return preg_match('/<button type="button" class="hint-toggle" data-hint-toggle="'.preg_quote($key, '/').'"[^>]*>/', $html, $m) ? $m[0] : null;
+    }
+
+    private function toggleHtml(string $key, bool $open = false): string
+    {
+        $id = 'hint-'.str_replace('.', '-', $key);
+
+        return '<button type="button" class="hint-toggle" data-hint-toggle="'.$key.'" aria-controls="'.$id.'" aria-expanded="'.($open ? 'true' : 'false').'" aria-label="Hilfe anzeigen" title="Hilfe anzeigen"><span class="hint-icon" aria-hidden="true">i</span></button>';
+    }
+
+    /** Whether $text appears inside any hint text block. */
     private function insideHint(string $html, string $text): bool
     {
-        return preg_match('/<details class="hint-box"[^>]*>(?:(?!<\/details>).)*'.preg_quote($text, '/').'/s', $html) === 1;
+        return preg_match('/<div class="hint hint-text[^"]*"[^>]*>(?:(?!<\/div>).)*'.preg_quote($text, '/').'/s', $html) === 1;
     }
 
     public function test_hints_are_closed_by_default_on_all_user_pages(): void
@@ -61,25 +75,94 @@ class HintsTest extends TestCase
         foreach ($pages as $url => $hints) {
             $html = $this->get($url)->assertOk()->getContent();
             $this->assertStringNotContainsString('aria-expanded="true"', $html, $url);
-            $this->assertDoesNotMatchRegularExpression('/<details class="hint-box[^>]* open[ >]/', $html, $url);
+            $this->assertStringNotContainsString('<details class="hint', $html, $url);
             foreach ($hints as $key => $text) {
-                $tag = $this->hintTag($html, $key);
-                $this->assertNotNull($tag, "$url $key");
                 $id = 'hint-'.str_replace('.', '-', $key);
-                $this->assertMatchesRegularExpression(
-                    '/data-hint="'.preg_quote($key, '/').'">\s*<summary class="hint-toggle" aria-label="Hilfe anzeigen" aria-controls="'.$id.'" aria-expanded="false" title="Hilfe anzeigen"><span class="hint-icon" aria-hidden="true">i<\/span><\/summary>\s*<div class="hint" id="'.$id.'">'.preg_quote(e($text), '/').'<\/div>/',
-                    $html,
-                    "$url $key"
-                );
+                $this->assertSame(1, substr_count($html, $this->toggleHtml($key)), "$url $key toggle");
+                $this->assertStringContainsString('<div class="hint hint-text" id="'.$id.'" data-hint="'.$key.'" hidden>'.e($text).'</div>', $html, "$url $key text");
             }
         }
+    }
+
+    public function test_toggles_sit_at_the_end_of_titles_and_texts_open_below(): void
+    {
+        $html = $this->actingAs($this->member)->get('/konto')->getContent();
+
+        // Round card: toggle inside the <h2> in the card summary, the text directly after the summary.
+        $this->assertMatchesRegularExpression(
+            '/<summary><h2>Runde spendieren '.preg_quote($this->toggleHtml('round.intro'), '/').'<\/h2><\/summary>\s*<div class="hint hint-text" id="hint-round-intro" data-hint="round.intro" hidden>/',
+            $html
+        );
+        $this->assertMatchesRegularExpression('/data-hint-toggle="deposit.intro"[^>]*>.*?<\/button><\/h2><\/summary>\s*<div class="hint hint-text" id="hint-deposit-intro"/s', $html);
+        // No collapsible box between a toggle and its text, nowhere a <details> hint box.
+        foreach (['round.intro', 'gift.intro', 'guest.intro', 'deposit.intro', 'round.extra', 'round.total'] as $key) {
+            $id = 'hint-'.str_replace('.', '-', $key);
+            $toggle = strpos($html, 'data-hint-toggle="'.$key.'"');
+            $text = strpos($html, 'id="'.$id.'"');
+            if ($toggle === false && $text === false) {
+                continue;
+            }
+            $this->assertNotFalse($toggle, $key);
+            $this->assertNotFalse($text, $key);
+            $this->assertLessThan($text, $toggle, $key);
+            $this->assertStringNotContainsString('<details', substr($html, $toggle, $text - $toggle), $key);
+        }
+        $this->assertStringContainsString('<span class="label">'.__('round.extra').' '.$this->toggleHtml('round.extra').'</span>', $html);
+        $this->assertMatchesRegularExpression('/<strong data-round-amount>[^<]*<\/strong> '.preg_quote($this->toggleHtml('round.total'), '/').'<\/p>/', $html);
+        // TWINT message partial: toggle at the label, text right below it; without $hintKey the plain hint.
+        $partial = (string) $this->view('partials.twint-message', ['username' => 'hanna', 'hintKey' => 'deposit.twint_message']);
+        $this->assertMatchesRegularExpression('/<span class="label">'.preg_quote(__('account.twint_message').' '.$this->toggleHtml('deposit.twint_message'), '/').'<\/span>\s*<div class="hint hint-text" id="hint-deposit-twint_message" data-hint="deposit.twint_message" hidden>/', $partial);
+        $plain = (string) $this->view('partials.twint-message', ['username' => 'hanna']);
+        $this->assertStringNotContainsString('hint-toggle', $plain);
+        $this->assertStringContainsString('<span class="hint">'.e(__('account.twint_message_hint')).'</span>', $plain);
+        // Undo toggles only with an undo list.
+        $this->assertNull($this->toggleTag($html, 'consume.undo'));
+        $this->assertNull($this->hintTag($html, 'consume.undo'));
+    }
+
+    public function test_undo_toggle_is_added_to_the_card_title_with_the_undo_list(): void
+    {
+        $this->actingAs($this->member);
+        $this->post('/konto/bier', $this->tokened('consume', ['quantity' => 1]))->assertRedirect();
+
+        $html = $this->get('/konto')->getContent();
+        $this->assertStringContainsString('<h2>'.__('account.beer').' '.$this->toggleHtml('consume.undo').'</h2>', $html);
+        $this->assertMatchesRegularExpression('/<ul class="undo-list">.*?<\/ul>\s*<div class="hint hint-text" id="hint-consume-undo" data-hint="consume.undo" hidden>/s', $html);
+    }
+
+    public function test_no_toggle_inside_a_label(): void
+    {
+        foreach ([$this->member, $this->kassier()] as $user) {
+            $this->actingAs($user);
+            foreach (['/konto', '/konto/einstellungen', '/konto/feedback'] as $url) {
+                $html = $this->get($url)->assertOk()->getContent();
+                $this->assertStringContainsString('class="hint-toggle"', $html, $url);
+                $this->assertSame(0, preg_match_all('/<label[^>]*>(?:(?!<\/label>).)*hint-toggle/s', $html), $url);
+            }
+        }
+
+        // Field labels get a label row with the toggle next to the label.
+        $html = $this->actingAs($this->member)->get('/konto/einstellungen')->getContent();
+        $this->assertStringContainsString('<div class="label-row"><label for="email">'.__('account.email').'</label>'.$this->toggleHtml('settings.email').'</div>', $html);
+    }
+
+    public function test_the_js_class_is_set_by_an_inline_script_with_the_nonce(): void
+    {
+        $response = $this->actingAs($this->member)->get('/konto')->assertOk();
+        preg_match("/'nonce-([^']+)'/", (string) $response->headers->get('Content-Security-Policy'), $m);
+        $this->assertNotEmpty($m[1] ?? null);
+
+        $this->assertStringContainsString('<script nonce="'.$m[1].'">document.documentElement.classList.add(\'js\')</script>', $response->getContent());
+        $css = File::get(public_path('css/app.css'));
+        $this->assertStringContainsString('html:not(.js) .hint-text[hidden]', $css);
+        $this->assertStringContainsString('html:not(.js) .hint-toggle { display: none; }', $css);
     }
 
     public function test_centered_hints_keep_the_center_class(): void
     {
         $html = $this->actingAs($this->member)->get('/konto')->getContent();
 
-        $this->assertSame('<details class="hint-box center" data-hint="round.total">', $this->hintTag($html, 'round.total'));
+        $this->assertSame('<div class="hint hint-text center" id="hint-round-total" data-hint="round.total" hidden>', $this->hintTag($html, 'round.total'));
     }
 
     public function test_opening_a_hint_is_remembered_per_account(): void
@@ -91,15 +174,16 @@ class HintsTest extends TestCase
         $this->assertSame(['round.intro'], $this->member->refresh()->open_hints);
 
         $html = $this->get('/konto')->getContent();
-        $this->assertSame('<details class="hint-box" data-hint="round.intro" open>', $this->hintTag($html, 'round.intro'));
-        $this->assertMatchesRegularExpression('/aria-controls="hint-round-intro" aria-expanded="true"/', $html);
-        $this->assertSame('<details class="hint-box" data-hint="deposit.intro">', $this->hintTag($html, 'deposit.intro'));
+        $this->assertSame('<div class="hint hint-text" id="hint-round-intro" data-hint="round.intro">', $this->hintTag($html, 'round.intro'));
+        $this->assertStringContainsString($this->toggleHtml('round.intro', true), $html);
+        $this->assertSame('<div class="hint hint-text" id="hint-deposit-intro" data-hint="deposit.intro" hidden>', $this->hintTag($html, 'deposit.intro'));
+        $this->assertStringContainsString($this->toggleHtml('deposit.intro'), $html);
         $this->assertSame(1, substr_count($html, 'aria-expanded="true"'));
 
         // Another user is not affected.
         $other = $this->user();
         $this->actingAs($other);
-        $this->assertSame('<details class="hint-box" data-hint="round.intro">', $this->hintTag($this->get('/konto')->getContent(), 'round.intro'));
+        $this->assertSame('<div class="hint hint-text" id="hint-round-intro" data-hint="round.intro" hidden>', $this->hintTag($this->get('/konto')->getContent(), 'round.intro'));
 
         $this->actingAs($this->member);
         $this->postJson('/konto/hinweise', ['key' => 'consume.undo', 'open' => true])->assertOk();
@@ -110,7 +194,9 @@ class HintsTest extends TestCase
         $this->postJson('/konto/hinweise', ['key' => 'round.intro', 'open' => 0])
             ->assertOk()->assertExactJson(['key' => 'round.intro', 'open' => false]);
         $this->assertSame(['consume.undo'], $this->member->refresh()->open_hints);
-        $this->assertSame('<details class="hint-box" data-hint="round.intro">', $this->hintTag($this->get('/konto')->getContent(), 'round.intro'));
+        $html = $this->get('/konto')->getContent();
+        $this->assertSame('<div class="hint hint-text" id="hint-round-intro" data-hint="round.intro" hidden>', $this->hintTag($html, 'round.intro'));
+        $this->assertStringContainsString($this->toggleHtml('round.intro'), $html);
     }
 
     public function test_invalid_hint_requests_are_rejected(): void
@@ -155,8 +241,8 @@ class HintsTest extends TestCase
     {
         $this->actingAs($this->kassier());
 
-        $this->get('/admin/entsorgung')->assertOk()->assertDontSee('hint-box', false);
-        $html = $this->get('/admin/statistik?zeitraum=frei')->assertOk()->assertDontSee('hint-box', false)->getContent();
+        $this->get('/admin/entsorgung')->assertOk()->assertDontSee('hint-text', false)->assertDontSee('hint-toggle', false);
+        $html = $this->get('/admin/statistik?zeitraum=frei')->assertOk()->assertDontSee('hint-text', false)->assertDontSee('hint-toggle', false)->getContent();
         $text = e(__('stats.period.custom_hint', ['years' => StatsPeriod::MAX_YEARS, 'days' => StatsPeriod::DAILY_MAX_DAYS]));
         $this->assertStringContainsString('<p class="hint">'.$text.'</p>', $html);
 
@@ -164,25 +250,49 @@ class HintsTest extends TestCase
         $html = $this->get('/statistik?zeitraum=frei')->assertOk()->getContent();
         $this->assertNotNull($this->hintTag($html, 'stats.period_custom'));
         $this->assertTrue($this->insideHint($html, $text));
+        // Toggle after the submit button inside the custom form, the text below the form.
+        $this->assertMatchesRegularExpression('/<button type="submit" class="btn small primary">'.__('stats.period.show').'<\/button>\s*'.preg_quote($this->toggleHtml('stats.period_custom'), '/').'\s*<\/form>\s*<div class="hint hint-text" id="hint-stats-period_custom"/', $html);
     }
 
-    public function test_every_key_is_used_and_every_used_key_is_known(): void
+    public function test_every_key_has_exactly_one_toggle_and_one_text(): void
     {
-        $used = [];
+        $toggles = [];
+        $texts = [];
         foreach (File::allFiles(resource_path('views')) as $file) {
-            preg_match_all('/<x-hint key="([^"]+)"|\'hintKey\' => \'([^\']+)\'/', $file->getContents(), $m, PREG_SET_ORDER);
-            foreach ($m as $match) {
-                $key = $match[1] !== '' ? $match[1] : $match[2];
-                $this->assertContains($key, Hints::KEYS, $file->getRelativePathname());
-                $used[$key] = true;
-            }
+            $content = $file->getContents();
             $path = str_replace('\\', '/', $file->getRelativePathname());
+            preg_match_all('/<x-hint-toggle key="([^"]+)"/', $content, $m);
+            foreach ($m[1] as $key) {
+                $this->assertContains($key, Hints::KEYS, $path);
+                $toggles[$key] = ($toggles[$key] ?? 0) + 1;
+            }
+            preg_match_all('/<x-hint key="([^"]+)"/', $content, $m);
+            foreach ($m[1] as $key) {
+                $this->assertContains($key, Hints::KEYS, $path);
+                $texts[$key] = ($texts[$key] ?? 0) + 1;
+            }
+            // The two partials render both parts for the key passed as $hintKey.
+            preg_match_all("/'hintKey' => '([^']+)'/", $content, $m);
+            foreach ($m[1] as $key) {
+                $this->assertContains($key, Hints::KEYS, $path);
+                $toggles[$key] = ($toggles[$key] ?? 0) + 1;
+                $texts[$key] = ($texts[$key] ?? 0) + 1;
+            }
+            if (str_contains($content, ':key="$hintKey"')) {
+                $this->assertSame(1, substr_count($content, '<x-hint-toggle :key="$hintKey"'), $path);
+                $this->assertSame(1, substr_count($content, '<x-hint :key="$hintKey"'), $path);
+            }
             if (preg_match('#^(backend|auth|guest|legal)/|^account/leave\.blade\.php$|^setup\.blade\.php$|^disposals/_ranking\.blade\.php$#', $path)) {
-                $this->assertStringNotContainsString('<x-hint', $file->getContents(), $path);
+                $this->assertStringNotContainsString('<x-hint', $content, $path);
             }
         }
 
-        $this->assertSame([], array_values(array_diff(Hints::KEYS, array_keys($used))));
+        $all = array_fill_keys(Hints::KEYS, 1);
+        ksort($toggles);
+        ksort($texts);
+        ksort($all);
+        $this->assertSame($all, $toggles);
+        $this->assertSame($all, $texts);
         $this->assertSame(Hints::KEYS, array_values(array_unique(Hints::KEYS)));
         foreach (Hints::KEYS as $key) {
             $this->assertLessThanOrEqual(Hints::MAX_KEY_LENGTH, strlen($key), $key);
@@ -217,17 +327,19 @@ class HintsTest extends TestCase
         Hints::set($this->member, 'round.nope', true);
     }
 
-    public function test_component_rejects_unknown_keys(): void
+    public function test_components_reject_unknown_keys(): void
     {
-        try {
-            $this->blade('<x-hint key="round.typo">Text</x-hint>');
-            $this->fail('Unknown key was rendered.');
-        } catch (\Throwable $e) {
-            while (! $e instanceof InvalidArgumentException && $e->getPrevious() !== null) {
-                $e = $e->getPrevious();
+        foreach (['<x-hint key="round.typo">Text</x-hint>', '<x-hint-toggle key="round.typo" />'] as $template) {
+            try {
+                $this->blade($template);
+                $this->fail('Unknown key was rendered: '.$template);
+            } catch (\Throwable $e) {
+                while (! $e instanceof InvalidArgumentException && $e->getPrevious() !== null) {
+                    $e = $e->getPrevious();
+                }
+                $this->assertInstanceOf(InvalidArgumentException::class, $e, $template);
+                $this->assertStringContainsString('round.typo', $e->getMessage());
             }
-            $this->assertInstanceOf(InvalidArgumentException::class, $e);
-            $this->assertStringContainsString('round.typo', $e->getMessage());
         }
     }
 }

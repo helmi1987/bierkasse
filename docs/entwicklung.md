@@ -52,7 +52,9 @@
   Text wie bisher. Sichtbar bleiben: Fehler (`@error`, `.alert`), Live-Werte (Rundensumme, Rückgängig-Countdown),
   «Keine Kollegen», Einzahlungen zurückgehalten, Vorschlag und Hinweis «dann melden», Einträge in Listen. Entscheide:
   Anmeldung/Registrierung/TOTP, Gast-Seiten, Rechtstexte, Austritt, Setup und Backend unverändert; kein Audit-Eintrag
-  (nur Anzeigeeinstellung); Gäste sehen nie einen offenen Hinweis.
+  (nur Anzeigeeinstellung); Gäste sehen nie einen offenen Hinweis. Seit 1.33.1: ⓘ als Knopf (blauer Kreis, Token `--info`)
+  am Ende des Titels/Feld-Labels, Text als versteckter Block darunter (`<x-hint-toggle>` + `<x-hint>`); ohne JS sind alle
+  Texte offen; Klick im `<summary>` klappt nur den Hinweis (stopPropagation).
 - Konto sperren (Entscheid 2026-10-24, Status `locked` neben `active`/`left`): Kassier und Admin in der Benutzer-Detailansicht,
   Grund Pflicht (max. 500 Zeichen, `users.locked_reason`, `locked_at`, `locked_by`; angezeigt in der Detailansicht,
   Audit `user.lock`/`user.unlock`). Anders als Deaktivieren auch mit Schulden oder offenen Posten. Kassiers können
@@ -568,6 +570,10 @@
   werden aktualisiert. Aus bei Seiten nach POST, mit Validierungsfehlern/alten Eingaben oder einmalig gezeigten
   Geheimnissen (Wiederherstellungscodes, Wartungsausgabe) sowie per `@section('live_off')`. Abgemeldet: `/live` und
   `X-Live-Refresh`-Anfragen liefern 401 statt Weiterleitung, dann (wie bei 503/Weiterleitung) einmal neu laden.
+  Seit 1.33.1 trägt `<body data-live-assets>` eine Version der ausgelieferten CSS/JS (`App\Support\AssetVersion`, Hash der
+  Dateidaten von `app.css`, `app.js`, `live.js`). Liefert der Server eine andere, lädt `live.js` die Seite einmal neu statt
+  das neue Markup in ein Dokument mit alter CSS zu tauschen (Befund nach dem Deploy 1.33.0: Knöpfe untereinander, ⓘ ohne
+  Kreis bei offener Seite); mit Eingaben auf dem Bildschirm wartet es auf einen späteren Durchgang.
   Entscheid 2026-10-24: Die Abfrage hielte die Session eines sichtbaren Tabs ewig am Leben. Darum stoppt sie (samt
   Neuladen der Seite) nach 30 Minuten ohne Benutzeraktivität (Konstante `IDLE_LIMIT` in `public/js/live.js`;
   Aktivität = echtes pointerdown, keydown, touchstart, wheel, scroll, input). Danach läuft die Session normal ab

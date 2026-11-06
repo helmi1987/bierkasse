@@ -191,12 +191,17 @@
         return !!el.querySelector('form[data-submitted], [data-live-dirty]') || el.matches('[data-live-dirty]');
     }
 
-    // Key of a <details>: its summary text (plus the n-th occurrence of that text).
+    // Key of a <details>: its summary text (plus the n-th occurrence of that text). Help toggles (1.33.1) are left
+    // out: an undo toggle that comes and goes with the undo list must not change the key of its card.
     function detailsKeys(root) {
         var seen = {};
         var keys = [];
         root.querySelectorAll('details').forEach(function (d) {
             var summary = d.querySelector('summary');
+            if (summary) {
+                summary = summary.cloneNode(true);
+                summary.querySelectorAll('[data-hint-toggle]').forEach(function (b) { b.remove(); });
+            }
             var text = (d.id || '') + '|' + (summary ? summary.textContent.replace(/\s+/g, ' ').trim() : '');
             seen[text] = (seen[text] || 0) + 1;
             keys.push({ el: d, key: text + '#' + seen[text] });
@@ -356,6 +361,15 @@
             }
             var doc = new DOMParser().parseFromString(html, 'text/html');
             if (!doc.body || !doc.body.hasAttribute('data-live')) {
+                return;
+            }
+            // New CSS/JS on the server (deploy): swapping the new markup into this document would render it
+            // with the old stylesheet. Load the page once instead; with user input on screen, wait for a later tick.
+            var assets = doc.body.getAttribute('data-live-assets');
+            if (assets && assets !== body.getAttribute('data-live-assets')) {
+                if (!contentChildren(main).some(isBlocked)) {
+                    stop(true);
+                }
                 return;
             }
             apply(doc);

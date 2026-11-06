@@ -37,7 +37,7 @@ class StatsSettingsTest extends TestCase
             ->assertSee(__('account.bookings_stats'))->assertSee(__('account.total_amount'));
         $this->get('/statistik')->assertOk()
             ->assertSee(__('stats.total_beers'))->assertSee('<h2>'.__('stats.course').'</h2>', false)
-            ->assertSee('<h2>'.__('stats.per_weekday').'</h2>', false)->assertSee('<h2>'.__('stats.ranking').'</h2>', false)
+            ->assertSee('<h2>'.__('stats.per_weekday').'</h2>', false)->assertSee('<h2>'.__('stats.ranking').' <button', false)
             ->assertSee('<strong>2</strong>', false)->assertDontSee(__('stats.nothing_enabled'));
     }
 
@@ -95,7 +95,7 @@ class StatsSettingsTest extends TestCase
             'stats_show_totals' => __('stats.total_beers'),
             'stats_show_months' => '<h2>'.__('stats.course').'</h2>',
             'stats_show_weekdays' => '<h2>'.__('stats.per_weekday').'</h2>',
-            'stats_show_ranking' => '<h2>'.__('stats.ranking').'</h2>',
+            'stats_show_ranking' => '<h2>'.__('stats.ranking').' <button',
         ];
 
         foreach ($sections as $key => $marker) {

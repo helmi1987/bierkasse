@@ -113,6 +113,9 @@ class AccountController extends Controller
             'recent' => Transaction::query()->with(['roundItems.user', 'giftParts.user', 'giftParent.user'])->where('user_id', $user->id)->latest('id')->limit(5)->get(),
             'stats' => $stats,
             'statsAmounts' => AppSettings::statsShows('amounts'),
+            // Fixed comparison (this/previous month and year) of the own beers (1.30.0).
+            'comparison' => $stats !== null ? Stats::comparison($user) : null,
+            'statsLink' => AppSettings::statsEnabled(),
             'canInvite' => AppSettings::invitationsAllowed(),
             'chart' => $stats !== null ? BarChart::render(
                 array_column($stats['months'], 'label'),

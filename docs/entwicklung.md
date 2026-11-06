@@ -374,12 +374,43 @@
   Zeile, damit der Opt-out-Benutzer seine eigene Zeile fett (`.me`) sieht; sie wird nie ausgegeben.
   "Nur Verwaltung"-Konten bleiben aussen vor, "Gäste" und "Gäste (eingeladen)" unverändert.
   Kassiers sehen in der Benutzerverwaltung trotzdem Saldo und Buchungen aller Konten.
+- Statistik-Zeitraum (1.30.0): `/statistik` nimmt GET-Parameter (teilbare URL, kein JS, ungültige Werte fallen
+  still auf den Standard zurück, nie eine Fehlerseite). `App\Support\StatsPeriod::fromQuery()` baut daraus den Zeitraum:
+  - `zeitraum=gesamt` (Standard, auch bei unbekanntem Wert): alles, Diagramm "Verlauf" = letzte 12 Monate, ohne Vor/Zurück.
+  - `zeitraum=woche&von=JJJJ-MM-TT`: ISO-Woche (Mo–So) mit `von` (Standard: aktuelle Woche), Diagramm pro Tag
+    («Mo 2.11.» … «So 8.11.»), Titel «KW 45 (2.–8.11.2026)».
+  - `zeitraum=monat&von=…`: Monat mit `von` (Standard: aktueller Monat), Diagramm pro Tag (1, 2, …), Titel «November 2026»
+    (`stats.month_long`).
+  - `zeitraum=jahr&von=…`: Jahr von `von` (Standard: aktuelles Jahr), Diagramm pro Monat (Jan … Dez), Titel «2026».
+  - `zeitraum=frei&von=…&bis=…`: beide Tage inklusive; Standard die letzten 30 Tage bis heute, `bis` vor `von` wird
+    getauscht, höchstens 5 Jahre (sonst wird `von` gekürzt). Bis 62 Tage pro Tag, länger pro Monat.
+    Formular mit zwei Datumsfeldern (GET, verstecktes `zeitraum=frei`). Titel «2.11.2026 – 6.11.2026».
+  Daten nur als `JJJJ-MM-TT` (streng, «2026-02-31» gilt als ungültig). Zeitraumleiste in
+  `resources/views/stats/_period.blade.php` (Reiter Gesamt | Woche | Monat | Jahr | Frei, aktiver Reiter `primary`;
+  bei Woche/Monat/Jahr «← Zurück», Titel, «Weiter →»; «Weiter» fehlt, wenn der nächste Zeitraum nach heute begänne),
+  wiederverwendbar mit `$periodRoute` für eine spätere Backend-Statistik.
+  Alles auf der Seite folgt dem Zeitraum: «Biere total», "Verlauf" (Schalter `stats_show_months`), Wochentage
+  (`stats_show_weekdays`) und Rangliste (`stats_show_ranking`, mit «Anonym n», Sport-Platzierung, Top 10 mit Gleichstand).
+  Gefiltert wird in SQL (`whereBetween('created_at', …)` auf Abstreichen, Gäste-Verkäufe und Runden, Runden nach dem
+  `created_at` der Runden-Buchung); geladen werden nur die Zeilen des Zeitraums. Die Grenzen sind Mitternacht in
+  `app.timezone` (Europe/Zurich). **Hinweis:** Eloquent schreibt `created_at` als Uhrzeit in der PHP-Standard-Zeitzone,
+  die Laravel aus `app.timezone` setzt, also Schweizer Ortszeit und nicht UTC. `StatsPeriod::dbBounds()` rechnet die
+  Grenzen deshalb in diese Zeitzone um (`StatsPeriod::toDb()`), damit z. B. 31.10. 23:30 im Oktober bleibt.
+- Vergleich (1.30.0), fest und unabhängig vom gewählten Zeitraum: `Stats::comparison(?User)` liefert Biere dieser
+  Monat, Vormonat, Veränderung in % (Vormonat → dieser Monat, `null` = «–», wenn der Vormonat 0 ist), dieses Jahr,
+  Vorjahr. Eine Summen-Abfrage pro Quelle (`SUM(CASE WHEN created_at BETWEEN …)`), keine Zeilen laden. Ohne Benutzer
+  alle Quellen wie `Stats::global()`, mit Benutzer dessen Biere wie `Stats::forUser()` (eigenes Abstreichen plus in
+  Runden erhaltene Biere). Auf `/statistik` als zweite Kennzahlen-Reihe «Vergleich» im Block `stats_show_totals`
+  (aus = beide Reihen weg), Anzeige «+25 %» / «−10 %» / «–» (`resources/views/stats/_compare.blade.php`).
+- Konto (1.30.0): In «Meine Buchungen & Statistik» (nur mit `stats_dashboard_enabled`) stehen unter den Kennzahlen
+  die gleichen fünf Vergleichswerte für den eigenen Benutzer, unter dem Diagramm «Zur Statistik →» (nur wenn
+  `stats_enabled` an ist). Keine Zeitraumleiste im Konto.
 - Statistik-Schalter (1.29.0) unter Admin > Einstellungen > Funktionen, Block "Statistik" (nur Admin, gleiches
   Formular `#funktionen`, Audit wie die übrigen Funktionen). Alle Settings Standard an (nicht gesetzt = an),
   Liste `AppSettings::STATS_SWITCHES`, Getter `statsEnabled()`, `statsShows($teil)`, `statsDashboardEnabled()`:
   - `stats_enabled` (Hauptschalter): aus = Menüpunkt "Statistik" für alle weg, `GET /statistik` gibt 404,
     auch für Admins (eine Backend-Statistik folgt später). Die alte Umleitung `/admin/statistik` bleibt.
-  - `stats_show_totals`, `stats_show_months` (Monats-, später auch Wochenverlauf), `stats_show_weekdays`,
+  - `stats_show_totals` (seit 1.30.0 inkl. Vergleich), `stats_show_months` (Verlauf, seit 1.30.0 pro Zeitraum), `stats_show_weekdays`,
     `stats_show_ranking`: blenden den jeweiligen Teil aus; Diagramme werden nur gerechnet, wenn sichtbar.
     Ist kein Teil an, erscheint «Die Statistik ist zurzeit ausgeschaltet.».
   - `stats_ranking_counts`: aus = Rangliste nur mit Platz und Name, ohne Anzahl Biere.

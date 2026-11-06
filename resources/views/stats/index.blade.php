@@ -5,21 +5,25 @@
 @section('content')
 <h1>{{ __('stats.title') }}</h1>
 
+{{-- Period filter (1.30.0): everything below follows it, except the fixed comparison KPIs. --}}
+@include('stats._period', ['period' => $period])
+
 {{-- Parts switched in Admin > Einstellungen > Funktionen (1.29.0). --}}
 @if ($nothing)
     <p class="muted">{{ __('stats.nothing_enabled') }}</p>
 @endif
 
 @if ($show['totals'])
-    <div class="kpis">
-        <div class="kpi big"><span>{{ __('stats.total_beers') }}</span><strong>{{ $stats['total_beers'] }}</strong></div>
+    <div class="kpis" data-testid="stats-total">
+        <div class="kpi big"><span>{{ __('stats.total_beers') }}</span><strong>{{ $stats['total_beers'] }}</strong><small>{{ $period->label() }}</small></div>
     </div>
+    @include('stats._compare', ['comparison' => $comparison])
 @endif
 
 @if ($show['months'])
     <section class="card">
-        <h2>{{ __('stats.per_month') }}</h2>
-        {!! $monthChart !!}
+        <h2>{{ __('stats.course') }}</h2>
+        {!! $courseChart !!}
     </section>
 @endif
 

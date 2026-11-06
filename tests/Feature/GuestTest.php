@@ -65,7 +65,7 @@ class GuestTest extends TestCase
         $this->assertSame(5, $stats['total_beers']);
         $this->assertSame([['rank' => 1, 'user_id' => 0, 'name' => 'Gäste', 'beers' => 5, 'anonymous' => false]], $stats['ranking']);
         $this->assertSame(5, array_sum(array_column($stats['weekdays'], 'beers')));
-        $this->assertSame(5, end($stats['months'])['beers']);
+        $this->assertSame(5, end($stats['course'])['beers']);
 
         $this->actingAs($this->user())->get('/statistik')->assertOk()->assertSee('Gäste');
     }

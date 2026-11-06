@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', __('feedback.title'))
+@section('live_off', '1')
 @section('main_class', 'narrow')
 
 @section('content')

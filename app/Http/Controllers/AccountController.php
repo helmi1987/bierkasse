@@ -292,32 +292,16 @@ class AccountController extends Controller
         abort_unless($transaction->user_id === $request->user()->id && $transaction->type === Transaction::TYPE_DEPOSIT, 404);
     }
 
-    public function history(Request $request): View
+    /** The history is the Livewire component App\Livewire\Account\History (1.35.0). */
+    public function history(): View
     {
-        $user = $request->user();
-
-        return view('account.history', [
-            'user' => $user,
-            'balance' => $user->availableBalance(),
-            'transactions' => Transaction::query()->with(['roundItems.user', 'giftParts.user', 'giftParent.user'])->where('user_id', $user->id)->latest('id')->paginate(25),
-        ]);
+        return view('account.history');
     }
 
-    public function leaveForm(Request $request): View
+    /** The page is the Livewire component App\Livewire\Account\Leave (1.35.0); leave() checks again. */
+    public function leaveForm(): View
     {
-        $user = $request->user();
-        $blocked = null;
-        try {
-            Ledger::assertCanLeave($user);
-        } catch (LedgerException $e) {
-            $blocked = $e->getMessage();
-        }
-
-        return view('account.leave', [
-            'balance' => $user->availableBalance(),
-            'blocked' => $blocked,
-            'pendingPayout' => Ledger::hasPendingPayout($user),
-        ]);
+        return view('account.leave');
     }
 
     public function leave(Request $request): RedirectResponse

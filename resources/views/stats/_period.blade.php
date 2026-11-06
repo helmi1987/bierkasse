@@ -1,6 +1,7 @@
 {{--
     Period bar of the statistics (1.30.0): tabs, previous/next for week/month/quarter/year, date form for "frei".
-    Plain GET links and form (no JS). Expects $period (App\Support\StatsPeriod); optional $periodRoute
+    Plain GET links and form (no JS); the form is wire:ignore so a Livewire poll keeps typed dates (1.35.0).
+    Expects $period (App\Support\StatsPeriod); optional $periodRoute
     (route name, default "stats") so a backend page can reuse it, and optional $extraQuery (GET parameters of
     other filters, 1.31.0) merged into every link and sent as hidden fields with the custom form.
 --}}
@@ -26,7 +27,7 @@
         @endif
     </div>
     @if ($period->kind === \App\Support\StatsPeriod::CUSTOM)
-        <form method="get" action="{{ route($periodRoute) }}" class="inline-form period-form" data-testid="period-form">
+        <form method="get" action="{{ route($periodRoute) }}" class="inline-form period-form" data-testid="period-form" wire:ignore>
             <input type="hidden" name="zeitraum" value="{{ \App\Support\StatsPeriod::CUSTOM }}">
             @foreach ($extraQuery as $extraName => $extraValue)
                 <input type="hidden" name="{{ $extraName }}" value="{{ $extraValue }}">

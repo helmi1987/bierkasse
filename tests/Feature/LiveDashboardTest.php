@@ -114,7 +114,7 @@ class LiveDashboardTest extends TestCase
         Livewire::actingAs($user)->test(TopNav::class)->assertForbidden();
 
         // Classic pages keep the static navigation with the same markup.
-        $classic = (string) $this->actingAs($kassier)->get('/statistik')->assertOk()->getContent();
+        $classic = (string) $this->actingAs($kassier)->get('/admin/lager')->assertOk()->getContent();
         $this->assertStringContainsString('<nav class="nav" aria-label="Hauptnavigation">', $classic);
         $this->assertStringContainsString('<span class="badge" title="1 offene Posten">1</span>', $classic);
         $this->assertStringNotContainsString('wire:poll', $classic);

@@ -323,6 +323,18 @@ class RoundTest extends TestCase
         $this->assertTrue($audit->newValues()['include_self']);
     }
 
+    public function test_total_and_buttons_sit_at_the_top_once(): void
+    {
+        $this->user(['first_name' => 'Anna']);
+        $html = $this->actingAs($this->giver)->get('/konto')->assertOk()
+            ->assertSeeInOrder(['data-round-count', 'data-round-submit', 'data-round-submit-self', 'name="recipients[]"'], false)
+            ->getContent();
+
+        $this->assertSame(1, substr_count($html, 'data-round-submit '));
+        $this->assertSame(1, substr_count($html, 'data-round-submit-self '));
+        $this->assertSame(1, substr_count($html, 'data-round-count>'));
+    }
+
     public function test_round_including_self_needs_another_beer_and_undo(): void
     {
         $this->setPrice(150);

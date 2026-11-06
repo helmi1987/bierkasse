@@ -119,14 +119,9 @@
                 @csrf
                 {!! \App\Support\FormToken::field('round') !!}
                 <input type="hidden" name="round_form" value="1">
-                {{-- Total and both buttons at the top, sticky below the topbar while scrolling (findability, 1.32.1). --}}
-                <div class="round-bar">
-                    <p class="round-total center" aria-live="polite">{{ __('round.total') }}: <strong data-round-count>{{ trans_choice('round.beers', $roundCount, ['count' => $roundCount]) }}</strong> · <strong data-round-amount>{{ chf($roundCount * $price) }}</strong></p>
-                    <div class="round-buttons">
-                        <button type="submit" class="btn primary big" data-round-submit data-label="{{ __('round.submit') }}" @disabled($roundCount < 1)>{{ __('round.submit', ['count' => $roundCount]) }}</button>
-                        <button type="submit" name="include_self" value="1" class="btn big" data-round-submit-self data-label="{{ __('round.submit_self') }}" @disabled($roundCount < 1)>{{ __('round.submit_self', ['count' => $roundCount + 1]) }}</button>
-                    </div>
-                </div>
+                @if ($roundBarTop)
+                    @include('account.action-bars.round')
+                @endif
                 <fieldset class="field">
                     <legend>{{ __('round.colleagues') }}</legend>
                     @if ($colleagues->isEmpty())
@@ -159,6 +154,9 @@
                     <input type="text" id="round-message" name="message" value="{{ old('message') }}" maxlength="{{ \App\Services\Rounds::MESSAGE_MAX }}" placeholder="{{ __('round.message_placeholder') }}" autocomplete="off">
                 </div>
                 <p class="hint center">{{ __('round.total_hint', ['max' => \App\Services\Rounds::MAX_BEERS, 'price' => chf($price)]) }}</p>
+                @unless ($roundBarTop)
+                    @include('account.action-bars.round')
+                @endunless
             </form>
 
 @island('undo-round', with: $__livewire->data())
@@ -187,6 +185,7 @@
     {{-- "Bier verschenken": the same number of beers as credit for each chosen colleague, paid by the user. --}}
     @php($giftOld = array_map('intval', (array) old('gift_recipients', [])))
     @php($giftQty = min(\App\Services\Gifts::MAX_PER_RECIPIENT, max(1, (int) old('gift_quantity', 1))))
+    @php($giftCount = count($giftOld) * $giftQty)
     <section class="card round-card" data-testid="gift">
         <details @if ($giftUndoable->isNotEmpty() || $formErrors->hasAny(['gift_recipients', 'gift_recipients.*', 'gift_quantity', 'gift_message']) || old('gift_quantity')) open @endif>
             <summary><h2>{{ __('gift.heading') }}</h2></summary>
@@ -195,6 +194,9 @@
                 data-one="{{ trans_choice('round.beers', 1, ['count' => 1]) }}" data-many="{{ trans_choice('round.beers', 2, ['count' => ':count']) }}">
                 @csrf
                 {!! \App\Support\FormToken::field('gift') !!}
+                @if ($giftBarTop)
+                    @include('account.action-bars.gift')
+                @endif
                 <fieldset class="field">
                     <legend>{{ __('gift.colleagues') }}</legend>
                     @if ($giftColleagues->isEmpty())
@@ -225,9 +227,9 @@
                     <label for="gift-message">{{ __('gift.message') }}</label>
                     <input type="text" id="gift-message" name="gift_message" value="{{ old('gift_message') }}" maxlength="{{ \App\Services\Gifts::MESSAGE_MAX }}" placeholder="{{ __('gift.message_placeholder') }}" autocomplete="off">
                 </div>
-                @php($giftCount = count($giftOld) * $giftQty)
-                <p class="round-total center" aria-live="polite">{{ __('gift.total') }}: <strong data-gift-count>{{ trans_choice('round.beers', $giftCount, ['count' => $giftCount]) }}</strong> · <strong data-gift-amount>{{ chf($giftCount * $price) }}</strong></p>
-                <button type="submit" class="btn primary big" data-gift-submit @disabled($giftOld === [])>{{ __('gift.submit') }}</button>
+                @unless ($giftBarTop)
+                    @include('account.action-bars.gift')
+                @endunless
             </form>
 
 @island('undo-gift', with: $__livewire->data())
@@ -254,6 +256,7 @@
 
 @if ($guestBooking)
     {{-- Beers for a guest: paid by the guest right away, the own balance stays unchanged. --}}
+    @php($guestQty = min(\App\Services\GuestSales::MAX_BEERS, max(1, (int) old('guest_quantity', 1))))
     <section class="card guest-card" data-testid="guest-booking">
         <details @if ($guestUndoable->isNotEmpty() || $formErrors->hasAny(['guest_quantity', 'guest_method', 'guest_name']) || old('guest_quantity')) open @endif>
             <summary><h2>{{ __('guest.book_heading') }}</h2></summary>
@@ -261,6 +264,9 @@
             <form method="post" action="{{ route('account.guest') }}" class="stack">
                 @csrf
                 {!! \App\Support\FormToken::field('guest-booking') !!}
+                @if ($guestBarTop)
+                    @include('account.action-bars.guest')
+                @endif
                 <div class="field">
                     <span class="label">{{ __('guest.quantity') }}</span>
                     <div class="stepper" data-stepper>
@@ -269,7 +275,7 @@
                         <input type="number" id="guest_quantity" name="guest_quantity" value="{{ old('guest_quantity', 1) }}" min="1" max="{{ \App\Services\GuestSales::MAX_BEERS }}" inputmode="numeric" data-price="{{ $price }}">
                         <button type="button" class="btn round" data-step="1" aria-label="{{ __('account.more') }}">+</button>
                     </div>
-                    <p class="muted center">{{ __('guest.price', ['price' => chf($price)]) }} · <strong data-total>{{ chf($price) }}</strong></p>
+                    <p class="muted center">{{ __('guest.price', ['price' => chf($price)]) }}</p>
                 </div>
                 <fieldset class="segmented">
                     <legend>{{ __('guest.method') }}</legend>
@@ -287,7 +293,9 @@
                     <label for="guest_name">{{ __('guest.name') }}</label>
                     <input type="text" id="guest_name" name="guest_name" value="{{ old('guest_name') }}" maxlength="100" autocomplete="off">
                 </div>
-                <button type="submit" class="btn primary big">{{ __('guest.book_submit') }}</button>
+                @unless ($guestBarTop)
+                    @include('account.action-bars.guest')
+                @endunless
             </form>
 
 @island('undo-guest', with: $__livewire->data())

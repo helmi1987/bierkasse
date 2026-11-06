@@ -7,6 +7,8 @@ return [
     'general' => 'Allgemein',
     'features' => 'Funktionen',
     'features_hint' => 'Funktionen für alle Benutzer ein- und ausschalten (nur Admin). Bestehende Buchungen bleiben.',
+    'bar_top' => 'Knöpfe oben fixieren',
+    'bar_top_hint' => 'Total und Knöpfe stehen oben im Bereich und bleiben beim Scrollen sichtbar. Aus: Sie stehen unten im Formular.',
     'features_qr' => 'QR-Codes anzeigen und drucken',
     'features_save' => 'Funktionen speichern',
     'app_name' => 'App-Name',

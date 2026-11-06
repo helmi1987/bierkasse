@@ -50,6 +50,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.38.0 | Neue Funktion | Bier verschenken und Bier für Gast: Total und Absende-Knopf oben und beim Scrollen sichtbar wie bei der Runde; pro Bereich schaltbar («Knöpfe oben fixieren», Standard ein) |
 | 1.37.0 | Änderung | Alte Live-Aktualisierung (live.js-Seitenaustausch, /live) entfernt; alle Live-Seiten sind Livewire-Komponenten |
 | 1.36.0 | Neue Funktion | Admin-Seiten (Übersicht, Kasse, Lager, Benutzer-Detail, Entsorgung, Feedback, Statistik) als Livewire-Komponenten mit Live-Badges in der Unternavigation; Einstellungen, Navigation, SSO, Wartung, QR-Seiten und Protokoll-Detail ohne Live-Aktualisierung |
 | 1.35.0 | Neue Funktion | Statistik, Verlauf und Konto verlassen als Livewire-Komponenten (Live ohne Springen); Einstellungen, Feedback, Einladen und Rechtliches ohne Live-Aktualisierung |

@@ -303,13 +303,14 @@ ul.plain { list-style: none; padding: 0; margin: .25rem 0 0; }
 .notice-dismiss { margin: 0; flex: none; }
 .notice-close { width: 32px; height: 32px; margin: -.35rem -.5rem -.35rem 0; border: 0; border-radius: var(--radius-sm); background: none; color: inherit; font-size: 1.4rem; line-height: 1; cursor: pointer; }
 @media (hover: hover) { .notice-close:hover { background: color-mix(in srgb, currentColor 12%, transparent); } }
-.round-total { font-size: 1.05rem; margin: 0; }
-/* Round total and buttons: at the top of the round form, sticky just below the sticky topbar (--topbar-h is set
-   from the real topbar height in app.js; safe-area inset). Opaque background so the list does not shine through. */
-.round-bar { position: sticky; top: var(--topbar-h, 60px); z-index: 4; background: var(--surface); margin: 0 -.5rem; padding: .5rem; display: flex; flex-direction: column; gap: .5rem; border-bottom: 1px solid var(--border); }
-.round-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
-.round-buttons .btn { min-width: 0; padding: .45rem .5rem; text-align: center; overflow-wrap: anywhere; line-height: 1.2; }
-@media (max-width: 400px) { .round-buttons .btn { font-size: .95rem; } }
+.action-total { font-size: 1.05rem; margin: 0; }
+/* Total and submit buttons of the round, gift and guest forms. Sticky just below the sticky topbar when the area's
+   "Knöpfe oben fixieren" switch is on (--topbar-h is set by app.js, opaque background so the list does not shine through). */
+.action-bar { display: flex; flex-direction: column; gap: .5rem; }
+.action-bar.is-sticky { position: sticky; top: var(--topbar-h, 60px); z-index: 4; background: var(--surface); margin: 0 -.5rem; padding: .5rem; border-bottom: 1px solid var(--border); }
+.action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.action-buttons .btn { min-width: 0; padding: .45rem .5rem; text-align: center; overflow-wrap: anywhere; line-height: 1.2; }
+@media (max-width: 400px) { .action-buttons .btn { font-size: .95rem; } }
 .undo-list { list-style: none; padding: 0; margin: 1rem 0 0; display: flex; flex-direction: column; gap: .4rem; }
 .undo-list li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .4rem .6rem; background: var(--surface-2); border-radius: var(--radius-sm); }
 

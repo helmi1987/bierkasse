@@ -1,5 +1,5 @@
 {{--
-    "Entsorgungsbonus" (1.32.0, kassiers and admins): guide, settings, status, report for a user and the list.
+    "Entsorgungsbonus" (1.32.0, kassiers and admins): guide, settings, status, report for a user, the list and the ranking.
     Plain forms, no JS. See App\Http\Controllers\Backend\DisposalController.
 --}}
 @extends('layouts.app')
@@ -169,5 +169,11 @@
         </ul>
         {{ $disposals->links('partials.pagination') }}
     @endif
+</section>
+
+<section class="card" data-testid="backend-disposal-ranking">
+    <h2>{{ __('disposal.ranking_backend') }}</h2>
+    @include('disposals._ranking', ['ranking' => $ranking])
+    <p class="hint">{{ __('disposal.ranking_backend_hint', ['count' => $totals['count'], 'beers' => $totals['beers']]) }}</p>
 </section>
 @endsection

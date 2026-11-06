@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\Audit;
+use App\Services\Disposals;
 use App\Services\Gifts;
 use App\Services\Ledger;
 use App\Services\LedgerException;
@@ -42,6 +43,7 @@ class UserController extends Controller
             'roundsGiven' => Rounds::beersGiven($user),
             'giftsGiven' => Gifts::beersGiven($user),
             'giftsReceived' => Gifts::beersReceived($user),
+            'disposals' => Disposals::countFor($user),
         ]);
     }
 

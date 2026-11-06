@@ -14,10 +14,14 @@
 @if ($user->isLocked())
     <p class="alert bad" data-testid="locked-info">{{ __('users.locked_info', ['date' => local_time($user->locked_at), 'by' => $user->lockedBy?->username ?? '–', 'reason' => $user->locked_reason ?? '–']) }}</p>
 @endif
-<p class="muted">{{ $user->username }}@if ($user->email) · {{ $user->email }}@endif · {{ __('users.totp') }}: {{ $user->hasTotp() ? __('account.totp_active') : '–' }}@if ($user->stats_opt_out) · {{ __('users.stats_opt_out') }}@endif · {{ __('users.last_login') }}: {{ local_time($user->last_login_at) }}@if ($personalSso) · {{ __('users.personal_sso', ['name' => $personalSso->name, 'host' => parse_url((string) $personalSso->authorize_url, PHP_URL_HOST) ?: '–']) }} ({{ $personalSso->identities_count > 0 ? __('sso.personal.connected') : __('sso.personal.not_connected') }})@endif</p>
+<p class="muted">{{ $user->username }}@if ($user->email) · {{ $user->email }}@endif · {{ __('users.totp') }}: {{ $user->hasTotp() ? __('account.totp_active') : '–' }}@if ($user->stats_opt_out) · {{ __('users.stats_opt_out') }}@endif@if ($user->disposal_stats_opt_out) · {{ __('users.disposal_stats_opt_out') }}@endif · {{ __('users.last_login') }}: {{ local_time($user->last_login_at) }}@if ($personalSso) · {{ __('users.personal_sso', ['name' => $personalSso->name, 'host' => parse_url((string) $personalSso->authorize_url, PHP_URL_HOST) ?: '–']) }} ({{ $personalSso->identities_count > 0 ? __('sso.personal.connected') : __('sso.personal.not_connected') }})@endif</p>
 
 @if ($roundsGiven > 0)
     <p class="muted" data-testid="round-given">{{ __('round.given_kpi') }}: {{ trans_choice('round.beers', $roundsGiven, ['count' => $roundsGiven]) }}</p>
+@endif
+
+@if ($disposals['count'] > 0)
+    <p class="muted" data-testid="disposals">{{ __('disposal.kpi') }}: {{ $disposals['count'] }} · {{ trans_choice('disposal.kpi_beers', $disposals['beers'], ['count' => $disposals['beers']]) }}</p>
 @endif
 
 @if ($user->isAdminOnly())

@@ -301,6 +301,56 @@ class Disposals
     }
 
     /**
+     * Ranking of the booked disposals per recipient (all time, independent of any statistics period): sorted by
+     * the number of disposals (not by beers, the bonus may be random), then beers, then user id; competition
+     * ranks via Stats::ranked() ("1224", every row tied with place $top is kept). Only existing users with a
+     * beer account. Users with disposal_stats_opt_out (never stats_opt_out) are listed as "Anonym 1", "Anonym 2",
+     * … from top to bottom of the shown list; user_id stays for the own-row highlight (never rendered).
+     *
+     * @return list<array{rank:int, user_id:int, name:string, count:int, beers:int, anonymous:bool}>
+     */
+    public static function ranking(int $top = 10): array
+    {
+        $sums = Disposal::query()->booked()->groupBy('user_id')
+            ->selectRaw('user_id, count(*) as c, coalesce(sum(quantity), 0) as b')->toBase()->get();
+        $users = User::query()->whereIn('id', $sums->pluck('user_id'))->hasBeerAccount()->get()->keyBy('id');
+
+        $rows = $sums->filter(fn ($row) => $users->has($row->user_id))
+            ->map(fn ($row) => [
+                'user_id' => (int) $row->user_id,
+                'name' => $users[$row->user_id]->displayName(),
+                'count' => (int) $row->c,
+                'beers' => (int) $row->b,
+                'anonymous' => (bool) $users[$row->user_id]->disposal_stats_opt_out,
+            ])
+            ->sort(fn (array $a, array $b) => [$b['count'], $b['beers'], $a['user_id']] <=> [$a['count'], $a['beers'], $b['user_id']])
+            ->values();
+        $ranked = Stats::ranked($rows, 'count', $top);
+
+        // Numbered after sorting and cutting, so the shown list reads Anonym 1, 2, … top to bottom.
+        $n = 0;
+        foreach ($ranked as $i => $row) {
+            if ($row['anonymous']) {
+                $ranked[$i]['name'] = __('stats.anonymous', ['n' => ++$n]);
+            }
+        }
+
+        return $ranked;
+    }
+
+    /**
+     * All booked disposals and the sum of their bonus beers.
+     *
+     * @return array{count: int, beers: int}
+     */
+    public static function totals(): array
+    {
+        $row = Disposal::query()->booked()->selectRaw('count(*) as c, coalesce(sum(quantity), 0) as b')->toBase()->first();
+
+        return ['count' => (int) ($row->c ?? 0), 'beers' => (int) ($row->b ?? 0)];
+    }
+
+    /**
      * Bonus rows of the user booked in the last NOTICE_DAYS days, not dismissed (newest first).
      *
      * @return Collection<int, Transaction>

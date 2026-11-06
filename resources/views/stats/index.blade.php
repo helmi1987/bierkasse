@@ -58,4 +58,12 @@
     @endif
 </div>
 @endif
+
+@if ($disposalRanking !== null)
+    <section class="card" data-testid="stats-disposal-ranking">
+        <h2>{{ __('disposal.ranking') }}</h2>
+        @include('disposals._ranking', ['ranking' => $disposalRanking])
+        <p class="hint">{{ __('disposal.ranking_hint') }}</p>
+    </section>
+@endif
 @endsection

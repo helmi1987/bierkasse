@@ -354,6 +354,58 @@
   - Admin-Bereich: Liste der Geschenke unter Buchungen > Geschenke (Kassier und Admin); Schalter "Bier verschenken
     erlauben" unter Einstellungen > Funktionen (nur Admin, seit 1.20.0; Standard an, `gifts_enabled`; aus: Karte
     ausgeblendet, `/konto/verschenken` 404).
+- Entsorgungsbonus (1.32.0, Entscheide von hemli): Bonus fürs Wegbringen des Leerguts, als Guthaben in Bier.
+  Ein-/ausschaltbar auf der Seite `/admin/entsorgung` (Standard aus). Dienst `App\Services\Disposals`, Modell
+  `App\Models\Disposal` (Tabelle `disposals`, Status `reported` | `withdrawn` | `booked`).
+  - Melden: Benutzer melden im Konto mit «Leergut entsorgt» (Karte im Dashboard, Einmal-Token). Die Karte erscheint
+    nur, wenn eine Meldung gerade möglich ist (`Disposals::canReport()`: Funktion an, Konto aktiv mit Bierkonto, keine
+    beantragte Auszahlung, keine eigene offene Meldung, keine Sperre). Sonst sehen Benutzer **nichts**: keinen Hinweis,
+    keine Frist, keinen Grund, keinen Namen (`blockReason()` liefert intern `disabled` | `locked` | `minimum`, nur im
+    Backend sichtbar).
+  - Sperrfrist (global für alle, `disposal_lock_days`, Standard 7, 0 = keine): Nach jeder nicht zurückgezogenen
+    Entsorgung kann erst nach so vielen Tagen wieder jemand melden.
+  - Mindestmenge (`disposal_min_beers`, 0 = keine): Seit der letzten Entsorgung müssen so viele Biere aus dem Lager
+    gegangen sein (`Disposals::beersSince()`): bestätigte Biere und Runden (`Transaction::BEER_TYPES`) plus
+    Gäste-Verkäufe. Lagerkorrekturen (z. B. Bruch, Inventur) und verschenkte Biere zählen nicht. Sperrfrist und
+    Mindestmenge müssen beide erfüllt sein.
+  - Einschalten ist ein Neustart: `disposal_enabled_at` wird beim Wechsel aus → an gesetzt; frühere Entsorgungen zählen
+    für Sperrfrist und Mindestmenge nicht mehr, die erste Meldung ist sofort möglich.
+  - Rückzugsfrist: `UNDO_MINUTES['disposal']` (Standard 10 Minuten, 0 = sofort), bearbeitet auf der Kassier-Seite
+    «Entsorgung», nicht in Admin > Einstellungen. Zurückziehen: der Benutzer nur eigene Meldungen, nicht die von
+    Kassier oder Admin für ihn erfassten (auch nicht, wenn er selbst Kassier ist); Kassier und Admin alle
+    (`Disposal::isWithdrawable()`).
+  - Buchung und Auslosung erst nach Ablauf der Frist: `php artisan disposals:book` jede Minute über den Scheduler
+    (`routes/console.php`, `withoutOverlapping`), dazu Nachholen bei Seitenaufrufen (Middleware `BookDueDisposals`,
+    höchstens einmal pro 60 s über einen Cache-Schlüssel, nur wenn etwas fällig ist, bricht den Request nie ab).
+    Erst dann wird die Anzahl gezogen (fest `disposal_fixed` oder zufällig 1 bis `disposal_random_max`). Vorher kennt
+    niemand die Anzahl, auch Kassier und Admin nicht; Mail an die Kassiers und Audit der Meldung enthalten keine
+    Anzahl. Cache-Sperre plus Zeilensperre: keine Doppelbuchung. Ist das Konto bei Fälligkeit nicht mehr aktiv oder
+    ohne Bierkonto, wird die Meldung ohne Bonus verworfen (`disposal.skip`).
+  - Gutschrift: Buchung Typ `disposal` (Anzahl × aktueller Bierpreis, positiv), Hinweis 1 Tag im Dashboard (mit ×).
+    Nicht getrunken: zählt nicht fürs Lager und nicht für die Bier-Statistik. Storno wie andere Buchungen
+    (`disposal.storno`); die Entsorgung bleibt «gebucht» ohne Buchung («Gutschrift storniert»).
+  - Backend `/admin/entsorgung` (Reiter «Entsorgung», Kassier und Admin): Anleitung, Einstellungen (Audit
+    `settings.update`), Stand (letzte Entsorgung, Sperre bis, Biere seit / Mindestmenge, offen oder gesperrt),
+    «Entsorgung für Benutzer erfassen» (**Entscheid 2026-11-06:** nie für sich selbst; ist es gesperrt, nur mit
+    «Sperre übersteuern» und Pflicht-Begründung, die im Audit und in der Liste steht), Liste aller Entsorgungen und
+    Rangliste.
+  - Statistik: Kennzahl «Entsorgungen» (Anzahl, darunter «n Biere») im Konto in «Meine Buchungen & Statistik» und in
+    der Benutzer-Detailansicht, nur wenn > 0 (`Stats::forUser()['disposals']` = `Disposals::countFor()`).
+    Rangliste `Disposals::ranking($top)`: gebuchte Entsorgungen pro Empfänger, **Entscheid 2026-11-06:** sortiert nach
+    Anzahl (nicht nach Bieren, die sind Zufall), dann Biere, dann Benutzer-ID; Sport-Platzierung über
+    `Stats::ranked()` auf der Anzahl (1, 1, 3, Gleichstand an der Grenze bleibt). Immer seit Beginn, unabhängig vom
+    Zeitraum. Nur bestehende Benutzer mit Bierkonto. Auf `/statistik` als Karte «Rangliste Entsorgungen» (Top 10, mit
+    Anzahl «n×» und «m Biere», `stats_ranking_counts` gilt hier nicht), nur wenn «Rangliste öffentlich»
+    (`disposal_ranking_public`, Standard aus), die Funktion an und `stats_show_ranking` an ist. Kassier und Admin
+    sehen die Top 20 mit Total immer auf `/admin/entsorgung`.
+  - Opt-out (**Entscheid 2026-11-06:** eigener Schalter, getrennt vom Bier-Schalter): Konto > Einstellungen > Statistik
+    hat zwei Schalter, «Name in Statistik Konsum zeigen» (`stats_opt_out`, Bier-Statistik) und «Name in Statistik
+    Entsorgung zeigen» (`users.disposal_stats_opt_out`, `POST /konto/statistik-entsorgung`, Audit `user.settings`).
+    Standard an (Name sichtbar); die Migration übernimmt den Bier-Schalter bewusst nicht. Jede Rangliste nutzt nur
+    ihren eigenen Schalter. Aus = «Anonym n» überall (auch im Backend), nummeriert nach der Reihenfolge in der
+    gezeigten Liste; die `user_id` bleibt für die eigene Zeile (`.me`).
+  - Protokoll: `disposal.report` (mit Begründung beim Übersteuern), `disposal.withdraw`, `disposal.book` (System,
+    mit Anzahl und Betrag), `disposal.skip`, `disposal.storno`.
 - Lager (`/admin/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
   Pflicht; alte Einträge ohne Anzahl zählen 0) + Inventur-Korrekturen (gezählter Bestand, gespeichert als Differenz
   mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere inkl. spendierter Runden (Rückgängig erhöht den
@@ -366,7 +418,7 @@
 - Statistik `/statistik`: Biere total, pro Monat, pro Wochentag, Rangliste (Diagramme als SVG vom Server).
   Rangliste mit Sport-Platzierung (1.28.1): gleich viele Biere = gleicher Rang, danach Lücke (1, 1, 3); der Rang
   kommt aus `Stats::ranked()`, nicht aus der View. Die Top-10-Grenze zeigt alle mit dem Rang von Platz 10 mit.
-  **Annahme:** Wer "In Statistik anzeigen" ausschaltet, wird für andere nirgends namentlich gezeigt
+  **Annahme:** Wer "In Statistik anzeigen" (seit 1.32.0 «Name in Statistik Konsum zeigen») ausschaltet, wird für andere nirgends namentlich gezeigt
   (im Admin-Bereich ebenfalls als «Anonym n»). Seit 1.29.0 steht er in der Rangliste als «Anonym 1»,
   «Anonym 2» … (`stats.anonymous`, Zeile mit `anonymous => true`). **Entscheid 2026-11-06:** nummeriert wird
   nach der Reihenfolge in der angezeigten Liste (nach Sortierung und Top-10-Schnitt, von oben nach unten), nicht
@@ -540,7 +592,8 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
   `cash_entry.create/delete`, `stock.correct`, `legal.update`, `consent.accept`, `user.lock/unlock`, `auth.login_locked`,
   `settings.update` (geänderte Schlüssel), `user.role/status/limit/password_reset/totp_reset/admin_only/...`,
   `auth.login`, `auth.login_failed` (nur versuchter Benutzername), `auth.logout`, `registration`,
-  `invitation.create/revoke`, `maintenance.*`, `backup.*`, `feedback.delete`, `sso_provider.*`), Objekt (Typ, ID),
+  `invitation.create/revoke`, `maintenance.*`, `backup.*`, `feedback.delete`, `sso_provider.*`,
+  `disposal.report/withdraw/book/skip/storno`), Objekt (Typ, ID),
   alte/neue Werte (nur geänderte Felder), IP, gekürzter User-Agent.
 - Geheimnisse werden nie gespeichert: Passwörter, Secrets, Tokens, TOTP, Client-Secrets, SMTP-Passwort,
   Registrierungs-/Gäste-Passwort, Flyer-Code erscheinen als `***changed***`.

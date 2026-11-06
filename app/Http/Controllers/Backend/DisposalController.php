@@ -17,7 +17,7 @@ use Illuminate\View\View;
 
 /**
  * "Entsorgungsbonus" (kassier and admin): guide, settings, status (lock and minimum, backend only),
- * report for a user (with override) and the list of disposals.
+ * report for a user (with override), the list of disposals and the ranking.
  */
 class DisposalController extends Controller
 {
@@ -46,6 +46,9 @@ class DisposalController extends Controller
             'disposals' => Disposal::query()->with(['user', 'reporter', 'withdrawer', 'transaction'])
                 ->latest('reported_at')->latest('id')->paginate(50),
             'viewer' => $request->user(),
+            // Always shown here (regardless of "Rangliste öffentlich"), same anonymisation as on /statistik.
+            'ranking' => Disposals::ranking(20),
+            'totals' => Disposals::totals(),
         ]);
     }
 

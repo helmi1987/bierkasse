@@ -118,6 +118,7 @@ Route::middleware(EnsureInstalled::class)->group(function () {
         Route::delete('/konto/navigation', [AccountSettingsController::class, 'navReset'])->middleware('role:kassier')->name('account.nav.reset');
         Route::put('/konto/passwort', [AccountSettingsController::class, 'password'])->name('account.password');
         Route::post('/konto/statistik', [AccountSettingsController::class, 'stats'])->name('account.stats');
+        Route::post('/konto/statistik-entsorgung', [AccountSettingsController::class, 'disposalStats'])->name('account.disposal-stats');
         Route::post('/konto/nur-verwaltung', [AccountSettingsController::class, 'adminOnly'])->name('account.admin-only');
         Route::post('/konto/totp', [AccountSettingsController::class, 'enableTotp'])->name('account.totp.enable');
         Route::post('/konto/totp/neu', [AccountSettingsController::class, 'restartTotp'])->name('account.totp.restart');

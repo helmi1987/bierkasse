@@ -258,6 +258,7 @@ return [
         'sso_provider_id' => 'SSO-Anbieter',
         'statements' => 'Anweisungen',
         'stats_opt_out' => 'Nicht in Statistik',
+        'disposal_stats_opt_out' => 'Nicht in Statistik Entsorgung',
         'status' => 'Status',
         'transaction_id' => 'Buchung',
         'type' => 'Typ',

@@ -38,7 +38,7 @@ return [
         'Kassier und Admin können unten eine Entsorgung für einen Benutzer erfassen (nicht für sich selbst). Ist es gerade gesperrt, geht das nur mit «Sperre übersteuern» und einer Begründung; die Begründung steht im Protokoll.',
         'Zurückziehen: eigene Meldungen durch den Benutzer selbst, alle Meldungen durch Kassier und Admin. Eine von Kassier oder Admin erfasste Entsorgung kann der Benutzer nicht zurückziehen.',
         'Ein gebuchter Bonus kann beim Benutzer unter Buchungen wie andere Buchungen storniert werden; die Entsorgung bleibt als gebucht stehen.',
-        'Statistik und Rangliste: Die Rangliste der Entsorgungen sehen Benutzer nur, wenn «Rangliste öffentlich» eingeschaltet ist.',
+        'Statistik und Rangliste: Die Rangliste der Entsorgungen sehen Benutzer nur, wenn «Rangliste öffentlich» eingeschaltet ist (und die Rangliste der Statistik gezeigt wird); Kassier und Admin sehen sie unten immer. Sortiert wird nach Anzahl Entsorgungen. Wer im Konto «Name in Statistik Entsorgung zeigen» ausschaltet, erscheint überall als «Anonym n».',
     ],
 
     // Settings
@@ -57,7 +57,7 @@ return [
     'withdraw_minutes' => 'Rückzugsfrist (Minuten)',
     'withdraw_minutes_hint' => 'Bis dahin kann die Meldung zurückgezogen werden; danach wird der Bonus ausgelost und gebucht. 0 = sofort.',
     'ranking_public' => 'Rangliste öffentlich',
-    'ranking_public_hint' => 'Zeigt Benutzern die Rangliste der Entsorgungen in der Statistik.',
+    'ranking_public_hint' => 'Zeigt Benutzern die Rangliste der Entsorgungen in der Statistik (nur wenn dort auch die Rangliste eingeschaltet ist).',
     'save' => 'Speichern',
     'saved' => 'Einstellungen gespeichert.',
 
@@ -99,4 +99,14 @@ return [
     'withdrawn_system' => 'ohne Bonus verworfen (Konto nicht mehr aktiv)',
     'beers' => '{1} :count Bier|[*] :count Biere',
     'storno_note' => 'Gutschrift storniert',
+
+    // Statistics (KPI and ranking)
+    'kpi' => 'Entsorgungen',
+    'kpi_beers' => '{1} :count Bier|[0,*] :count Biere',
+    'ranking' => 'Rangliste Entsorgungen',
+    'ranking_backend' => 'Rangliste',
+    'ranking_empty' => 'Noch keine gebuchten Entsorgungen.',
+    'ranking_hint' => 'Sortiert nach Anzahl Entsorgungen, seit Beginn (unabhängig vom gewählten Zeitraum). Wer «Name in Statistik Entsorgung zeigen» ausgeschaltet hat, erscheint als «Anonym».',
+    'ranking_backend_hint' => 'Top 20, sortiert nach Anzahl Entsorgungen, seit Beginn. Wer «Name in Statistik Entsorgung zeigen» ausgeschaltet hat, erscheint auch hier als «Anonym». Total: :count Entsorgungen, :beers Biere.',
+    'ranking_count' => ':count×',
 ];

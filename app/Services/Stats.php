@@ -36,7 +36,7 @@ class Stats
     public const INVITED_ID = -1;
 
     /**
-     * @return array{total_beers:int, total_amount:int, per_week:float, months: list<array{label:string, beers:int, amount:int}>, given:int, gifted:int, gift_received:int}
+     * @return array{total_beers:int, total_amount:int, per_week:float, months: list<array{label:string, beers:int, amount:int}>, given:int, gifted:int, gift_received:int, disposals:array{count:int, beers:int}}
      */
     public static function forUser(User $user): array
     {
@@ -64,6 +64,8 @@ class Stats
             // "Bier verschenken" (credit, not drunk): never counted as beers above.
             'gifted' => Gifts::beersGiven($user),
             'gift_received' => Gifts::beersReceived($user),
+            // "Entsorgungsbonus" (1.32.0, credit, not drunk): booked disposals and their bonus beers.
+            'disposals' => Disposals::countFor($user),
         ];
     }
 

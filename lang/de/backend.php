@@ -8,6 +8,7 @@ return [
         'stock' => 'Lager',
         'users' => 'Benutzer',
         'bookings' => 'Buchungen',
+        'stats' => 'Statistik',
         'qr' => 'QR-Codes',
         'audit' => 'Protokoll',
         'settings' => 'Einstellungen',

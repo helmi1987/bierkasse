@@ -9,7 +9,8 @@ use App\Models\User;
  * internal group key "backend", kept so stored orders stay valid), and the order of their tabs: default set by
  * the admin (setting NAV_ORDER), personal order per account (users.nav_order), else the built-in order.
  * Entscheid 2026-10-24 (1.20.0): Kassier = Übersicht, Kasse, Lager, Benutzer, Buchungen, QR-Codes, Protokoll;
- * Admin = Einstellungen, Feedback, SSO, Navigation, Wartung.
+ * Admin = Einstellungen, Feedback, SSO, Navigation, Wartung. 1.31.0: "Statistik" after "Buchungen" (stored
+ * orders get it appended by normalize()).
  */
 class BackendNav
 {
@@ -29,6 +30,8 @@ class BackendNav
             'users' => ['backend.users.index', 'backend.users.*'],
             // Rounds, gifts and guest sales.
             'bookings' => ['backend.bookings', 'backend.bookings*'],
+            // Backend statistics (1.31.0).
+            'stats' => ['backend.stats', 'backend.stats*'],
             // QR codes: view for kassiers, management parts for admins, and the print pages.
             'qr' => ['backend.qr-codes.index', ['backend.qr-codes.*', 'backend.registration.qr', 'backend.registration.flyer-svg', 'backend.guests.qr']],
             // Audit log with the tab "Fassungen".

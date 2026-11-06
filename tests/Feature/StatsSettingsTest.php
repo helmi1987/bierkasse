@@ -81,8 +81,8 @@ class StatsSettingsTest extends TestCase
             $this->actingAs($account)->get('/konto')->assertOk()->assertDontSee(self::NAV_LINK, false);
             $this->get('/statistik')->assertNotFound();
         }
-        // The legacy kassier tab still redirects.
-        $this->actingAs($this->kassier())->get('/admin/statistik')->assertRedirect(route('stats'));
+        // The backend statistics (1.31.0) do not depend on the switch.
+        $this->actingAs($this->kassier())->get('/admin/statistik')->assertOk();
         // The own statistics on the dashboard have their own switch.
         $this->actingAs($user)->get('/konto')->assertSee(__('account.bookings_stats'));
     }

@@ -28,8 +28,9 @@ class StatsTest extends TestCase
 
         $this->actingAs($visible)->get('/statistik')->assertOk()
             ->assertSee('Vreni Sichtbar')->assertDontSee('Versteckt')->assertSee('<svg class="chart"', false);
-        // The former kassier statistics tab redirects to the statistics page (1.20.0).
-        $this->actingAs($this->kassier())->get('/admin/statistik')->assertRedirect(route('stats'));
+        // Since 1.31.0 /admin/statistik is the backend statistics page (no longer a redirect), also anonymised.
+        $this->actingAs($this->kassier())->get('/admin/statistik?gruppe=benutzer')->assertOk()
+            ->assertSee('Vreni Sichtbar')->assertSee('Anonym 1')->assertDontSee('Versteckt');
         $this->get('/statistik')->assertOk()->assertDontSee('Versteckt');
     }
 

@@ -9,11 +9,12 @@ use Throwable;
 
 /**
  * Period of the statistics page (1.30.0), built from the GET parameters
- * `zeitraum` (gesamt|woche|monat|jahr|frei), `von` and `bis` (YYYY-MM-DD, app time zone).
+ * `zeitraum` (gesamt|woche|monat|quartal|jahr|frei), `von` and `bis` (YYYY-MM-DD, app time zone).
  *
  * - gesamt: all time (no bounds), chart = last Stats::MONTHS months.
  * - woche: ISO week (Monday–Sunday) containing `von`, chart per day.
  * - monat: month containing `von`, chart per day.
+ * - quartal: calendar quarter containing `von`, chart per month (1.31.0).
  * - jahr: year of `von`, chart per month.
  * - frei: `von`–`bis` inclusive (default last 30 days, swapped if reversed, at most MAX_YEARS),
  *   chart per day up to DAILY_MAX_DAYS days, else per month.
@@ -29,12 +30,14 @@ final class StatsPeriod
 
     public const MONTH = 'monat';
 
+    public const QUARTER = 'quartal';
+
     public const YEAR = 'jahr';
 
     public const CUSTOM = 'frei';
 
     /** In the order of the tabs. */
-    public const KINDS = [self::ALL, self::WEEK, self::MONTH, self::YEAR, self::CUSTOM];
+    public const KINDS = [self::ALL, self::WEEK, self::MONTH, self::QUARTER, self::YEAR, self::CUSTOM];
 
     /** Custom periods up to this many days are charted per day, longer ones per month. */
     public const DAILY_MAX_DAYS = 62;
@@ -62,6 +65,7 @@ final class StatsPeriod
         return match ($kind) {
             self::WEEK => self::week($von ?? self::today()),
             self::MONTH => self::month($von ?? self::today()),
+            self::QUARTER => self::quarter($von ?? self::today()),
             self::YEAR => self::year($von ?? self::today()),
             self::CUSTOM => self::custom($von, self::parseDate($query['bis'] ?? null)),
             default => self::all(),
@@ -85,6 +89,13 @@ final class StatsPeriod
         $start = self::local($day)->startOfMonth()->startOfDay();
 
         return new self(self::MONTH, $start, $start->endOfMonth()->endOfDay());
+    }
+
+    public static function quarter(CarbonInterface $day): self
+    {
+        $start = self::local($day)->firstOfQuarter()->startOfDay();
+
+        return new self(self::QUARTER, $start, $start->lastOfQuarter()->endOfDay());
     }
 
     public static function year(CarbonInterface $day): self
@@ -115,18 +126,19 @@ final class StatsPeriod
         return $this->kind === self::ALL;
     }
 
-    /** True for the kinds with previous/next navigation (woche, monat, jahr). */
+    /** True for the kinds with previous/next navigation (woche, monat, quartal, jahr). */
     public function isStepped(): bool
     {
-        return in_array($this->kind, [self::WEEK, self::MONTH, self::YEAR], true);
+        return in_array($this->kind, [self::WEEK, self::MONTH, self::QUARTER, self::YEAR], true);
     }
 
-    /** Heading of the period, e.g. "KW 45 (2.–8.11.2026)", "November 2026", "2026", "2.11.2026 – 6.11.2026". */
+    /** Heading of the period, e.g. "KW 45 (2.–8.11.2026)", "November 2026", "Q4 2026", "2026", "2.11.2026 – 6.11.2026". */
     public function label(): string
     {
         return match ($this->kind) {
             self::WEEK => __('stats.period.week_label', ['week' => $this->from->isoWeek(), 'range' => $this->weekRange()]),
             self::MONTH => __('stats.month_long.'.$this->from->month).' '.$this->from->year,
+            self::QUARTER => 'Q'.$this->from->quarter.' '.$this->from->year,
             self::YEAR => (string) $this->from->year,
             self::CUSTOM => $this->from->format('j.n.Y').' – '.$this->to->format('j.n.Y'),
             default => __('stats.period.'.self::ALL),
@@ -138,6 +150,7 @@ final class StatsPeriod
         return match ($this->kind) {
             self::WEEK => self::week($this->from->subWeek()),
             self::MONTH => self::month($this->from->subMonthNoOverflow()),
+            self::QUARTER => self::quarter($this->from->subMonthsNoOverflow(3)),
             self::YEAR => self::year($this->from->subYearNoOverflow()),
             default => null,
         };
@@ -149,11 +162,27 @@ final class StatsPeriod
         $next = match ($this->kind) {
             self::WEEK => self::week($this->from->addWeek()),
             self::MONTH => self::month($this->from->addMonthNoOverflow()),
+            self::QUARTER => self::quarter($this->from->addMonthsNoOverflow(3)),
             self::YEAR => self::year($this->from->addYearNoOverflow()),
             default => null,
         };
 
         return $next !== null && $next->from->lessThanOrEqualTo(self::today()) ? $next : null;
+    }
+
+    /**
+     * Period of the same length immediately before this one (backend comparison, 1.31.0): previous() for the
+     * stepped kinds, the same number of days before `von` for "frei", null for "gesamt".
+     */
+    public function preceding(): ?self
+    {
+        if ($this->kind === self::CUSTOM) {
+            $to = $this->from->subDay();
+
+            return self::custom($to->subDays($this->days() - 1), $to);
+        }
+
+        return $this->previous();
     }
 
     /**
@@ -228,7 +257,7 @@ final class StatsPeriod
             }
         } else {
             for ($m = $start; $m->lessThanOrEqualTo($end); $m = $m->addMonthNoOverflow()) {
-                $buckets[$m->format('Y-m')] = $this->kind === self::YEAR
+                $buckets[$m->format('Y-m')] = in_array($this->kind, [self::YEAR, self::QUARTER], true)
                     ? __('stats.month_short.'.$m->month)
                     : __('stats.month_short.'.$m->month).' '.$m->format('y');
             }

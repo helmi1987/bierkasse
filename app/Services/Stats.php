@@ -7,6 +7,7 @@ use App\Models\RoundItem;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Support\StatsPeriod;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -78,11 +79,7 @@ class Stats
         $bounds = $period->dbBounds();
         $rows = self::consumptions()->when($bounds, fn ($q) => $q->whereBetween('created_at', $bounds))
             ->get(['user_id', 'quantity', 'amount', 'created_at']);
-        // Guest sales as pseudo rows (user_id 0, shown as "Gäste"), never as a user.
-        $guests = GuestSale::query()->when($bounds, fn ($q) => $q->whereBetween('created_at', $bounds))
-            ->get(['beers', 'amount', 'created_at'])
-            ->map(fn (GuestSale $g) => (object) ['user_id' => self::GUESTS_ID, 'quantity' => $g->beers, 'amount' => -$g->amount, 'created_at' => $g->created_at]);
-        $rows = $rows->toBase()->concat($guests)->concat(self::roundRows($bounds));
+        $rows = $rows->toBase()->concat(self::guestRows($bounds))->concat(self::roundRows($bounds));
 
         return [
             'total_beers' => (int) $rows->sum('quantity'),
@@ -157,23 +154,47 @@ class Stats
         return $query->whereBetween($date, [min($all), max($all)])->selectRaw(implode(', ', $select), $bindings)->toBase()->first();
     }
 
-    private static function consumptions()
+    /**
+     * Confirmed own consumption (row source of the statistics, also used by BackendStats).
+     *
+     * @return Builder<Transaction>
+     */
+    public static function consumptions(): Builder
     {
         return Transaction::query()->confirmed()->where('type', Transaction::TYPE_CONSUMPTION);
     }
 
     /**
-     * Beers of all confirmed rounds as rows of the drinker (user_id INVITED_ID for beers without
-     * a name), at the time and price of the round; optionally only rounds within DB bounds.
+     * Guest sales as pseudo rows (user_id GUESTS_ID, shown as "Gäste"), never as a user; optionally only
+     * sales within DB bounds.
      *
      * @param  array{0:string, 1:string}|null  $bounds
      * @return Collection<int, object{user_id:int, quantity:int, amount:int, created_at:Carbon}>
      */
-    private static function roundRows(?array $bounds = null): Collection
+    public static function guestRows(?array $bounds = null): Collection
+    {
+        return GuestSale::query()->when($bounds, fn ($q) => $q->whereBetween('created_at', $bounds))
+            ->get(['beers', 'amount', 'created_at'])
+            ->map(fn (GuestSale $g) => (object) ['user_id' => self::GUESTS_ID, 'quantity' => $g->beers, 'amount' => -$g->amount, 'created_at' => $g->created_at])
+            ->toBase();
+    }
+
+    /**
+     * Beers of all confirmed rounds as rows of the drinker (user_id INVITED_ID for beers without
+     * a name), at the time and price of the round; optionally only rounds within DB bounds and only
+     * the items matching $items (a constraint on the round_items query, e.g. one drinker; applied in SQL).
+     *
+     * @param  array{0:string, 1:string}|null  $bounds
+     * @param  (Closure(Builder<RoundItem>): mixed)|null  $items
+     * @return Collection<int, object{user_id:int, quantity:int, amount:int, created_at:Carbon}>
+     */
+    public static function roundRows(?array $bounds = null, ?Closure $items = null): Collection
     {
         return Transaction::query()->confirmed()->where('type', Transaction::TYPE_ROUND)
             ->when($bounds, fn ($q) => $q->whereBetween('created_at', $bounds))
-            ->with('roundItems:id,transaction_id,user_id,quantity')
+            // when() would call a Closure value itself, so the condition is a bool.
+            ->when($items !== null, fn ($q) => $q->whereHas('roundItems', $items))
+            ->with(['roundItems' => fn ($q) => $q->select(['id', 'transaction_id', 'user_id', 'quantity'])->when($items !== null, $items)])
             ->get(['id', 'unit_price', 'created_at'])
             ->flatMap(fn (Transaction $tx) => $tx->roundItems->map(fn ($item) => (object) [
                 'user_id' => $item->user_id ?? self::INVITED_ID,

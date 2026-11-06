@@ -13,6 +13,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 - Kasse mit Kassenbuch (Einzahlungen, Auszahlungen, Ausgaben, Einnahmen)
 - Lager mit Bestand und Warnung per Mail
 - Statistik: Biere pro Monat und Wochentag, Rangliste
+- Backend-Statistik für Kassier und Admin mit Filtern und CSV-Export
 - Gäste ohne Konto per QR-Kleber (Bar oder TWINT)
 - Bier für einen Gast buchen
 - Runde spendieren
@@ -48,6 +49,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.31.0 | Neue Funktion | Backend-Statistik für Kassier und Admin: Zeitraum (inkl. Quartal), Benutzer, Typ, Gruppierung nach Zeit oder Benutzer, Vergleich Vorperiode, CSV-Export |
 | 1.30.0 | Neue Funktion | Statistik mit Zeitraum (Woche, Monat, Jahr, frei) und Vor/Zurück, Wochenansicht, Vergleich Monat/Vormonat/Jahr/Vorjahr, Rangliste pro Zeitraum |
 | 1.29.0 | Neue Funktion | Statistik für Benutzer in den Funktionen ein-/ausschaltbar (ganz oder einzelne Teile); Opt-out-Benutzer in der Rangliste als «Anonym n» |
 | 1.28.1 | Bugfix | Rangliste mit Sport-Platzierung: gleich viele Biere = gleicher Rang, danach Lücke (1, 1, 3) |

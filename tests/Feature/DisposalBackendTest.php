@@ -61,11 +61,13 @@ class DisposalBackendTest extends TestCase
         $this->actingAs($this->admin())->get('/admin/entsorgung')->assertOk();
     }
 
-    public function test_feature_off_page_shows_guide_open_and_no_report_form(): void
+    public function test_feature_off_page_shows_guide_and_faq_collapsed_and_no_report_form(): void
     {
         $page = $this->actingAs($this->kassier)->get('/admin/entsorgung')->assertOk();
-        $this->assertMatchesRegularExpression('/data-testid="disposal-guide"\s+open/', $page->getContent());
-        $page->assertSee(__('disposal.guide')[1])
+        // 1.38.2: guide and FAQ are always collapsed, also when the feature is off.
+        $this->assertDoesNotMatchRegularExpression('/data-testid="disposal-(guide|faq)"\s+open/', $page->getContent());
+        $page->assertSee(__('disposal.guide')[1])->assertSee('data-testid="disposal-faq"', false)
+            ->assertSee(__('disposal.faq_heading'))->assertSee(__('disposal.faq')[0]['q'])->assertSee(__('disposal.faq')[11]['a'])
             ->assertSee('data-testid="disposal-settings"', false)->assertDontSee('data-testid="disposal-for-user"', false);
         $this->post('/admin/entsorgung', ['user_id' => $this->user->id])->assertSessionHas('error', __('disposal.disabled'));
         $this->assertSame(0, Disposal::query()->count());

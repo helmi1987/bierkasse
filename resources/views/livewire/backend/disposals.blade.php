@@ -1,14 +1,29 @@
 {{-- "Entsorgungsbonus" (Livewire since 1.36.0; see App\Livewire\Backend\Disposals). Polls every 10 s while visible;
      only the islands (status, list, ranking) are re-rendered, guide and forms stay as rendered at mount. --}}
 <div wire:poll.10s.visible="tick" data-testid="backend-disposals">
-<section class="card">
-    <details data-testid="disposal-guide" @if (! $enabled) open @endif>
+{{-- Guide and FAQ are static and always collapsed; wire:ignore keeps their open state across polls. --}}
+<section class="card" wire:ignore>
+    <details data-testid="disposal-guide">
         <summary><h2>{{ __('disposal.guide_heading') }}</h2></summary>
         <ul>
             @foreach (__('disposal.guide') as $paragraph)
                 <li>{{ $paragraph }}</li>
             @endforeach
         </ul>
+    </details>
+</section>
+
+<section class="card" wire:ignore>
+    <details data-testid="disposal-faq">
+        <summary><h2>{{ __('disposal.faq_heading') }}</h2></summary>
+        <div class="faq">
+            @foreach (__('disposal.faq') as $item)
+                <details>
+                    <summary>{{ $item['q'] }}</summary>
+                    <p>{{ $item['a'] }}</p>
+                </details>
+            @endforeach
+        </div>
     </details>
 </section>
 

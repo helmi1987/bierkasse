@@ -392,7 +392,7 @@
   - Gutschrift: Buchung Typ `disposal` (Anzahl × aktueller Bierpreis, positiv), Hinweis 1 Tag im Dashboard (mit ×).
     Nicht getrunken: zählt nicht fürs Lager und nicht für die Bier-Statistik. Storno wie andere Buchungen
     (`disposal.storno`); die Entsorgung bleibt «gebucht» ohne Buchung («Gutschrift storniert»).
-  - Backend `/admin/entsorgung` (Reiter «Entsorgung», Kassier und Admin): Anleitung, Einstellungen (Audit
+  - Backend `/admin/entsorgung` (Reiter «Entsorgung», Kassier und Admin): Anleitung und «Häufige Fragen» (beide immer eingeklappt, `wire:ignore`, 1.38.2), Einstellungen (Audit
     `settings.update`), Stand (letzte Entsorgung, Sperre bis, Biere seit / Mindestmenge, offen oder gesperrt),
     «Entsorgung für Benutzer erfassen» (**Entscheid 2026-11-06:** nie für sich selbst; ist es gesperrt, nur mit
     «Sperre übersteuern» und Pflicht-Begründung, die im Audit und in der Liste steht), Liste aller Entsorgungen und

@@ -41,6 +41,22 @@ return [
         'Statistik und Rangliste: Die Rangliste der Entsorgungen sehen Benutzer nur, wenn «Rangliste öffentlich» eingeschaltet ist (und die Rangliste der Statistik gezeigt wird); Kassier und Admin sehen sie unten immer. Sortiert wird nach Anzahl Entsorgungen. Wer im Konto «Name in Statistik Entsorgung zeigen» ausschaltet, erscheint überall als «Anonym n».',
     ],
 
+    'faq_heading' => 'Häufige Fragen',
+    'faq' => [
+        ['q' => 'Wie meldet ein Benutzer eine Entsorgung?', 'a' => 'Im Konto mit dem Knopf «Leergut entsorgt». Die Karte erscheint nur, wenn gerade eine Meldung möglich ist.'],
+        ['q' => 'Warum sieht ein Benutzer die Karte «Leergut entsorgt» nicht?', 'a' => 'Die Sperrfrist seit der letzten Meldung läuft noch, die Mindestmenge Bier ist noch nicht erreicht oder die Funktion ist ausgeschaltet. Benutzer sehen dann gar nichts: keinen Hinweis, keine Frist, keinen Namen.'],
+        ['q' => 'Welche Biere zählen für die Mindestmenge?', 'a' => 'Bestätigte Biere, spendierte Runden und Gäste-Verkäufe seit der letzten Entsorgung. Lagerkorrekturen (z. B. Bruch) und verschenkte Biere zählen nicht.'],
+        ['q' => 'Was passiert beim Einschalten der Funktion?', 'a' => 'Ein Neustart: Frühere Entsorgungen zählen für Sperrfrist und Mindestmenge nicht mehr, die erste Entsorgung ist sofort möglich.'],
+        ['q' => 'Wann wird der Bonus gebucht?', 'a' => 'Automatisch nach Ablauf der Rückzugsfrist. Erst dann wird die Anzahl Biere ausgelost (fest oder zufällig von 1 bis zum Maximum).'],
+        ['q' => 'Wer kennt die Anzahl Biere vor der Buchung?', 'a' => 'Niemand, auch Kassier und Admin nicht.'],
+        ['q' => 'Wie viel ist der Bonus wert?', 'a' => 'Anzahl Biere × aktueller Bierpreis, als Guthaben wie ein geschenktes Bier. Er zählt nicht für das Lager und nicht für die Bier-Statistik.'],
+        ['q' => 'Kann ich eine Entsorgung für einen Benutzer erfassen?', 'a' => 'Ja, unten auf dieser Seite, aber nicht für sich selbst. Ist es gerade gesperrt, geht das nur mit «Sperre übersteuern» und einer Begründung; die Begründung steht im Protokoll.'],
+        ['q' => 'Wer kann eine Meldung zurückziehen?', 'a' => 'Während der Rückzugsfrist: der Benutzer seine eigenen Meldungen, Kassier und Admin alle. Eine von Kassier oder Admin erfasste Entsorgung kann der Benutzer nicht zurückziehen.'],
+        ['q' => 'Ein Bonus wurde zu Unrecht gebucht. Was tun?', 'a' => 'Beim Benutzer unter Buchungen stornieren wie andere Buchungen. Die Entsorgung bleibt als gebucht stehen.'],
+        ['q' => 'Wer sieht die Rangliste der Entsorgungen?', 'a' => 'Benutzer nur, wenn «Rangliste öffentlich» eingeschaltet ist und die Rangliste der Statistik gezeigt wird. Kassier und Admin sehen sie unten immer. Sortiert wird nach Anzahl Entsorgungen.'],
+        ['q' => 'Kann ein Benutzer anonym bleiben?', 'a' => 'Ja: Wer im Konto «Name in Statistik Entsorgung zeigen» ausschaltet, erscheint überall als «Anonym n».'],
+    ],
+
     // Settings
     'settings' => 'Einstellungen',
     'enabled' => 'Entsorgungsbonus aktiv',

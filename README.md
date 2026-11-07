@@ -50,6 +50,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.38.2 | Verbesserung | Kassier > Entsorgung: Anleitung immer eingeklappt; neuer klappbarer Bereich «Häufige Fragen» darunter |
 | 1.38.1 | Änderung | Ranglisten: Die Nummern von «Anonym n» wechseln bei jedem Aufruf zufällig, damit niemand über die Nummer oder die Position wiedererkannt wird |
 | 1.38.0 | Neue Funktion | Bier verschenken und Bier für Gast: Total und Absende-Knopf oben und beim Scrollen sichtbar wie bei der Runde; pro Bereich schaltbar («Knöpfe oben fixieren», Standard ein) |
 | 1.37.0 | Änderung | Alte Live-Aktualisierung (live.js-Seitenaustausch, /live) entfernt; alle Live-Seiten sind Livewire-Komponenten |

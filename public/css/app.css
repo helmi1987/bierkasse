@@ -190,6 +190,13 @@ details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: 
 .card > details > summary::-webkit-details-marker { display: none; }
 .card > details > summary::after { content: "›"; color: var(--muted); font-size: 1.4rem; line-height: 1; transition: transform .15s; }
 .card > details[open] > summary::after { transform: rotate(90deg); }
+.faq details { border-top: 1px solid var(--border); }
+.faq details:last-child { border-bottom: 1px solid var(--border); }
+.faq details > summary { justify-content: space-between; gap: .75rem; list-style: none; }
+.faq details > summary::-webkit-details-marker { display: none; }
+.faq details > summary::after { content: "›"; color: var(--muted); font-size: 1.2rem; transition: transform .15s; }
+.faq details[open] > summary::after { transform: rotate(90deg); }
+.faq details > p { margin: 0 0 .75rem; }
 .stock-line { text-align: center; margin: .5rem 0 0; font-weight: 600; color: var(--muted); }
 .stock-line.low { color: var(--bad); }
 .inline-form { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: 1rem; }

@@ -50,6 +50,12 @@ class EmergencyPlanController extends Controller
     /** Envelope window: side and position/size in cm (step 0.1), stored in mm; has to fit on A4 inside the print margin. */
     public function window(Request $request): RedirectResponse
     {
+        // Accept a decimal comma ("4,5") as well as a point.
+        foreach (['top', 'edge', 'width', 'height'] as $key) {
+            if (is_string($request->input($key))) {
+                $request->merge([$key => str_replace(',', '.', trim($request->input($key)))]);
+            }
+        }
         $cm = ['required', 'numeric', 'decimal:0,1'];
         $data = $request->validate([
             'side' => ['required', Rule::in(AppSettings::EMERGENCY_WINDOW_SIDES)],

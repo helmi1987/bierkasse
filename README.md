@@ -51,6 +51,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.40.1 | Verbesserung | Notfallplan: Sichtfenster-Masse auch mit Komma eingeben (z. B. 4,5) |
 | 1.40.0 | Neue Funktion | Admin > Notfallplan: Offline-Notfallplan zum Drucken (A4, doppelseitig, Farbe; Seite 1 mit Sichtfenster für C5-Umschlag, danach Strichliste aller aktiven Benutzer mit leeren Feldern für neue), Testdruck, gespeicherte Ausdrucke mit Differenz neu/ausgetreten, einstellbares Sichtfenster und Texte, wöchentliche Mail-Erinnerung ab einstellbarer Schwelle |
 | 1.39.0 | Änderung | Kassier > Entsorgung ist neu ein Bereich unten auf der Seite Lager (Anleitung, Häufige Fragen, Einstellungen, Stand, Erfassen, Liste, Rangliste); Reiter «Entsorgung» entfällt, alte Adresse leitet auf Lager weiter |
 | 1.38.2 | Verbesserung | Kassier > Entsorgung: Anleitung immer eingeklappt; neuer klappbarer Bereich «Häufige Fragen» darunter |

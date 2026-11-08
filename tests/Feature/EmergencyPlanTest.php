@@ -205,7 +205,7 @@ class EmergencyPlanTest extends TestCase
     public function test_window_settings_validated_against_a4(): void
     {
         $this->actingAs($this->admin);
-        $this->assertSame(['side' => 'right', 'top' => 40, 'edge' => 20, 'width' => 100, 'height' => 45], AppSettings::emergencyWindow());
+        $this->assertSame(['side' => 'right', 'top' => 50, 'edge' => 30, 'width' => 100, 'height' => 45], AppSettings::emergencyWindow());
 
         $this->put('/admin/notfallplan/fenster', $this->windowForm())->assertSessionHasNoErrors()->assertRedirect(route('backend.emergency'));
         $this->assertSame(['side' => 'left', 'top' => 45, 'edge' => 22, 'width' => 100, 'height' => 45], AppSettings::emergencyWindow());

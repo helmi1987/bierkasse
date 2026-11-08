@@ -445,7 +445,7 @@
   - Differenz = Benutzer jetzt auf der Liste, aber nicht im letzten Ausdruck (neu) + Benutzer im letzten Ausdruck,
     jetzt nicht mehr auf der Liste (ausgetreten, gesperrt, gelöscht, «Nur Verwaltung»). Noch nie gedruckt: alle neu.
   - Einstellungen (Audit `settings.update`): Sichtfenster `emergency_window` (Seite rechts/links, Abstand oben,
-    Abstand Rand, Breite, Höhe; Eingabe cm mit Schritt 0.1, gespeichert in mm; Standard rechts, 4.0 / 2.0 / 10.0 /
+    Abstand Rand, Breite, Höhe; Eingabe cm mit Schritt 0.1, gespeichert in mm; Standard rechts, 5.0 / 3.0 / 10.0 /
     4.5 cm). **Entscheid 2026-11-08 (Annahme):** Masse vom Blattrand; Validierung: mind. 1.0 cm (Druckrand) zu jedem
     Rand, Breite/Höhe mind. 2.0 cm, oben + Höhe ≤ 28.7 cm, Rand + Breite ≤ 20.0 cm. Texte `emergency_texts`
     (Fenster-Titel, -Untertitel, -Hinweis, Überschrift, Kontakt-Zeile, Anleitung, Kurzanleitung, Fusszeile;

@@ -256,7 +256,7 @@ class AppSettings
      */
     public const EMERGENCY_WINDOW = 'emergency_window';
 
-    public const EMERGENCY_WINDOW_DEFAULTS = ['side' => 'right', 'top' => 40, 'edge' => 20, 'width' => 100, 'height' => 45];
+    public const EMERGENCY_WINDOW_DEFAULTS = ['side' => 'right', 'top' => 50, 'edge' => 30, 'width' => 100, 'height' => 45];
 
     public const EMERGENCY_WINDOW_SIDES = ['right', 'left'];
 

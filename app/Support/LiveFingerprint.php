@@ -29,6 +29,7 @@ class LiveFingerprint
         'qr_codes' => ['id', 'count', 'updated_at'],
         'user_favorites' => ['id', 'count'],
         'audit_logs' => ['id'],
+        'emergency_plan_prints' => ['id', 'count'],
     ];
 
     public static function current(): string

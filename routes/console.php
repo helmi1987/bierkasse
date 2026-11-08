@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Schedule;
 // Client-secret expiry reminders for SSO providers (needs the cron `schedule:run`).
 Schedule::command('sso:secret-reminders')->dailyAt('08:00');
 
+// Offline emergency plan (1.40.0): reminder when the printed list is out of date (at most weekly, see EmergencyPlan).
+Schedule::command('emergency-plan:reminders')->dailyAt('08:10');
+
 // "Entsorgungsbonus": book disposals whose withdrawal window is over. The Plesk cron must run
 // `php artisan schedule:run` every minute; page views catch up when it does not (BookDueDisposals).
 Schedule::command('disposals:book')->everyMinute()->withoutOverlapping();

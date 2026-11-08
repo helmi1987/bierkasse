@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Livewire\Backend\Cash;
 use App\Livewire\Backend\Dashboard;
 use App\Livewire\Backend\Disposals as DisposalsPage;
+use App\Livewire\Backend\EmergencyPlan as EmergencyPlanPage;
 use App\Livewire\Backend\FeedbackList;
 use App\Livewire\Backend\Stats as BackendStats;
 use App\Livewire\Backend\Stock;
@@ -50,10 +51,12 @@ class LiveAdminPagesTest extends TestCase
             '/admin/kasse' => Cash::class,
             '/admin/lager' => Stock::class,
             '/admin/benutzer/'.$user->id => UserShow::class,
-            '/admin/entsorgung' => DisposalsPage::class,
             '/admin/feedback' => FeedbackList::class,
             '/admin/statistik' => BackendStats::class,
+            '/admin/notfallplan' => EmergencyPlanPage::class,
         ];
+        // 1.39.0: the disposal area is a second component on the stock page.
+        $this->get('/admin/lager')->assertOk()->assertSeeLivewire(DisposalsPage::class);
         foreach ($pages as $uri => $class) {
             $html = (string) $this->get($uri)->assertOk()->assertSeeLivewire($class)->assertSeeLivewire(SubNav::class)->getContent();
             $this->assertStringContainsString('data-livewire-page', $html, $uri);
@@ -72,7 +75,7 @@ class LiveAdminPagesTest extends TestCase
     public function test_components_are_forbidden_for_plain_users(): void
     {
         $user = $this->user();
-        foreach ([Dashboard::class, Cash::class, Stock::class, DisposalsPage::class, FeedbackList::class, BackendStats::class, SubNav::class] as $class) {
+        foreach ([Dashboard::class, Cash::class, Stock::class, DisposalsPage::class, FeedbackList::class, BackendStats::class, SubNav::class, EmergencyPlanPage::class] as $class) {
             Livewire::actingAs($user)->test($class)->assertForbidden();
         }
         Livewire::actingAs($user)->test(UserShow::class, ['user' => $user])->assertForbidden();

@@ -125,7 +125,7 @@ class DisposalStatsTest extends TestCase
 
         // Off (default): not on /statistik, but always on the backend page.
         $this->actingAs($user)->get('/statistik')->assertOk()->assertDontSee($card, false)->assertDontSee(__('disposal.ranking'));
-        $this->actingAs($this->kassier)->get('/admin/entsorgung')->assertOk()
+        $this->actingAs($this->kassier)->get('/admin/lager')->assertOk()
             ->assertSee('data-testid="backend-disposal-ranking"', false)->assertSee('Edi Entsorger')->assertSee('2×');
 
         Setting::putMany([AppSettings::DISPOSAL_RANKING_PUBLIC => true]);
@@ -173,7 +173,7 @@ class DisposalStatsTest extends TestCase
         // Beer ranking: Bea is anonymous there (stats_opt_out), but named in the disposal ranking.
         $this->assertSame('Anonym 1', Stats::global()['ranking'][0]['name']);
 
-        $this->actingAs($this->kassier)->get('/admin/entsorgung')->assertOk()
+        $this->actingAs($this->kassier)->get('/admin/lager')->assertOk()
             ->assertSee('<span class="name">Anonym 1</span>', false)->assertDontSee('<span class="name">Heiri Versteckt</span>', false);
     }
 
@@ -259,7 +259,7 @@ class DisposalStatsTest extends TestCase
 
         $this->actingAs($this->kassier)->get('/admin/benutzer/'.$user->id)->assertOk()
             ->assertSee('data-testid="disposals"', false)->assertSee('Entsorgungen: 2 · 5 Biere');
-        $this->get('/admin/entsorgung')->assertOk()
+        $this->get('/admin/lager')->assertOk()
             ->assertSee('data-testid="backend-disposal-ranking"', false)->assertSee('Edi Entsorger')->assertSee('2×');
     }
 }

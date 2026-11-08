@@ -22,7 +22,7 @@ class Setting extends Model
     protected $fillable = ['key', 'value'];
 
     /** Internal state, not a setting changed by a person. */
-    private const NOT_AUDITED = ['stock_low_warned'];
+    private const NOT_AUDITED = ['stock_low_warned', 'emergency_mail_sent_at'];
 
     /** @var array<string, mixed>|null */
     private static ?array $cache = null;

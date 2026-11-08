@@ -54,16 +54,39 @@ class DisposalBackendTest extends TestCase
 
     public function test_rights_user_403_kassier_and_admin_200(): void
     {
-        $this->actingAs($this->user)->get('/admin/entsorgung')->assertForbidden();
+        $this->actingAs($this->user)->get('/admin/lager')->assertForbidden();
         $this->post('/admin/entsorgung', ['user_id' => $this->user->id])->assertForbidden();
-        $this->actingAs($this->kassier)->get('/admin/entsorgung')->assertOk()
-            ->assertSee('href="'.route('backend.disposals').'" class="active"', false);
-        $this->actingAs($this->admin())->get('/admin/entsorgung')->assertOk();
+        $this->actingAs($this->kassier)->get('/admin/lager')->assertOk()
+            ->assertSee('href="'.route('backend.stock').'" class="active"', false);
+        $this->actingAs($this->admin())->get('/admin/lager')->assertOk();
+    }
+
+    public function test_area_is_on_the_stock_page_without_own_tab_and_old_page_redirects(): void
+    {
+        // 1.39.0: the whole page "Entsorgung" is an area below the stock, the tab is gone.
+        $page = $this->actingAs($this->kassier)->get('/admin/lager')->assertOk();
+        $html = $page->getContent();
+        $page->assertSee('id="entsorgung"', false)->assertSee(__('disposal.intro'))
+            ->assertSee('data-testid="disposal-guide"', false)->assertSee('data-testid="disposal-faq"', false)
+            ->assertSee('data-testid="disposal-settings"', false)->assertSee('data-testid="backend-disposal-ranking"', false)
+            ->assertDontSee('href="'.url('/admin/entsorgung').'"', false);
+        // Below the stock content.
+        $this->assertLessThan(strpos($html, 'id="entsorgung"'), strpos($html, 'data-testid="backend-stock"'));
+
+        $this->get('/admin/entsorgung')->assertStatus(301)->assertRedirect(route('backend.stock').'#entsorgung');
+        $this->actingAs($this->user)->get('/admin/entsorgung')->assertForbidden();
+
+        // The form posts go back to the area.
+        $this->actingAs($this->kassier)->put('/admin/entsorgung/einstellungen', $this->settingsForm())
+            ->assertRedirect(route('backend.stock').'#entsorgung');
+        $this->put('/admin/entsorgung/einstellungen', $this->settingsForm(['disposal_fixed' => 99]))
+            ->assertRedirect(route('backend.stock').'#entsorgung')->assertSessionHasErrors('disposal_fixed');
+        $this->post('/admin/entsorgung', ['user_id' => $this->user->id])->assertRedirect(route('backend.stock').'#entsorgung');
     }
 
     public function test_feature_off_page_shows_guide_and_faq_collapsed_and_no_report_form(): void
     {
-        $page = $this->actingAs($this->kassier)->get('/admin/entsorgung')->assertOk();
+        $page = $this->actingAs($this->kassier)->get('/admin/lager')->assertOk();
         // 1.38.2: guide and FAQ are always collapsed, also when the feature is off.
         $this->assertDoesNotMatchRegularExpression('/data-testid="disposal-(guide|faq)"\s+open/', $page->getContent());
         $page->assertSee(__('disposal.guide')[1])->assertSee('data-testid="disposal-faq"', false)
@@ -112,7 +135,7 @@ class DisposalBackendTest extends TestCase
     public function test_report_for_user_books_to_the_recipient_and_only_kassier_can_withdraw(): void
     {
         $this->enable();
-        $page = $this->actingAs($this->kassier)->get('/admin/entsorgung')->assertOk();
+        $page = $this->actingAs($this->kassier)->get('/admin/lager')->assertOk();
         $page->assertSee('data-testid="disposal-for-user"', false)->assertSee('Ursi User')
             ->assertDontSee('<option value="'.$this->kassier->id.'"', false)->assertSee(__('disposal.guide')[0]);
         $this->assertDoesNotMatchRegularExpression('/data-testid="disposal-guide"\s+open/', $page->getContent());
@@ -120,7 +143,7 @@ class DisposalBackendTest extends TestCase
         $this->post('/admin/entsorgung', ['user_id' => $this->user->id])->assertSessionHas('status', __('disposal.reported_for', ['user' => 'Ursi User']));
         $d = Disposal::query()->sole();
         $this->assertSame([$this->user->id, $this->kassier->id, Disposal::STATUS_REPORTED], [$d->user_id, $d->reported_by, $d->status]);
-        $this->get('/admin/entsorgung')->assertSee('erfasst von Kurt Kassier')->assertSee('gemeldet')->assertSee('Buchung am 12:10');
+        $this->get('/admin/lager')->assertSee('erfasst von Kurt Kassier')->assertSee('gemeldet')->assertSee('Buchung am 12:10');
 
         // The user sees it registered, without the withdraw button, and cannot withdraw it.
         $this->actingAs($this->user)->get('/konto')->assertOk()->assertSee('Entsorgung wurde registriert.')
@@ -133,7 +156,7 @@ class DisposalBackendTest extends TestCase
         $this->assertSame(1, Disposals::bookDue());
         $this->assertSame(300, Ledger::balance($this->user));
         $this->assertSame(0, Ledger::balance($this->kassier));
-        $this->actingAs($this->kassier)->get('/admin/entsorgung')->assertSee('gebucht')->assertSee('2 Biere')->assertSee('CHF 3.00');
+        $this->actingAs($this->kassier)->get('/admin/lager')->assertSee('gebucht')->assertSee('2 Biere')->assertSee('CHF 3.00');
     }
 
     public function test_kassier_withdraws_a_report_inside_the_window(): void
@@ -141,10 +164,10 @@ class DisposalBackendTest extends TestCase
         $this->enable();
         Disposals::report($this->user, $this->user);
         $d = Disposal::query()->sole();
-        $this->actingAs($this->kassier)->get('/admin/entsorgung')->assertSee(route('backend.disposals.withdraw', $d), false);
+        $this->actingAs($this->kassier)->get('/admin/lager')->assertSee(route('backend.disposals.withdraw', $d), false);
         $this->post("/admin/entsorgung/{$d->id}/zurueckziehen")->assertSessionHas('status', __('disposal.withdrawn'));
         $this->assertSame([Disposal::STATUS_WITHDRAWN, $this->kassier->id], [$d->fresh()->status, $d->fresh()->withdrawn_by]);
-        $this->get('/admin/entsorgung')->assertSee('zurückgezogen von Kurt Kassier');
+        $this->get('/admin/lager')->assertSee('zurückgezogen von Kurt Kassier');
     }
 
     public function test_self_report_via_backend_is_rejected(): void
@@ -169,7 +192,7 @@ class DisposalBackendTest extends TestCase
         $this->assertSame([$other->id, 'Hat doppelt geschleppt'], [$d->user_id, $d->override_reason]);
         $audit = AuditLog::query()->where('action', 'disposal.report')->latest('id')->first();
         $this->assertSame('Hat doppelt geschleppt', $audit->newValues()['override_reason']);
-        $this->get('/admin/entsorgung')->assertSee('Übersteuert: Hat doppelt geschleppt');
+        $this->get('/admin/lager')->assertSee('Übersteuert: Hat doppelt geschleppt');
 
         // Users can never override (service level).
         $this->expectException(LedgerException::class);
@@ -193,7 +216,7 @@ class DisposalBackendTest extends TestCase
         $d = Disposal::query()->sole();
         $this->assertSame([Disposal::STATUS_BOOKED, null, 2], [$d->status, $d->transaction_id, $d->quantity]);
         $this->assertTrue(AuditLog::query()->where('action', 'disposal.storno')->exists());
-        $this->get('/admin/entsorgung')->assertOk()->assertSee(__('disposal.storno_note'));
+        $this->get('/admin/lager')->assertOk()->assertSee(__('disposal.storno_note'));
     }
 
     public function test_inactive_recipient_is_skipped_at_booking(): void

@@ -363,7 +363,7 @@
     erlauben" unter Einstellungen > Funktionen (nur Admin, seit 1.20.0; Standard an, `gifts_enabled`; aus: Karte
     ausgeblendet, `/konto/verschenken` 404).
 - Entsorgungsbonus (1.32.0, Entscheide von hemli): Bonus fürs Wegbringen des Leerguts, als Guthaben in Bier.
-  Ein-/ausschaltbar auf der Seite `/admin/entsorgung` (Standard aus). Dienst `App\Services\Disposals`, Modell
+  Ein-/ausschaltbar im Bereich «Entsorgung» der Seite Lager (`/admin/lager#entsorgung`, Standard aus). Dienst `App\Services\Disposals`, Modell
   `App\Models\Disposal` (Tabelle `disposals`, Status `reported` | `withdrawn` | `booked`).
   - Melden: Benutzer melden im Konto mit «Leergut entsorgt» (Karte im Dashboard, Einmal-Token). Die Karte erscheint
     nur, wenn eine Meldung gerade möglich ist (`Disposals::canReport()`: Funktion an, Konto aktiv mit Bierkonto, keine
@@ -378,8 +378,8 @@
     Mindestmenge müssen beide erfüllt sein.
   - Einschalten ist ein Neustart: `disposal_enabled_at` wird beim Wechsel aus → an gesetzt; frühere Entsorgungen zählen
     für Sperrfrist und Mindestmenge nicht mehr, die erste Meldung ist sofort möglich.
-  - Rückzugsfrist: `UNDO_MINUTES['disposal']` (Standard 10 Minuten, 0 = sofort), bearbeitet auf der Kassier-Seite
-    «Entsorgung», nicht in Admin > Einstellungen. Zurückziehen: der Benutzer nur eigene Meldungen, nicht die von
+  - Rückzugsfrist: `UNDO_MINUTES['disposal']` (Standard 10 Minuten, 0 = sofort), bearbeitet im Bereich
+    «Entsorgung» (Seite Lager), nicht in Admin > Einstellungen. Zurückziehen: der Benutzer nur eigene Meldungen, nicht die von
     Kassier oder Admin für ihn erfassten (auch nicht, wenn er selbst Kassier ist); Kassier und Admin alle
     (`Disposal::isWithdrawable()`).
   - Buchung und Auslosung erst nach Ablauf der Frist: `php artisan disposals:book` jede Minute über den Scheduler
@@ -392,7 +392,11 @@
   - Gutschrift: Buchung Typ `disposal` (Anzahl × aktueller Bierpreis, positiv), Hinweis 1 Tag im Dashboard (mit ×).
     Nicht getrunken: zählt nicht fürs Lager und nicht für die Bier-Statistik. Storno wie andere Buchungen
     (`disposal.storno`); die Entsorgung bleibt «gebucht» ohne Buchung («Gutschrift storniert»).
-  - Backend `/admin/entsorgung` (Reiter «Entsorgung», Kassier und Admin): Anleitung und «Häufige Fragen» (beide immer eingeklappt, `wire:ignore`, 1.38.2), Einstellungen (Audit
+  - Backend: Bereich «Entsorgung» unter dem Lager-Inhalt auf `/admin/lager` (Anker `#entsorgung`, Kassier und Admin;
+    **Entscheid 2026-11-08 (1.39.0):** kein eigener Reiter mehr, gespeicherte Reihenfolgen verlieren den Schlüssel
+    `disposals`; `GET /admin/entsorgung` leitet 301 auf `/admin/lager#entsorgung`; die POST/PUT-Routen
+    `/admin/entsorgung…` bleiben und leiten danach, auch bei Validierungsfehlern, auf den Anker; Liste mit
+    Seitenparameter `entsorgung_seite`, damit sie nicht mit den Lager-Korrekturen (`page`) kollidiert). Anleitung und «Häufige Fragen» (beide immer eingeklappt, `wire:ignore`, 1.38.2), Einstellungen (Audit
     `settings.update`), Stand (letzte Entsorgung, Sperre bis, Biere seit / Mindestmenge, offen oder gesperrt),
     «Entsorgung für Benutzer erfassen» (**Entscheid 2026-11-06:** nie für sich selbst; ist es gesperrt, nur mit
     «Sperre übersteuern» und Pflicht-Begründung, die im Audit und in der Liste steht), Liste aller Entsorgungen und
@@ -405,7 +409,7 @@
     Zeitraum. Nur bestehende Benutzer mit Bierkonto. Auf `/statistik` als Karte «Rangliste Entsorgungen» (Top 10, mit
     Anzahl «n×» und «m Biere», `stats_ranking_counts` gilt hier nicht), nur wenn «Rangliste öffentlich»
     (`disposal_ranking_public`, Standard aus), die Funktion an und `stats_show_ranking` an ist. Kassier und Admin
-    sehen die Top 20 mit Total immer auf `/admin/entsorgung`.
+    sehen die Top 20 mit Total immer im Bereich «Entsorgung» der Seite Lager.
   - Opt-out (**Entscheid 2026-11-06:** eigener Schalter, getrennt vom Bier-Schalter): Konto > Einstellungen > Statistik
     hat zwei Schalter, «Name in Statistik Konsum zeigen» (`stats_opt_out`, Bier-Statistik) und «Name in Statistik
     Entsorgung zeigen» (`users.disposal_stats_opt_out`, `POST /konto/statistik-entsorgung`, Audit `user.settings`).
@@ -417,6 +421,43 @@
     und Backend unverändert.
   - Protokoll: `disposal.report` (mit Begründung beim Übersteuern), `disposal.withdraw`, `disposal.book` (System,
     mit Anzahl und Betrag), `disposal.skip`, `disposal.storno`.
+- Offline-Notfallplan (1.40.0, nur Admin, Reiter «Notfallplan» unter Admin; Kassier 403, Reiter unsichtbar):
+  gedruckte Strichliste im verschlossenen Umschlag (C5, A4 einmal gefalzt) für den Ausfall der App. Dienst
+  `App\Services\EmergencyPlan`, Seite `Backend\EmergencyPlan` (Livewire, Insel `status`), Controller
+  `Backend\EmergencyPlanController`, Modell `EmergencyPlanPrint` (Tabelle `emergency_plan_prints`: `printed_at`,
+  `printed_by`, `user_ids` JSON, `user_count`).
+  - Liste: aktive Benutzer mit Bierkonto (`status = active`, `hasBeerAccount()`, gleiche Menge wie «Entsorgung für
+    Benutzer erfassen»; gesperrte und «Nur Verwaltung» nicht), sortiert nach Anzeigename, keine Saldi.
+  - Kontakte `{kassier}`/`{admin}`: aktive Konten mit Rolle Kassier bzw. Admin inkl. «Nur Verwaltung», jedes Konto
+    einmal (Rolle ist eindeutig), mehrere mit «, » getrennt, keine = «–».
+  - «Notfallplan drucken» (POST, neuer Tab) speichert den Ausdruck (Audit `emergency_plan.print` mit `user_count`,
+    `new_users`, `left_users`) und öffnet `/admin/notfallplan/druck/{id}` (Browser-Druck, öffnet den Druckdialog
+    einmal automatisch). Die Druckansicht eines Ausdrucks zeigt dessen Benutzer und Zeitpunkt. «Testdruck»
+    (`/admin/notfallplan/testdruck`): nur Seite 1 mit gestricheltem Sichtfenster, speichert nichts.
+  - Druckansicht ohne App-Layout, eigene Styles mit CSP-Nonce, keine Bibliothek. A4, `@page` Rand 10 mm, Farbe
+    (Orange/Braun), S/W lesbar (Zeilen weiss / hell-orange, Kästchen immer weiss, `print-color-adjust: exact`).
+    Seite 1: Sichtfenster (Titel, Untertitel, Hinweis fett, «Stand {datum}»), Überschrift, Kontakt-Kasten,
+    nummerierte Anleitung, Ausgedruckt / Anzahl / Umschlag geöffnet. Seite 2+: Kopf (Titel, Ausdruck, Bierpreis,
+    Seite x/y), Kurzanleitung, 3 Felder pro Zeile (Name fett, Benutzername, 10 Kästchen à 4.2 mm, Strich nach 5),
+    Balken «Neue Benutzer», leere Felder bis Ende der letzten Seite; Fusszeile (ein Teil pro Zeile).
+    Seitenumbruch serverseitig mit festen Höhen (`EmergencyPlan::pages()`: Seite 276 mm, Kopf 26, Fuss 7, Zeile 13.5,
+    Balken 6.5 → 17 Zeilen pro Seite; passt der Balken mit einer Zeile nicht mehr, beginnt eine neue Seite).
+  - Differenz = Benutzer jetzt auf der Liste, aber nicht im letzten Ausdruck (neu) + Benutzer im letzten Ausdruck,
+    jetzt nicht mehr auf der Liste (ausgetreten, gesperrt, gelöscht, «Nur Verwaltung»). Noch nie gedruckt: alle neu.
+  - Einstellungen (Audit `settings.update`): Sichtfenster `emergency_window` (Seite rechts/links, Abstand oben,
+    Abstand Rand, Breite, Höhe; Eingabe cm mit Schritt 0.1, gespeichert in mm; Standard rechts, 5.0 / 3.0 / 10.0 /
+    4.5 cm). **Entscheid 2026-11-08 (Annahme):** Masse vom Blattrand; Validierung: mind. 1.0 cm (Druckrand) zu jedem
+    Rand, Breite/Höhe mind. 2.0 cm, oben + Höhe ≤ 28.7 cm, Rand + Breite ≤ 20.0 cm. Texte `emergency_texts`
+    (Fenster-Titel, -Untertitel, -Hinweis, Überschrift, Kontakt-Zeile, Anleitung, Kurzanleitung, Fusszeile;
+    Standard in `lang/de/emergency.php` «defaults»; nur Abweichungen werden gespeichert; «Standardtext
+    wiederherstellen» je Text, `DELETE /admin/notfallplan/texte/{key}`). Platzhalter `{bierpreis}` (ohne «CHF»),
+    `{datum}` (Datum des Ausdrucks), `{person}`, `{anzahl}`, `{kassier}`, `{admin}`; Ausgabe escaped, `**Text**` wird fett.
+  - E-Mail-Erinnerung: Schwelle `emergency_mail_threshold` (Standard 3, Mail bei Differenz > Schwelle), Empfänger
+    `emergency_mail_recipients` (Checkboxen: aktive Admins und Kassiers; beim Senden nur noch aktive Admins/Kassiers
+    mit Adresse). `php artisan emergency-plan:reminders` (Scheduler täglich 08:10, `--dry-run`): höchstens eine Mail
+    pro 7 Kalendertage (`emergency_mail_sent_at`, nicht im Audit; wird nur gesetzt, wenn eine Mail rausging; Audit
+    `emergency_plan.reminder`), solange die Differenz über der Schwelle liegt; nach einem neuen Ausdruck fällt sie
+    auf 0. Keine Empfänger → keine Mail. Der globale Schalter «Kassier benachrichtigen» gilt hier nicht.
 - Lager (`/admin/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
   Pflicht; alte Einträge ohne Anzahl zählen 0) + Inventur-Korrekturen (gezählter Bestand, gespeichert als Differenz
   mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere inkl. spendierter Runden (Rückgängig erhöht den
@@ -551,7 +592,7 @@
   Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Seit 1.37.0 ist jede
   solche Seite eine Livewire-Komponente, die sich selbst aktualisiert (`wire:poll.10s.visible`, siehe "Livewire"):
   Dashboard, Statistik, Verlauf, Konto verlassen, Kopfzeilen-Badges (`TopNav`) sowie im Admin-Bereich Übersicht, Kasse,
-  Lager, Benutzer-Detail, Entsorgung, Feedback, Statistik und die Unternavigation (`Backend\SubNav`). Alle übrigen Seiten
+  Lager (mit Bereich Entsorgung), Benutzer-Detail, Feedback, Statistik, Notfallplan (1.40.0) und die Unternavigation (`Backend\SubNav`). Alle übrigen Seiten
   haben keine Live-Daten und werden nie aktualisiert. Keine Websockets.
   Die alte Seiten-Aktualisierung (bis 1.36.0: `public/js/live.js` fragte `/live` ab, lud die Seite mit Header
   `X-Live-Refresh` neu und tauschte die geänderten Kinder von `<main>` aus, samt Fingerprint auf der Seite,
@@ -617,7 +658,7 @@
     statisch). Ohne Live-Aktualisierung (nichts, was andere ändern): Einstellungen, Feedback, Einladen, Rechtliches.
   - Admin-Seiten (1.36.0): Übersicht `/admin` (Inseln Kennzahlen, Einzahlungen, Auszahlungen, Überträge, Minus), Kasse
     (Kennzahlen, Einträge mit Seiten), Lager (Stand, Korrekturen), Benutzer-Detail (Saldo, Aktionen, Verlauf), Entsorgung
-    (Stand, Liste, Rangliste), Feedback (Liste), Backend-Statistik (ganze Komponente, Filter als Eigenschaften,
+    (zweite Komponente auf der Seite Lager seit 1.39.0; Stand, Liste, Rangliste), Feedback (Liste), Backend-Statistik (ganze Komponente, Filter als Eigenschaften,
     Filterformular `wire:ignore`); Unternavigation mit Badges als Komponente `Backend\SubNav` (pollt alle 10 s auch ausserhalb des sichtbaren Bereichs, da meist weggescrollt; aktiver Reiter beim
     Mount festgehalten); Formulare je Zeile `wire:ignore`, Zeilen `wire:key`. Ohne Live-Aktualisierung: Einstellungen,
     Navigation, SSO, Wartung, QR-Druckseiten, Protokoll-Detail (ebenso die Gast-, Anmelde- und
@@ -649,7 +690,7 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
   `settings.update` (geänderte Schlüssel), `user.role/status/limit/password_reset/totp_reset/admin_only/...`,
   `auth.login`, `auth.login_failed` (nur versuchter Benutzername), `auth.logout`, `registration`,
   `invitation.create/revoke`, `maintenance.*`, `backup.*`, `feedback.delete`, `sso_provider.*`,
-  `disposal.report/withdraw/book/skip/storno`), Objekt (Typ, ID),
+  `disposal.report/withdraw/book/skip/storno`, `emergency_plan.print/reminder`), Objekt (Typ, ID),
   alte/neue Werte (nur geänderte Felder), IP, gekürzter User-Agent.
 - Geheimnisse werden nie gespeichert: Passwörter, Secrets, Tokens, TOTP, Client-Secrets, SMTP-Passwort,
   Registrierungs-/Gäste-Passwort, Flyer-Code erscheinen als `***changed***`.

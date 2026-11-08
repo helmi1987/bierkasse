@@ -246,6 +246,15 @@ Route::middleware(EnsureInstalled::class)->group(function () {
                 Route::delete('/wartung/backup/{backup}', [Backend\MaintenanceController::class, 'backupDelete'])
                     ->where('backup', 'bierkasse-\d{4}-\d{2}-\d{2}-\d{6}')->name('maintenance.backup.delete');
                 Route::put('/wartung/modus', [Backend\MaintenanceController::class, 'mode'])->name('maintenance.mode');
+                // Offline emergency plan (1.40.0): page, print (stored), print view, test print, settings.
+                Route::get('/notfallplan', [Backend\EmergencyPlanController::class, 'index'])->name('emergency');
+                Route::post('/notfallplan/drucken', [Backend\EmergencyPlanController::class, 'print'])->middleware('throttle:10,1')->name('emergency.print');
+                Route::get('/notfallplan/druck/{print}', [Backend\EmergencyPlanController::class, 'sheet'])->whereNumber('print')->name('emergency.sheet');
+                Route::get('/notfallplan/testdruck', [Backend\EmergencyPlanController::class, 'test'])->name('emergency.test');
+                Route::put('/notfallplan/fenster', [Backend\EmergencyPlanController::class, 'window'])->name('emergency.window');
+                Route::put('/notfallplan/texte', [Backend\EmergencyPlanController::class, 'texts'])->name('emergency.texts');
+                Route::delete('/notfallplan/texte/{key}', [Backend\EmergencyPlanController::class, 'resetText'])->where('key', '[a-z_]+')->name('emergency.texts.reset');
+                Route::put('/notfallplan/mail', [Backend\EmergencyPlanController::class, 'mail'])->name('emergency.mail');
                 Route::resource('sso', Backend\SsoProviderController::class)->except(['show'])
                     ->parameters(['sso' => 'ssoProvider'])->names('sso');
                 Route::post('/sso/{ssoProvider}/verschieben', [Backend\SsoProviderController::class, 'move'])

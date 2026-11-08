@@ -61,4 +61,15 @@ return [
     'sso_secret_left_expired' => 'Abgelaufen',
     'sso_secret_outro' => 'Nach dem Erneuern das neue Secret und das neue Ablaufdatum im Formular eintragen.',
     'button_sso' => 'Anbieter im Admin-Bereich öffnen',
+
+    // Offline emergency plan (1.40.0): reminder when the printed list is out of date.
+    'emergency_subject' => '{1} Notfallplan veraltet: :count Änderung seit dem Ausdruck|[2,*] Notfallplan veraltet: :count Änderungen seit dem Ausdruck',
+    'emergency_title' => 'Offline-Notfallplan neu drucken',
+    'emergency_line' => 'Seit dem letzten Ausdruck des Offline-Notfallplans sind :count Benutzer dazugekommen oder ausgetreten (Schwelle: :threshold).',
+    'emergency_line_print' => 'Bitte den Notfallplan neu drucken und die Liste im Umschlag ersetzen.',
+    'emergency_row_last' => 'Letzter Ausdruck',
+    'emergency_row_new' => 'Neu',
+    'emergency_row_left' => 'Ausgetreten',
+    'emergency_button' => 'Notfallplan öffnen',
+    'emergency_outro' => 'Diese Erinnerung kommt höchstens einmal pro Woche, bis der Notfallplan neu gedruckt ist.',
 ];

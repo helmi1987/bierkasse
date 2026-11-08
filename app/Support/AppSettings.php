@@ -250,6 +250,46 @@ class AppSettings
 
     public const FEEDBACK_RECIPIENT_MODES = [self::FEEDBACK_TO_ADMINS, self::FEEDBACK_TO_FIXED];
 
+    /**
+     * Offline emergency plan (1.40.0, admins): envelope window on page 1 as ['side' => 'left'|'right', 'top',
+     * 'edge', 'width', 'height' (mm from the sheet edge)], unset parts = EMERGENCY_WINDOW_DEFAULTS.
+     */
+    public const EMERGENCY_WINDOW = 'emergency_window';
+
+    public const EMERGENCY_WINDOW_DEFAULTS = ['side' => 'right', 'top' => 40, 'edge' => 20, 'width' => 100, 'height' => 45];
+
+    public const EMERGENCY_WINDOW_SIDES = ['right', 'left'];
+
+    /** A4 portrait in mm (the window has to fit inside, keeping EMERGENCY_PRINT_MARGIN to every edge). */
+    public const A4_WIDTH = 210;
+
+    public const A4_HEIGHT = 297;
+
+    /** Page margin of the print view in mm (@page); nothing is printed closer to the sheet edge. */
+    public const EMERGENCY_PRINT_MARGIN = 10;
+
+    /** Smallest window width/height in mm. */
+    public const EMERGENCY_WINDOW_MIN = 20;
+
+    /** Texts of the print (key => text, unset = default from lang/de/emergency.php "defaults"). */
+    public const EMERGENCY_TEXTS = 'emergency_texts';
+
+    public const EMERGENCY_TEXT_KEYS = ['window_title', 'window_subtitle', 'window_notice', 'heading', 'contact', 'steps', 'short_guide', 'footer'];
+
+    /** Maximum length per text ("steps" is one step per line). */
+    public const EMERGENCY_TEXT_MAX = ['window_title' => 60, 'window_subtitle' => 80, 'window_notice' => 200, 'heading' => 120, 'contact' => 300, 'steps' => 2000, 'short_guide' => 600, 'footer' => 300];
+
+    /** Reminder mail when more than this many users joined/left since the last print (default 3). */
+    public const EMERGENCY_MAIL_THRESHOLD = 'emergency_mail_threshold';
+
+    public const EMERGENCY_MAIL_THRESHOLD_MAX = 1000;
+
+    /** Recipients of the reminder mail: IDs of admins and kassiers (empty = no mail). */
+    public const EMERGENCY_MAIL_RECIPIENTS = 'emergency_mail_recipients';
+
+    /** Time of the last reminder mail (UTC, ATOM; internal state, not audited). */
+    public const EMERGENCY_MAIL_SENT_AT = 'emergency_mail_sent_at';
+
     public const MAIL_TRANSPORTS = ['sendmail', 'smtp'];
 
     public const MAIL_ENCRYPTIONS = ['', 'tls', 'ssl'];
@@ -689,5 +729,81 @@ class AppSettings
             'smtp_password' => (string) ($c['smtp_password'] ?? ''),
             'smtp_encryption' => in_array($encryption, self::MAIL_ENCRYPTIONS, true) ? $encryption : '',
         ];
+    }
+
+    /**
+     * Envelope window of the emergency plan in mm from the sheet edge (see EMERGENCY_WINDOW).
+     *
+     * @return array{side: string, top: int, edge: int, width: int, height: int}
+     */
+    public static function emergencyWindow(): array
+    {
+        $stored = (array) self::get(self::EMERGENCY_WINDOW, []);
+        $d = self::EMERGENCY_WINDOW_DEFAULTS;
+        $side = in_array($stored['side'] ?? null, self::EMERGENCY_WINDOW_SIDES, true) ? $stored['side'] : $d['side'];
+        $window = ['side' => $side];
+        foreach (['top', 'edge', 'width', 'height'] as $key) {
+            $window[$key] = is_numeric($stored[$key] ?? null) ? (int) $stored[$key] : $d[$key];
+        }
+
+        return $window;
+    }
+
+    /** Default text of the emergency plan (lang/de/emergency.php "defaults"). */
+    public static function emergencyTextDefault(string $key): string
+    {
+        return (string) __('emergency.defaults.'.$key);
+    }
+
+    /**
+     * Stored texts of the emergency plan that differ from the default (key => text).
+     *
+     * @return array<string, string>
+     */
+    public static function emergencyTextsStored(): array
+    {
+        $stored = (array) self::get(self::EMERGENCY_TEXTS, []);
+
+        return array_filter(
+            array_map(fn ($t) => (string) $t, array_intersect_key($stored, array_flip(self::EMERGENCY_TEXT_KEYS))),
+            fn (string $t) => trim($t) !== '',
+        );
+    }
+
+    /** Text of the emergency plan: stored, else the default. */
+    public static function emergencyText(string $key): string
+    {
+        return self::emergencyTextsStored()[$key] ?? self::emergencyTextDefault($key);
+    }
+
+    public static function emergencyMailThreshold(): int
+    {
+        return max(0, min(self::EMERGENCY_MAIL_THRESHOLD_MAX, (int) self::get(self::EMERGENCY_MAIL_THRESHOLD, 3)));
+    }
+
+    /**
+     * Chosen recipients of the reminder mail (user IDs).
+     *
+     * @return list<int>
+     */
+    public static function emergencyMailRecipients(): array
+    {
+        return array_values(array_unique(array_map('intval', array_filter(
+            (array) self::get(self::EMERGENCY_MAIL_RECIPIENTS, []),
+            fn ($id) => is_int($id) || (is_string($id) && ctype_digit($id)),
+        ))));
+    }
+
+    public static function emergencyMailSentAt(): ?Carbon
+    {
+        $value = self::get(self::EMERGENCY_MAIL_SENT_AT);
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+        try {
+            return Carbon::parse($value);
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

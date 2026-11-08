@@ -64,12 +64,12 @@ class NavOrderTest extends TestCase
     public function test_built_in_order_entscheid_2026_10_24(): void
     {
         $this->assertSame(['dashboard', 'cash', 'stock', 'users', 'bookings', 'stats', 'qr', 'audit'], array_keys(BackendNav::ITEMS['kassier']));
-        $this->assertSame(['settings', 'feedback', 'sso', 'nav', 'maintenance'], array_keys(BackendNav::ITEMS['backend']));
+        $this->assertSame(['settings', 'feedback', 'sso', 'nav', 'maintenance', 'emergency'], array_keys(BackendNav::ITEMS['backend']));
 
         $this->actingAs($this->kassier());
         $this->assertSame(['Übersicht', 'Kasse', 'Lager', 'Benutzer', 'Buchungen', 'Statistik', 'QR-Codes', 'Protokoll'], $this->tabs($this->get('/admin')->getContent()));
         $this->actingAs($this->admin());
-        $this->assertSame(['Einstellungen', 'Feedback', 'SSO', 'Navigation', 'Wartung'], $this->tabs($this->get('/admin/einstellungen')->getContent()));
+        $this->assertSame(['Einstellungen', 'Feedback', 'SSO', 'Navigation', 'Wartung', 'Notfallplan'], $this->tabs($this->get('/admin/einstellungen')->getContent()));
         // Audit log and QR codes are one page each, in the kassier group (also for admins).
         $this->get('/admin/verwaltung/protokoll')->assertRedirect(route('backend.audit'));
         $this->get('/admin/protokoll')->assertOk()->assertSee('href="'.route('backend.audit').'" class="active"', false);
@@ -94,7 +94,7 @@ class NavOrderTest extends TestCase
         ]);
         // The old key "stats" (dropped in 1.20.0) is a tab again since 1.31.0 and keeps its stored place.
         $this->assertSame(['audit', 'bookings', 'cash', 'stats', 'users', 'dashboard', 'stock', 'qr'], BackendNav::defaults()['kassier']);
-        $this->assertSame(['maintenance', 'settings', 'feedback', 'sso', 'nav'], BackendNav::defaults()['backend']);
+        $this->assertSame(['maintenance', 'settings', 'feedback', 'sso', 'nav', 'emergency'], BackendNav::defaults()['backend']);
 
         $kassier = $this->kassier();
         $kassier->forceFill(['nav_order' => ['kassier' => ['stock', 'deposit_suggestions', 'guests', 'qr', 'stats']]])->save();

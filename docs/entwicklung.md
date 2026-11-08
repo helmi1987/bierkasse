@@ -421,6 +421,43 @@
     und Backend unverändert.
   - Protokoll: `disposal.report` (mit Begründung beim Übersteuern), `disposal.withdraw`, `disposal.book` (System,
     mit Anzahl und Betrag), `disposal.skip`, `disposal.storno`.
+- Offline-Notfallplan (1.40.0, nur Admin, Reiter «Notfallplan» unter Admin; Kassier 403, Reiter unsichtbar):
+  gedruckte Strichliste im verschlossenen Umschlag (C5, A4 einmal gefalzt) für den Ausfall der App. Dienst
+  `App\Services\EmergencyPlan`, Seite `Backend\EmergencyPlan` (Livewire, Insel `status`), Controller
+  `Backend\EmergencyPlanController`, Modell `EmergencyPlanPrint` (Tabelle `emergency_plan_prints`: `printed_at`,
+  `printed_by`, `user_ids` JSON, `user_count`).
+  - Liste: aktive Benutzer mit Bierkonto (`status = active`, `hasBeerAccount()`, gleiche Menge wie «Entsorgung für
+    Benutzer erfassen»; gesperrte und «Nur Verwaltung» nicht), sortiert nach Anzeigename, keine Saldi.
+  - Kontakte `{kassier}`/`{admin}`: aktive Konten mit Rolle Kassier bzw. Admin inkl. «Nur Verwaltung», jedes Konto
+    einmal (Rolle ist eindeutig), mehrere mit «, » getrennt, keine = «–».
+  - «Notfallplan drucken» (POST, neuer Tab) speichert den Ausdruck (Audit `emergency_plan.print` mit `user_count`,
+    `new_users`, `left_users`) und öffnet `/admin/notfallplan/druck/{id}` (Browser-Druck, öffnet den Druckdialog
+    einmal automatisch). Die Druckansicht eines Ausdrucks zeigt dessen Benutzer und Zeitpunkt. «Testdruck»
+    (`/admin/notfallplan/testdruck`): nur Seite 1 mit gestricheltem Sichtfenster, speichert nichts.
+  - Druckansicht ohne App-Layout, eigene Styles mit CSP-Nonce, keine Bibliothek. A4, `@page` Rand 10 mm, Farbe
+    (Orange/Braun), S/W lesbar (Zeilen weiss / hell-orange, Kästchen immer weiss, `print-color-adjust: exact`).
+    Seite 1: Sichtfenster (Titel, Untertitel, Hinweis fett, «Stand {datum}»), Überschrift, Kontakt-Kasten,
+    nummerierte Anleitung, Ausgedruckt / Anzahl / Umschlag geöffnet. Seite 2+: Kopf (Titel, Ausdruck, Bierpreis,
+    Seite x/y), Kurzanleitung, 3 Felder pro Zeile (Name fett, Benutzername, 10 Kästchen à 4.2 mm, Strich nach 5),
+    Balken «Neue Benutzer», leere Felder bis Ende der letzten Seite; Fusszeile (ein Teil pro Zeile).
+    Seitenumbruch serverseitig mit festen Höhen (`EmergencyPlan::pages()`: Seite 276 mm, Kopf 26, Fuss 7, Zeile 13.5,
+    Balken 6.5 → 17 Zeilen pro Seite; passt der Balken mit einer Zeile nicht mehr, beginnt eine neue Seite).
+  - Differenz = Benutzer jetzt auf der Liste, aber nicht im letzten Ausdruck (neu) + Benutzer im letzten Ausdruck,
+    jetzt nicht mehr auf der Liste (ausgetreten, gesperrt, gelöscht, «Nur Verwaltung»). Noch nie gedruckt: alle neu.
+  - Einstellungen (Audit `settings.update`): Sichtfenster `emergency_window` (Seite rechts/links, Abstand oben,
+    Abstand Rand, Breite, Höhe; Eingabe cm mit Schritt 0.1, gespeichert in mm; Standard rechts, 4.0 / 2.0 / 10.0 /
+    4.5 cm). **Entscheid 2026-11-08 (Annahme):** Masse vom Blattrand; Validierung: mind. 1.0 cm (Druckrand) zu jedem
+    Rand, Breite/Höhe mind. 2.0 cm, oben + Höhe ≤ 28.7 cm, Rand + Breite ≤ 20.0 cm. Texte `emergency_texts`
+    (Fenster-Titel, -Untertitel, -Hinweis, Überschrift, Kontakt-Zeile, Anleitung, Kurzanleitung, Fusszeile;
+    Standard in `lang/de/emergency.php` «defaults»; nur Abweichungen werden gespeichert; «Standardtext
+    wiederherstellen» je Text, `DELETE /admin/notfallplan/texte/{key}`). Platzhalter `{bierpreis}` (ohne «CHF»),
+    `{datum}` (Datum des Ausdrucks), `{person}`, `{anzahl}`, `{kassier}`, `{admin}`; Ausgabe escaped, `**Text**` wird fett.
+  - E-Mail-Erinnerung: Schwelle `emergency_mail_threshold` (Standard 3, Mail bei Differenz > Schwelle), Empfänger
+    `emergency_mail_recipients` (Checkboxen: aktive Admins und Kassiers; beim Senden nur noch aktive Admins/Kassiers
+    mit Adresse). `php artisan emergency-plan:reminders` (Scheduler täglich 08:10, `--dry-run`): höchstens eine Mail
+    pro 7 Kalendertage (`emergency_mail_sent_at`, nicht im Audit; wird nur gesetzt, wenn eine Mail rausging; Audit
+    `emergency_plan.reminder`), solange die Differenz über der Schwelle liegt; nach einem neuen Ausdruck fällt sie
+    auf 0. Keine Empfänger → keine Mail. Der globale Schalter «Kassier benachrichtigen» gilt hier nicht.
 - Lager (`/admin/lager`, Kassier und Admin): Bestand = gekaufte Biere (Kassenbuch "Bierkauf", Feld "Anzahl Biere"
   Pflicht; alte Einträge ohne Anzahl zählen 0) + Inventur-Korrekturen (gezählter Bestand, gespeichert als Differenz
   mit Bemerkung, wer, wann) − bestätigte abgestrichene Biere inkl. spendierter Runden (Rückgängig erhöht den
@@ -555,7 +592,7 @@
   Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Seit 1.37.0 ist jede
   solche Seite eine Livewire-Komponente, die sich selbst aktualisiert (`wire:poll.10s.visible`, siehe "Livewire"):
   Dashboard, Statistik, Verlauf, Konto verlassen, Kopfzeilen-Badges (`TopNav`) sowie im Admin-Bereich Übersicht, Kasse,
-  Lager (mit Bereich Entsorgung), Benutzer-Detail, Feedback, Statistik und die Unternavigation (`Backend\SubNav`). Alle übrigen Seiten
+  Lager (mit Bereich Entsorgung), Benutzer-Detail, Feedback, Statistik, Notfallplan (1.40.0) und die Unternavigation (`Backend\SubNav`). Alle übrigen Seiten
   haben keine Live-Daten und werden nie aktualisiert. Keine Websockets.
   Die alte Seiten-Aktualisierung (bis 1.36.0: `public/js/live.js` fragte `/live` ab, lud die Seite mit Header
   `X-Live-Refresh` neu und tauschte die geänderten Kinder von `<main>` aus, samt Fingerprint auf der Seite,
@@ -653,7 +690,7 @@ Entscheid 2026-10-22: lückenloses Protokoll aller Änderungen und Buchungen; Ei
   `settings.update` (geänderte Schlüssel), `user.role/status/limit/password_reset/totp_reset/admin_only/...`,
   `auth.login`, `auth.login_failed` (nur versuchter Benutzername), `auth.logout`, `registration`,
   `invitation.create/revoke`, `maintenance.*`, `backup.*`, `feedback.delete`, `sso_provider.*`,
-  `disposal.report/withdraw/book/skip/storno`), Objekt (Typ, ID),
+  `disposal.report/withdraw/book/skip/storno`, `emergency_plan.print/reminder`), Objekt (Typ, ID),
   alte/neue Werte (nur geänderte Felder), IP, gekürzter User-Agent.
 - Geheimnisse werden nie gespeichert: Passwörter, Secrets, Tokens, TOTP, Client-Secrets, SMTP-Passwort,
   Registrierungs-/Gäste-Passwort, Flyer-Code erscheinen als `***changed***`.

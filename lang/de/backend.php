@@ -16,6 +16,7 @@ return [
         'sso' => 'SSO',
         'nav' => 'Navigation',
         'maintenance' => 'Wartung',
+        'emergency' => 'Notfallplan',
     ],
     // Tabs inside the pages (1.20.0).
     'tabs' => [

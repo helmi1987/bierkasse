@@ -33,6 +33,7 @@
    Seit 1.32.0 bucht der Scheduler damit auch jede Minute die fälligen Entsorgungsboni (`disposals:book`). Läuft der
    Cron nicht, holen Seitenaufrufe das nach (höchstens einmal pro Minute); die Buchung kommt dann erst mit dem
    nächsten Aufruf.
+   Seit 1.40.0 prüft er täglich um 08:10 den Offline-Notfallplan (`emergency-plan:reminders`, `--dry-run` nur anzeigen).
 6. Setup:
    - `bootstrap/ensure-env.php` wird nur von `public/index.php` geladen, also erst beim ersten
      Web-Aufruf. Dabei entstehen `.env` (aus `.env.example`, mit generiertem `APP_KEY`) und das

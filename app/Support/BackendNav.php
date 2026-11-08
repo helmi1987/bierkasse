@@ -11,7 +11,7 @@ use App\Models\User;
  * Entscheid 2026-10-24 (1.20.0): Kassier = Übersicht, Kasse, Lager, Benutzer, Buchungen, QR-Codes, Protokoll;
  * Admin = Einstellungen, Feedback, SSO, Navigation, Wartung. 1.31.0: "Statistik" after "Buchungen" (stored
  * orders get it appended by normalize()). 1.32.0: "Entsorgung" after "Statistik". 1.39.0: tab "Entsorgung" removed,
- * the area is part of "Lager" (stored orders drop the key in normalize()).
+ * the area is part of "Lager" (stored orders drop the key in normalize()). 1.40.0: "Notfallplan" (Admin) after "Wartung".
  */
 class BackendNav
 {
@@ -45,6 +45,8 @@ class BackendNav
             'sso' => ['backend.sso.index', 'backend.sso.*'],
             'nav' => ['backend.nav', 'backend.nav'],
             'maintenance' => ['backend.maintenance', 'backend.maintenance*'],
+            // Offline emergency plan (1.40.0).
+            'emergency' => ['backend.emergency', 'backend.emergency*'],
         ],
     ];
 
@@ -58,7 +60,7 @@ class BackendNav
     ];
 
     /** Route patterns of the admin-only pages. */
-    public const ADMIN_ROUTES = ['backend.settings*', 'backend.nav*', 'backend.feedback*', 'backend.maintenance*', 'backend.sso.*'];
+    public const ADMIN_ROUTES = ['backend.settings*', 'backend.nav*', 'backend.feedback*', 'backend.maintenance*', 'backend.sso.*', 'backend.emergency*'];
 
     public static function isAdminPage(): bool
     {

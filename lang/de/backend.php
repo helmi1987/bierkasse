@@ -21,6 +21,8 @@ return [
     // Tabs inside the pages (1.20.0).
     'tabs' => [
         'cash_book' => 'Kassenbuch',
+        'stock' => 'Bestand',
+        'disposals' => 'Entsorgung',
         'deposit_suggestions' => 'Einzahlungsvorschläge',
         'users' => 'Benutzer',
         'invitations' => 'Einladungen',

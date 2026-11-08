@@ -55,8 +55,9 @@ class LiveAdminPagesTest extends TestCase
             '/admin/statistik' => BackendStats::class,
             '/admin/notfallplan' => EmergencyPlanPage::class,
         ];
-        // 1.39.0: the disposal area is a second component on the stock page.
-        $this->get('/admin/lager')->assertOk()->assertSeeLivewire(DisposalsPage::class);
+        // 1.40.2: the disposal area is the tab "Entsorgung" of the stock page.
+        $this->get('/admin/lager?tab=entsorgung')->assertOk()->assertSeeLivewire(DisposalsPage::class)->assertDontSeeLivewire(Stock::class);
+        $this->get('/admin/lager')->assertOk()->assertDontSeeLivewire(DisposalsPage::class);
         foreach ($pages as $uri => $class) {
             $html = (string) $this->get($uri)->assertOk()->assertSeeLivewire($class)->assertSeeLivewire(SubNav::class)->getContent();
             $this->assertStringContainsString('data-livewire-page', $html, $uri);

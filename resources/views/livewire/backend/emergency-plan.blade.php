@@ -77,7 +77,7 @@
         @foreach (['top', 'edge', 'width', 'height'] as $key)
             <div class="field">
                 <label for="window_{{ $key }}">{{ __('emergency.window_'.$key) }}</label>
-                <input type="number" id="window_{{ $key }}" name="{{ $key }}" value="{{ old($key, number_format($window[$key] / 10, 1, '.', '')) }}" min="0" max="{{ in_array($key, ['top', 'height'], true) ? '29.7' : '21' }}" step="0.1" inputmode="decimal" required>
+                <input type="text" id="window_{{ $key }}" name="{{ $key }}" value="{{ old($key, number_format($window[$key] / 10, 1, '.', '')) }}" inputmode="decimal" pattern="[0-9]{1,2}([.,][0-9])?" maxlength="4" autocomplete="off" required>
                 @if ($key === 'edge')<div class="hint">{{ __('emergency.window_edge_hint') }}</div>@endif
                 @if ($formErrors->has($key))<div class="hint neg">{{ $formErrors->first($key) }}</div>@endif
             </div>

@@ -392,10 +392,11 @@
   - Gutschrift: Buchung Typ `disposal` (Anzahl × aktueller Bierpreis, positiv), Hinweis 1 Tag im Dashboard (mit ×).
     Nicht getrunken: zählt nicht fürs Lager und nicht für die Bier-Statistik. Storno wie andere Buchungen
     (`disposal.storno`); die Entsorgung bleibt «gebucht» ohne Buchung («Gutschrift storniert»).
-  - Backend: Bereich «Entsorgung» unter dem Lager-Inhalt auf `/admin/lager` (Anker `#entsorgung`, Kassier und Admin;
-    **Entscheid 2026-11-08 (1.39.0):** kein eigener Reiter mehr, gespeicherte Reihenfolgen verlieren den Schlüssel
-    `disposals`; `GET /admin/entsorgung` leitet 301 auf `/admin/lager#entsorgung`; die POST/PUT-Routen
-    `/admin/entsorgung…` bleiben und leiten danach, auch bei Validierungsfehlern, auf den Anker; Liste mit
+  - Backend: Reiter «Entsorgung» der Seite Lager, `/admin/lager?tab=entsorgung` (Kassier und Admin;
+    **Entscheid 2026-11-08 (1.39.0/1.40.2):** kein eigener Sub-Nav-Reiter, gespeicherte Reihenfolgen verlieren den Schlüssel
+    `disposals`; Lager hat wie Kasse/Benutzer die Reiter «Bestand» und «Entsorgung» (Partial `backend/partials/stock-tabs`);
+    `GET /admin/entsorgung` leitet 301 auf den Reiter; die POST/PUT-Routen
+    `/admin/entsorgung…` bleiben und leiten danach, auch bei Validierungsfehlern, auf den Reiter; Liste mit
     Seitenparameter `entsorgung_seite`, damit sie nicht mit den Lager-Korrekturen (`page`) kollidiert). Anleitung und «Häufige Fragen» (beide immer eingeklappt, `wire:ignore`, 1.38.2), Einstellungen (Audit
     `settings.update`), Stand (letzte Entsorgung, Sperre bis, Biere seit / Mindestmenge, offen oder gesperrt),
     «Entsorgung für Benutzer erfassen» (**Entscheid 2026-11-06:** nie für sich selbst; ist es gesperrt, nur mit
@@ -658,7 +659,7 @@
     statisch). Ohne Live-Aktualisierung (nichts, was andere ändern): Einstellungen, Feedback, Einladen, Rechtliches.
   - Admin-Seiten (1.36.0): Übersicht `/admin` (Inseln Kennzahlen, Einzahlungen, Auszahlungen, Überträge, Minus), Kasse
     (Kennzahlen, Einträge mit Seiten), Lager (Stand, Korrekturen), Benutzer-Detail (Saldo, Aktionen, Verlauf), Entsorgung
-    (zweite Komponente auf der Seite Lager seit 1.39.0; Stand, Liste, Rangliste), Feedback (Liste), Backend-Statistik (ganze Komponente, Filter als Eigenschaften,
+    (Reiter «Entsorgung» der Seite Lager seit 1.40.2; Stand, Liste, Rangliste), Feedback (Liste), Backend-Statistik (ganze Komponente, Filter als Eigenschaften,
     Filterformular `wire:ignore`); Unternavigation mit Badges als Komponente `Backend\SubNav` (pollt alle 10 s auch ausserhalb des sichtbaren Bereichs, da meist weggescrollt; aktiver Reiter beim
     Mount festgehalten); Formulare je Zeile `wire:ignore`, Zeilen `wire:key`. Ohne Live-Aktualisierung: Einstellungen,
     Navigation, SSO, Wartung, QR-Druckseiten, Protokoll-Detail (ebenso die Gast-, Anmelde- und

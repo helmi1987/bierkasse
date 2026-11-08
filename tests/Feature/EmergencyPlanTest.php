@@ -330,4 +330,13 @@ class EmergencyPlanTest extends TestCase
         Mail::assertNothingSent();
         $this->assertNull(AppSettings::emergencyMailSentAt());
     }
+
+    public function test_window_accepts_a_decimal_comma(): void
+    {
+        $this->actingAs($this->admin)
+            ->put('/admin/notfallplan/fenster', $this->windowForm(['top' => '4,5', 'edge' => '2,5']))
+            ->assertSessionHasNoErrors();
+        $this->assertSame(45, AppSettings::emergencyWindow()['top']);
+        $this->assertSame(25, AppSettings::emergencyWindow()['edge']);
+    }
 }

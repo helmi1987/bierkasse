@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\Backend\DisposalController;
 use App\Models\Disposal;
 use App\Models\GuestSale;
 use App\Models\Transaction;
@@ -187,7 +188,7 @@ class Disposals
                 __('mail.disposal_row_booking') => local_time($disposal->bookingAt()),
                 __('mail.disposal_row_override') => (string) $disposal->override_reason,
             ],
-            url: route('backend.stock').'#entsorgung',
+            url: DisposalController::url(),
             buttonLabel: __('mail.disposal_button'),
             title: __('mail.disposal_title'),
         );

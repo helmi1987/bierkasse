@@ -15,7 +15,7 @@ use Livewire\WithPagination;
 
 /**
  * "Entsorgungsbonus" (Livewire since 1.36.0; since 1.39.0 the area "Entsorgung" below the stock on "/admin/lager",
- * anchor #entsorgung): guide, settings, status, report for a user, the list (50 per page, page in the URL as
+ * tab ?tab=entsorgung): guide, settings, status, report for a user, the list (50 per page, page in the URL as
  * "entsorgung_seite", apart from the stock corrections' "page") and the ranking. The forms post classically to
  * Backend\DisposalController.
  *

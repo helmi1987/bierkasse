@@ -86,8 +86,6 @@ h1 { font-size: 1.6rem; line-height: 1.2; margin: .5rem 0 1rem; }
 h2 { font-size: 1.15rem; margin: 0 0 .75rem; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 h3 { font-size: 1rem; margin: 1rem 0 .5rem; }
 /* Second area of a page below its main content (1.39.0: "Entsorgung" on the stock page); anchor target below the sticky topbar. */
-.page-section { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border); scroll-margin-top: var(--topbar-h, 60px); }
-.page-section > h2 { font-size: 1.4rem; }
 p { margin: 0 0 .75rem; }
 code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 img { max-width: 100%; height: auto; }

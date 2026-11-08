@@ -17,21 +17,21 @@ use Illuminate\Validation\ValidationException;
 /**
  * "Entsorgungsbonus" (kassier and admin): guide, settings, status (lock and minimum, backend only),
  * report for a user (with override), the list of disposals and the ranking.
- * Since 1.39.0 the area is part of the stock page (anchor #entsorgung, Livewire component
- * App\Livewire\Backend\Disposals); the forms still post here and every answer goes back to that anchor.
+ * Since 1.39.0 part of "Lager", since 1.40.2 its tab "Entsorgung" (?tab=entsorgung, Livewire component
+ * App\Livewire\Backend\Disposals); the forms still post here and every answer goes back to that tab.
  */
 class DisposalController extends Controller
 {
-    /** Anchor of the disposal area on the stock page. */
-    public const ANCHOR = 'entsorgung';
+    /** Tab of the disposal area on the stock page. */
+    public const TAB = 'entsorgung';
 
-    /** URL of the disposal area on the stock page. */
+    /** URL of the tab "Entsorgung" on the stock page. */
     public static function url(): string
     {
-        return route('backend.stock').'#'.self::ANCHOR;
+        return route('backend.stock', ['tab' => self::TAB]);
     }
 
-    /** The old page "/admin/entsorgung" (until 1.38): permanent redirect to the area on the stock page. */
+    /** The old page "/admin/entsorgung" (until 1.38): permanent redirect to the tab on the stock page. */
     public function index(): RedirectResponse
     {
         return redirect()->to(self::url(), 301);

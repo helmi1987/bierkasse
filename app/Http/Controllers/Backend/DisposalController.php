@@ -13,23 +13,33 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 
 /**
  * "Entsorgungsbonus" (kassier and admin): guide, settings, status (lock and minimum, backend only),
  * report for a user (with override), the list of disposals and the ranking.
+ * Since 1.39.0 the area is part of the stock page (anchor #entsorgung, Livewire component
+ * App\Livewire\Backend\Disposals); the forms still post here and every answer goes back to that anchor.
  */
 class DisposalController extends Controller
 {
-    /** Host page of the Livewire component App\Livewire\Backend\Disposals (1.36.0); the forms post here. */
-    public function index(): View
+    /** Anchor of the disposal area on the stock page. */
+    public const ANCHOR = 'entsorgung';
+
+    /** URL of the disposal area on the stock page. */
+    public static function url(): string
     {
-        return view('backend.disposals');
+        return route('backend.stock').'#'.self::ANCHOR;
+    }
+
+    /** The old page "/admin/entsorgung" (until 1.38): permanent redirect to the area on the stock page. */
+    public function index(): RedirectResponse
+    {
+        return redirect()->to(self::url(), 301);
     }
 
     public function settings(Request $request): RedirectResponse
     {
-        $data = $request->validate([
+        $data = $this->validated($request, [
             'disposal_mode' => ['required', Rule::in(AppSettings::DISPOSAL_MODES)],
             'disposal_fixed' => ['required', 'integer', 'between:1,'.AppSettings::DISPOSAL_BEERS_MAX],
             'disposal_random_max' => ['required', 'integer', 'between:1,'.AppSettings::DISPOSAL_BEERS_MAX],
@@ -59,40 +69,40 @@ class DisposalController extends Controller
         }
         Setting::putMany($values);
 
-        return back()->with('status', __('disposal.saved'));
+        return $this->toArea()->with('status', __('disposal.saved'));
     }
 
     public function report(Request $request): RedirectResponse
     {
         if (! Disposals::isEnabled()) {
-            return back()->with('error', __('disposal.disabled'));
+            return $this->toArea()->with('error', __('disposal.disabled'));
         }
-        $data = $request->validate([
+        $data = $this->validated($request, [
             'user_id' => ['required', 'integer'],
             'override' => ['nullable', 'boolean'],
             'reason' => ['nullable', 'required_if_accepted:override', 'string', 'max:500'],
         ], ['reason.required_if_accepted' => __('disposal.reason_required')]);
         $by = $request->user();
         if ((int) $data['user_id'] === $by->id) {
-            return back()->withInput()->with('error', __('disposal.self_forbidden'));
+            return $this->toArea()->withInput()->with('error', __('disposal.self_forbidden'));
         }
         $recipient = User::query()->find((int) $data['user_id']);
         if ($recipient === null) {
-            throw ValidationException::withMessages(['user_id' => __('disposal.recipient_invalid')]);
+            throw ValidationException::withMessages(['user_id' => __('disposal.recipient_invalid')])->redirectTo(self::url());
         }
 
         $override = $request->boolean('override');
         if (! $override && Disposals::blockReason() !== null) {
-            return back()->withInput()->with('error', __('disposal.blocked_backend'));
+            return $this->toArea()->withInput()->with('error', __('disposal.blocked_backend'));
         }
 
         try {
             Disposals::report($recipient, $by, $override, $data['reason'] ?? null);
         } catch (LedgerException $e) {
-            return back()->withInput()->with('error', $e->getMessage() === __('disposal.blocked') ? __('disposal.blocked_backend') : $e->getMessage());
+            return $this->toArea()->withInput()->with('error', $e->getMessage() === __('disposal.blocked') ? __('disposal.blocked_backend') : $e->getMessage());
         }
 
-        return back()->with('status', __('disposal.reported_for', ['user' => $recipient->displayName()]));
+        return $this->toArea()->with('status', __('disposal.reported_for', ['user' => $recipient->displayName()]));
     }
 
     public function withdraw(Request $request, Disposal $disposal): RedirectResponse
@@ -100,9 +110,25 @@ class DisposalController extends Controller
         try {
             Disposals::withdraw($disposal, $request->user());
         } catch (LedgerException $e) {
-            return back()->with('error', $e->getMessage());
+            return $this->toArea()->with('error', $e->getMessage());
         }
 
-        return back()->with('status', __('disposal.withdrawn'));
+        return $this->toArea()->with('status', __('disposal.withdrawn'));
+    }
+
+    /** Redirect to the disposal area on the stock page (instead of back(): keeps the anchor). */
+    private function toArea(): RedirectResponse
+    {
+        return redirect()->to(self::url());
+    }
+
+    /** Validates like $request->validate(), but failures go back to the disposal area too. */
+    private function validated(Request $request, array $rules, array $messages = []): array
+    {
+        try {
+            return $request->validate($rules, $messages);
+        } catch (ValidationException $e) {
+            throw $e->redirectTo(self::url());
+        }
     }
 }

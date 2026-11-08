@@ -10,7 +10,8 @@ use App\Models\User;
  * the admin (setting NAV_ORDER), personal order per account (users.nav_order), else the built-in order.
  * Entscheid 2026-10-24 (1.20.0): Kassier = Übersicht, Kasse, Lager, Benutzer, Buchungen, QR-Codes, Protokoll;
  * Admin = Einstellungen, Feedback, SSO, Navigation, Wartung. 1.31.0: "Statistik" after "Buchungen" (stored
- * orders get it appended by normalize()). 1.32.0: "Entsorgung" after "Statistik".
+ * orders get it appended by normalize()). 1.32.0: "Entsorgung" after "Statistik". 1.39.0: tab "Entsorgung" removed,
+ * the area is part of "Lager" (stored orders drop the key in normalize()).
  */
 class BackendNav
 {
@@ -25,15 +26,14 @@ class BackendNav
             'dashboard' => ['backend.dashboard', 'backend.dashboard'],
             // Cash book with the tab "Einzahlungsvorschläge".
             'cash' => ['backend.cash', 'backend.cash*'],
-            'stock' => ['backend.stock', 'backend.stock*'],
+            // Stock with the area "Entsorgung" (1.39.0; its form routes keep the names backend.disposals*).
+            'stock' => ['backend.stock', ['backend.stock*', 'backend.disposals*']],
             // Users with the tab "Einladungen".
             'users' => ['backend.users.index', 'backend.users.*'],
             // Rounds, gifts and guest sales.
             'bookings' => ['backend.bookings', 'backend.bookings*'],
             // Backend statistics (1.31.0).
             'stats' => ['backend.stats', 'backend.stats*'],
-            // "Entsorgungsbonus" (1.32.0).
-            'disposals' => ['backend.disposals', 'backend.disposals*'],
             // QR codes: view for kassiers, management parts for admins, and the print pages.
             'qr' => ['backend.qr-codes.index', ['backend.qr-codes.*', 'backend.registration.qr', 'backend.registration.flyer-svg', 'backend.guests.qr']],
             // Audit log with the tab "Fassungen".

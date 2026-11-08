@@ -14,8 +14,9 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * "Entsorgungsbonus" "/admin/entsorgung" (Livewire since 1.36.0): guide, settings, status, report for a user,
- * the list (50 per page, page in the URL) and the ranking. The forms post classically to
+ * "Entsorgungsbonus" (Livewire since 1.36.0; since 1.39.0 the area "Entsorgung" below the stock on "/admin/lager",
+ * anchor #entsorgung): guide, settings, status, report for a user, the list (50 per page, page in the URL as
+ * "entsorgung_seite", apart from the stock corrections' "page") and the ranking. The forms post classically to
  * Backend\DisposalController.
  *
  * Polls every 10 s while visible (tick()). Only the islands (status, list, ranking) are re-rendered, and only
@@ -29,6 +30,9 @@ class Disposals extends Component
     use WithPagination;
 
     public const PER_PAGE = 50;
+
+    /** Page parameter of the list (the stock component on the same page uses "page"). */
+    public const PAGE_NAME = 'entsorgung_seite';
 
     /** Islands of the view, re-rendered together by tick(). */
     public const ISLANDS = ['status', 'list', 'ranking'];
@@ -99,7 +103,7 @@ class Disposals extends Component
                 ->whereKeyNot($viewer->id)->get()
                 ->sortBy(fn (User $u) => mb_strtolower($u->displayName()))->values(),
             'disposals' => Disposal::query()->with(['user', 'reporter', 'withdrawer', 'transaction'])
-                ->latest('reported_at')->latest('id')->paginate(self::PER_PAGE),
+                ->latest('reported_at')->latest('id')->paginate(self::PER_PAGE, pageName: self::PAGE_NAME),
             'viewer' => $viewer,
             // Always shown here (regardless of "Rangliste öffentlich"), same anonymisation as on /statistik.
             'ranking' => DisposalService::ranking(20),

@@ -363,7 +363,7 @@
     erlauben" unter Einstellungen > Funktionen (nur Admin, seit 1.20.0; Standard an, `gifts_enabled`; aus: Karte
     ausgeblendet, `/konto/verschenken` 404).
 - Entsorgungsbonus (1.32.0, Entscheide von hemli): Bonus fürs Wegbringen des Leerguts, als Guthaben in Bier.
-  Ein-/ausschaltbar auf der Seite `/admin/entsorgung` (Standard aus). Dienst `App\Services\Disposals`, Modell
+  Ein-/ausschaltbar im Bereich «Entsorgung» der Seite Lager (`/admin/lager#entsorgung`, Standard aus). Dienst `App\Services\Disposals`, Modell
   `App\Models\Disposal` (Tabelle `disposals`, Status `reported` | `withdrawn` | `booked`).
   - Melden: Benutzer melden im Konto mit «Leergut entsorgt» (Karte im Dashboard, Einmal-Token). Die Karte erscheint
     nur, wenn eine Meldung gerade möglich ist (`Disposals::canReport()`: Funktion an, Konto aktiv mit Bierkonto, keine
@@ -378,8 +378,8 @@
     Mindestmenge müssen beide erfüllt sein.
   - Einschalten ist ein Neustart: `disposal_enabled_at` wird beim Wechsel aus → an gesetzt; frühere Entsorgungen zählen
     für Sperrfrist und Mindestmenge nicht mehr, die erste Meldung ist sofort möglich.
-  - Rückzugsfrist: `UNDO_MINUTES['disposal']` (Standard 10 Minuten, 0 = sofort), bearbeitet auf der Kassier-Seite
-    «Entsorgung», nicht in Admin > Einstellungen. Zurückziehen: der Benutzer nur eigene Meldungen, nicht die von
+  - Rückzugsfrist: `UNDO_MINUTES['disposal']` (Standard 10 Minuten, 0 = sofort), bearbeitet im Bereich
+    «Entsorgung» (Seite Lager), nicht in Admin > Einstellungen. Zurückziehen: der Benutzer nur eigene Meldungen, nicht die von
     Kassier oder Admin für ihn erfassten (auch nicht, wenn er selbst Kassier ist); Kassier und Admin alle
     (`Disposal::isWithdrawable()`).
   - Buchung und Auslosung erst nach Ablauf der Frist: `php artisan disposals:book` jede Minute über den Scheduler
@@ -392,7 +392,11 @@
   - Gutschrift: Buchung Typ `disposal` (Anzahl × aktueller Bierpreis, positiv), Hinweis 1 Tag im Dashboard (mit ×).
     Nicht getrunken: zählt nicht fürs Lager und nicht für die Bier-Statistik. Storno wie andere Buchungen
     (`disposal.storno`); die Entsorgung bleibt «gebucht» ohne Buchung («Gutschrift storniert»).
-  - Backend `/admin/entsorgung` (Reiter «Entsorgung», Kassier und Admin): Anleitung und «Häufige Fragen» (beide immer eingeklappt, `wire:ignore`, 1.38.2), Einstellungen (Audit
+  - Backend: Bereich «Entsorgung» unter dem Lager-Inhalt auf `/admin/lager` (Anker `#entsorgung`, Kassier und Admin;
+    **Entscheid 2026-11-08 (1.39.0):** kein eigener Reiter mehr, gespeicherte Reihenfolgen verlieren den Schlüssel
+    `disposals`; `GET /admin/entsorgung` leitet 301 auf `/admin/lager#entsorgung`; die POST/PUT-Routen
+    `/admin/entsorgung…` bleiben und leiten danach, auch bei Validierungsfehlern, auf den Anker; Liste mit
+    Seitenparameter `entsorgung_seite`, damit sie nicht mit den Lager-Korrekturen (`page`) kollidiert). Anleitung und «Häufige Fragen» (beide immer eingeklappt, `wire:ignore`, 1.38.2), Einstellungen (Audit
     `settings.update`), Stand (letzte Entsorgung, Sperre bis, Biere seit / Mindestmenge, offen oder gesperrt),
     «Entsorgung für Benutzer erfassen» (**Entscheid 2026-11-06:** nie für sich selbst; ist es gesperrt, nur mit
     «Sperre übersteuern» und Pflicht-Begründung, die im Audit und in der Liste steht), Liste aller Entsorgungen und
@@ -405,7 +409,7 @@
     Zeitraum. Nur bestehende Benutzer mit Bierkonto. Auf `/statistik` als Karte «Rangliste Entsorgungen» (Top 10, mit
     Anzahl «n×» und «m Biere», `stats_ranking_counts` gilt hier nicht), nur wenn «Rangliste öffentlich»
     (`disposal_ranking_public`, Standard aus), die Funktion an und `stats_show_ranking` an ist. Kassier und Admin
-    sehen die Top 20 mit Total immer auf `/admin/entsorgung`.
+    sehen die Top 20 mit Total immer im Bereich «Entsorgung» der Seite Lager.
   - Opt-out (**Entscheid 2026-11-06:** eigener Schalter, getrennt vom Bier-Schalter): Konto > Einstellungen > Statistik
     hat zwei Schalter, «Name in Statistik Konsum zeigen» (`stats_opt_out`, Bier-Statistik) und «Name in Statistik
     Entsorgung zeigen» (`users.disposal_stats_opt_out`, `POST /konto/statistik-entsorgung`, Audit `user.settings`).
@@ -551,7 +555,7 @@
   Statistik) bleiben ohne Neuladen aktuell (Saldo, Biere, Badges, offene Posten, Lager usw.). Seit 1.37.0 ist jede
   solche Seite eine Livewire-Komponente, die sich selbst aktualisiert (`wire:poll.10s.visible`, siehe "Livewire"):
   Dashboard, Statistik, Verlauf, Konto verlassen, Kopfzeilen-Badges (`TopNav`) sowie im Admin-Bereich Übersicht, Kasse,
-  Lager, Benutzer-Detail, Entsorgung, Feedback, Statistik und die Unternavigation (`Backend\SubNav`). Alle übrigen Seiten
+  Lager (mit Bereich Entsorgung), Benutzer-Detail, Feedback, Statistik und die Unternavigation (`Backend\SubNav`). Alle übrigen Seiten
   haben keine Live-Daten und werden nie aktualisiert. Keine Websockets.
   Die alte Seiten-Aktualisierung (bis 1.36.0: `public/js/live.js` fragte `/live` ab, lud die Seite mit Header
   `X-Live-Refresh` neu und tauschte die geänderten Kinder von `<main>` aus, samt Fingerprint auf der Seite,
@@ -617,7 +621,7 @@
     statisch). Ohne Live-Aktualisierung (nichts, was andere ändern): Einstellungen, Feedback, Einladen, Rechtliches.
   - Admin-Seiten (1.36.0): Übersicht `/admin` (Inseln Kennzahlen, Einzahlungen, Auszahlungen, Überträge, Minus), Kasse
     (Kennzahlen, Einträge mit Seiten), Lager (Stand, Korrekturen), Benutzer-Detail (Saldo, Aktionen, Verlauf), Entsorgung
-    (Stand, Liste, Rangliste), Feedback (Liste), Backend-Statistik (ganze Komponente, Filter als Eigenschaften,
+    (zweite Komponente auf der Seite Lager seit 1.39.0; Stand, Liste, Rangliste), Feedback (Liste), Backend-Statistik (ganze Komponente, Filter als Eigenschaften,
     Filterformular `wire:ignore`); Unternavigation mit Badges als Komponente `Backend\SubNav` (pollt alle 10 s auch ausserhalb des sichtbaren Bereichs, da meist weggescrollt; aktiver Reiter beim
     Mount festgehalten); Formulare je Zeile `wire:ignore`, Zeilen `wire:key`. Ohne Live-Aktualisierung: Einstellungen,
     Navigation, SSO, Wartung, QR-Druckseiten, Protokoll-Detail (ebenso die Gast-, Anmelde- und

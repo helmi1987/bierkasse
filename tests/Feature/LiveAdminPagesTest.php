@@ -50,10 +50,11 @@ class LiveAdminPagesTest extends TestCase
             '/admin/kasse' => Cash::class,
             '/admin/lager' => Stock::class,
             '/admin/benutzer/'.$user->id => UserShow::class,
-            '/admin/entsorgung' => DisposalsPage::class,
             '/admin/feedback' => FeedbackList::class,
             '/admin/statistik' => BackendStats::class,
         ];
+        // 1.39.0: the disposal area is a second component on the stock page.
+        $this->get('/admin/lager')->assertOk()->assertSeeLivewire(DisposalsPage::class);
         foreach ($pages as $uri => $class) {
             $html = (string) $this->get($uri)->assertOk()->assertSeeLivewire($class)->assertSeeLivewire(SubNav::class)->getContent();
             $this->assertStringContainsString('data-livewire-page', $html, $uri);

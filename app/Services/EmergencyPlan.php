@@ -31,6 +31,9 @@ class EmergencyPlan
     /** Layout of the list pages in mm (A4 minus the @page margin; the CSS of the print view uses the same values). */
     public const PAGE_MM = 276.0;
 
+    /** Fold line of the sheet (A4 folded once for a C5 envelope), in mm from the sheet top. */
+    public const FOLD_MM = 148.5;
+
     public const HEAD_MM = 26.0;
 
     public const FOOT_MM = 7.0;
@@ -203,7 +206,7 @@ class EmergencyPlan
      * print margin).
      *
      * @param  array{side: string, top: int, edge: int, width: int, height: int}  $w
-     * @return array{side: string, top: float, edge: float, width: float, height: float, body: float}
+     * @return array{side: string, top: float, edge: float, width: float, height: float, body: float, body_x: float}
      */
     public static function windowCss(array $w): array
     {
@@ -215,8 +218,11 @@ class EmergencyPlan
             'edge' => max(0, $w['edge'] - $m),
             'width' => $w['width'],
             'height' => $w['height'],
-            // Text block: as in the approved layout (110 mm from the sheet top), lower when the window reaches further.
-            'body' => max(110, $w['top'] + $w['height'] + 10) - $m,
+            // Text block in the lower half (1.40.3): below the fold of the C5 envelope (A4 folded once), so that only
+            // the window is visible when folded; lower when the window reaches further.
+            'body' => max(self::FOLD_MM + 10, $w['top'] + $w['height'] + 10) - $m,
+            // Side margin of the text block: the window's distance from the sheet edge, on both sides.
+            'body_x' => max(0, $w['edge'] - $m),
         ];
     }
 

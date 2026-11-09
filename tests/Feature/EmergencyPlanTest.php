@@ -339,4 +339,16 @@ class EmergencyPlanTest extends TestCase
         $this->assertSame(45, AppSettings::emergencyWindow()['top']);
         $this->assertSame(25, AppSettings::emergencyWindow()['edge']);
     }
+
+    public function test_cover_text_is_below_the_fold_with_the_window_side_margin(): void
+    {
+        // 1.40.3: folded once (C5), only the window shows; the text block uses the window's edge distance.
+        $css = EmergencyPlan::windowCss(['side' => 'right', 'top' => 50, 'edge' => 30, 'width' => 100, 'height' => 45]);
+        $m = AppSettings::EMERGENCY_PRINT_MARGIN;
+        $this->assertGreaterThanOrEqual(EmergencyPlan::FOLD_MM, $css['body'] + $m);
+        $this->assertSame(30 - $m, $css['body_x']);
+
+        $html = $this->actingAs($this->admin)->get(route('backend.emergency.test'))->assertOk()->getContent();
+        $this->assertStringContainsString('left: '.$css['body_x'].'mm; right: '.$css['body_x'].'mm;', $html);
+    }
 }

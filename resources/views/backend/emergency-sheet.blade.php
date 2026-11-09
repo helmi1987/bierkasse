@@ -41,7 +41,7 @@
         .ws { font-size: 11pt; }
         .wn { font-size: 9.5pt; font-weight: 700; margin-top: 2mm; }
         .wd { font-size: 9pt; margin-top: 2mm; }
-        .cover .body { position: absolute; top: {{ $window['body'] }}mm; left: 0; right: 0; font-size: 10.5pt; }
+        .cover .body { position: absolute; top: {{ $window['body'] }}mm; left: {{ $window['body_x'] }}mm; right: {{ $window['body_x'] }}mm; font-size: 10.5pt; }
         .cover h2 { font-size: 14pt; margin: 0 0 3mm; color: #8a4b0f; }
         .contact { border: 1.2pt solid #b5560b; padding: 2mm 3mm; border-radius: 2mm; margin: 0 0 3mm; }
         .contact b, .info b { color: #b5560b; }

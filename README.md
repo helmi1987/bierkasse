@@ -51,6 +51,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.40.3 | Bugfix | Notfallplan Seite 1: Text unter der Falzlinie (gefalzt nur das Sichtfenster sichtbar) und mit seitlichem Rand wie das Fenster |
 | 1.40.2 | Verbesserung | Lager: Reiter «Bestand» und «Entsorgung» wie bei Kasse und Benutzer (statt Entsorgung unter dem Lager) |
 | 1.40.1 | Verbesserung | Notfallplan: Sichtfenster-Masse auch mit Komma eingeben (z. B. 4,5) |
 | 1.40.0 | Neue Funktion | Admin > Notfallplan: Offline-Notfallplan zum Drucken (A4, doppelseitig, Farbe; Seite 1 mit Sichtfenster für C5-Umschlag, danach Strichliste aller aktiven Benutzer mit leeren Feldern für neue), Testdruck, gespeicherte Ausdrucke mit Differenz neu/ausgetreten, einstellbares Sichtfenster und Texte, wöchentliche Mail-Erinnerung ab einstellbarer Schwelle |

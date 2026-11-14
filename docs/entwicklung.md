@@ -2,10 +2,11 @@
 
 ## Branch-Modell
 
-- Gearbeitet wird auf `claude/**`-Branches. Die CI (`.github/workflows/tests.yml`) führt dort die Tests aus.
-- Nach grüner CI merged `.github/workflows/auto-merge.yml` den Branch automatisch in `main`; `main` wird von Plesk deployt.
-  Repository-Einstellung nötig: Settings > Actions > General > Workflow permissions "Read and write" und
-  "Allow GitHub Actions to create and approve pull requests".
+- Gearbeitet wird auf `claude/**`-Branches. Bei jedem Push führt `.github/workflows/auto-merge.yml` die Tests
+  (`tests.yml`) aus und merged den Branch bei grünen Tests direkt per Git in `main` (ohne PR; ändert der Branch `.github/workflows`, per PR,
+  da GITHUB_TOKEN keine Workflow-Dateien pushen darf); `main` wird von Plesk deployt.
+  Repository-Einstellung nötig: Settings > Actions > General > Workflow permissions "Read and write"
+  und "Allow GitHub Actions to create and approve pull requests" (PR-Merge, "Promote to main").
 - Manuell: Actions > "Promote to main" > Run workflow (unter "Use workflow from" den `claude/...`-Branch wählen). Legt `main` an, falls es fehlt, sonst Merge per PR.
   Danach einmalig Settings > General > Default branch = `main`.
 - Releases: nach jedem Merge setzt `auto-merge.yml` den Tag `vX.Y.Z` aus `VERSION` (falls neu) und veröffentlicht das

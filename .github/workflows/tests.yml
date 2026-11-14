@@ -1,4 +1,5 @@
 # Test suite with PHP 8.4 on every push to Claude's working branches (claude/**); the auto-merge PRs need no second run.
+# Also called by dependabot-auto-merge.yml for Dependabot pull requests.
 # Does not deploy anything.
 name: Tests
 
@@ -6,6 +7,7 @@ on:
   push:
     branches: ['claude/**']
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read

@@ -1,5 +1,5 @@
-# Merges a claude/** branch into main once the Tests workflow succeeded on it.
-# Plesk deploys main via its Git webhook.
+# Merges a claude/** branch into main once the Tests workflow succeeded on it, then tags vX.Y.Z from
+# VERSION (if new) and publishes the GitHub release. Plesk deploys main via its Git webhook.
 name: Auto-merge Claude branches
 
 on:
@@ -22,6 +22,8 @@ jobs:
       github.event.workflow_run.event == 'push' &&
       startsWith(github.event.workflow_run.head_branch, 'claude/')
     runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
@@ -51,8 +53,50 @@ jobs:
           echo "number=$pr" >> "$GITHUB_OUTPUT"
 
       - name: Merge pull request
+        id: merge
         if: steps.pr.outputs.number != ''
         run: |
           set -euo pipefail
           gh pr merge "${{ steps.pr.outputs.number }}" --merge --match-head-commit "$SHA"
           echo "Merged pull request #${{ steps.pr.outputs.number }} into $BASE"
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: auto-merge
+    if: needs.auto-merge.outputs.merged == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Tag the release from VERSION
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force origin
+          # Tag the first commit on main's first-parent line that contains the merged branch head
+          # (the merge commit), even if main has moved on since.
+          commit=$(git rev-list --first-parent --reverse --ancestry-path "$SHA..HEAD" | head -n1)
+          [ -n "$commit" ] || commit=$(git rev-parse HEAD)
+          version=$(git show "$commit:VERSION" | tr -d '[:space:]')
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "VERSION '$version' is not X.Y.Z, no tag"; exit 0
+          fi
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "Tag $tag exists, nothing to do"; exit 0
+          fi
+          git tag -a "$tag" -m "$tag" "$commit"
+          git push origin "refs/tags/$tag"
+          echo "Tagged $commit as $tag"
+
+      - name: Publish GitHub releases (new tag and any tag without a release)
+        run: |
+          git fetch --tags --force origin
+          .github/scripts/publish-releases.sh

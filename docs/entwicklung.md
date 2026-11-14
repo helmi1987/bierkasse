@@ -8,6 +8,14 @@
   "Allow GitHub Actions to create and approve pull requests".
 - Manuell: Actions > "Promote to main" > Run workflow (unter "Use workflow from" den `claude/...`-Branch wählen). Legt `main` an, falls es fehlt, sonst Merge per PR.
   Danach einmalig Settings > General > Default branch = `main`.
+- Releases: nach jedem Merge setzt `auto-merge.yml` den Tag `vX.Y.Z` aus `VERSION` (falls neu) und veröffentlicht das
+  GitHub-Release; Text = neue Zeilen der README-Tabelle "Releases" (`.github/scripts/publish-releases.sh`).
+  Fehlende Releases (Tag ohne Release) nachholen: Actions > "Releases" > Run workflow.
+- Komponenten-Updates: Dependabot (`.github/dependabot.yml`, montags, Composer + GitHub Actions, Minor/Patch gebündelt).
+  `dependabot-auto-merge.yml`: Composer Patch/Minor -> Tests -> Merge nach `main` -> `VERSION` Patch +1, README-Zeile,
+  Tag, Release -> Plesk deployt. Offen für manuellen Merge: Major-Updates und PRs, die `.github/workflows` ändern
+  (GITHUB_TOKEN darf keine Workflow-Dateien pushen). Sicherheits-Updates: Settings > Code security einschalten.
+  Folge: ein offener `claude/**`-Branch kann danach bei `VERSION`/README mit `main` kollidieren -> `main` hineinmergen.
 
 ## Funktionen
 

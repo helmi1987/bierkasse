@@ -63,7 +63,7 @@ class FeedbackController extends Controller
         $addresses = FeedbackNotifier::parseAddresses((string) ($data['recipients'] ?? ''));
         $errors = [];
         foreach ($addresses as $address) {
-            if (Validator::make(['a' => $address], ['a' => ['email', 'max:255']])->fails()) {
+            if (Validator::make(['a' => $address], ['a' => ['email:rfc,filter', 'max:255']])->fails()) {
                 $errors[] = __('feedback.recipient_invalid', ['address' => $address]);
             }
         }

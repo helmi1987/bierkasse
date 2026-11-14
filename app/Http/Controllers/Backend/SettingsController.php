@@ -115,7 +115,7 @@ class SettingsController extends Controller
     {
         $data = $request->validate([
             'legal_name' => ['required', 'string', 'max:100'],
-            'legal_email' => ['required', 'email', 'max:255'],
+            'legal_email' => ['required', 'email:rfc,filter', 'max:255'],
             'legal_location' => ['required', 'string', 'max:100'],
             'privacy_text' => ['nullable', 'string', 'max:'.LegalTexts::TEXT_MAX],
             'terms_text' => ['nullable', 'string', 'max:'.LegalTexts::TEXT_MAX],
@@ -196,7 +196,7 @@ class SettingsController extends Controller
             'registration_mode' => ['required', Rule::in(AppSettings::REGISTRATION_MODES)],
             'registration_password' => ['nullable', 'string', 'min:4', 'max:100'],
             'mail_transport' => ['required', Rule::in(AppSettings::MAIL_TRANSPORTS)],
-            'mail_from_address' => ['nullable', 'email', 'max:255'],
+            'mail_from_address' => ['nullable', 'email:rfc,filter', 'max:255'],
             'mail_from_name' => ['nullable', 'string', 'max:100'],
             'smtp_host' => ['nullable', 'required_if:mail_transport,smtp', 'string', 'max:255'],
             'smtp_port' => ['nullable', 'integer', 'between:1,65535'],

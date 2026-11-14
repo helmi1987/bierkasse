@@ -68,7 +68,7 @@ class SetupController extends Controller
             'admin_username' => ['required', 'string', 'regex:'.UserRules::USERNAME_PATTERN, UserRules::notReserved()],
             'admin_first_name' => ['nullable', 'string', 'max:100'],
             'admin_last_name' => ['nullable', 'string', 'max:100'],
-            'admin_email' => ['required', 'email', 'max:255'],
+            'admin_email' => ['required', 'email:rfc,filter', 'max:255'],
             'admin_password' => ['required', 'string', 'min:12', 'max:1024', 'confirmed'],
         ]);
 

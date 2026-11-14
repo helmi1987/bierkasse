@@ -57,7 +57,7 @@ class UserRules
             'first_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['nullable', 'string', 'max:100'],
             // Unique, because the password reset identifies the account by its address.
-            'email' => [$emailRequired ? 'required' : 'nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($ignoreId)],
+            'email' => [$emailRequired ? 'required' : 'nullable', 'email:rfc,filter', 'max:255', Rule::unique('users', 'email')->ignore($ignoreId)],
         ];
     }
 }

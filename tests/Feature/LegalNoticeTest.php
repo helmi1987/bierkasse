@@ -85,6 +85,15 @@ class LegalNoticeTest extends TestCase
         $this->assertNotNull(LegalTexts::changedAt(LegalTexts::TERMS));
     }
 
+    public function test_email_without_top_level_domain_is_rejected(): void
+    {
+        $this->actingAs($this->admin());
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['legal_email' => 'bier@bluewin']))
+            ->assertSessionHasErrors('legal_email');
+        $this->put('/admin/einstellungen/rechtliches', $this->legalForm(['legal_email' => 'bier@bluewin.ch']))
+            ->assertSessionHasNoErrors();
+    }
+
     public function test_auto_mode_update_when_text_changed_and_silent_otherwise(): void
     {
         $this->actingAs($this->admin());

@@ -58,7 +58,7 @@ class PasswordResetController extends Controller
     {
         $data = $request->validate([
             'token' => ['required', 'string'],
-            'email' => ['required', 'email'],
+            'email' => ['required', 'email:rfc,filter'],
             'password' => UserRules::password(),
         ]);
 

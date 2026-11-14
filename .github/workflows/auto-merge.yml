@@ -1,90 +1,90 @@
-# Merges a claude/** branch into main once the Tests workflow succeeded on it, then tags vX.Y.Z from
-# VERSION (if new), publishes the GitHub release and deletes merged claude/** branches.
-# Plesk deploys main via its Git webhook.
+# Push to claude/** -> tests -> merge into main -> tag vX.Y.Z from VERSION (if new) and publish the
+# GitHub release -> delete merged claude/** branches. The merge is a plain git push (no pull request);
+# GITHUB_TOKEN may not push changes to .github/workflows, so such branches are merged via a pull request.
+# Plesk deploys main via its Git webhook. dependabot-auto-merge.yml can push to main at the same time,
+# so the push is retried on a fresh main.
 name: Auto-merge Claude branches
 
 on:
-  workflow_run:
-    workflows: [Tests]
-    types: [completed]
-
-permissions:
-  contents: write
-  pull-requests: write
+  push:
+    branches: ['claude/**']
 
 concurrency:
-  group: auto-merge-${{ github.event.workflow_run.head_branch }}
+  group: auto-merge-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
-  auto-merge:
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      startsWith(github.event.workflow_run.head_branch, 'claude/')
-    runs-on: ubuntu-latest
-    outputs:
-      merged: ${{ steps.merge.outputs.merged }}
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-      BRANCH: ${{ github.event.workflow_run.head_branch }}
-      SHA: ${{ github.event.workflow_run.head_sha }}
-      BASE: main
-    steps:
-      - name: Create or find pull request
-        id: pr
-        run: |
-          set -euo pipefail
-          ahead=$(gh api "repos/$GH_REPO/compare/$BASE...$SHA" --jq '.ahead_by')
-          if [ "$ahead" = "0" ]; then
-            echo "Commit $SHA has no commits ahead of $BASE, nothing to merge."
-            exit 0
-          fi
-          pr=$(gh pr list --head "$BRANCH" --base "$BASE" --state open --json number --jq '.[0].number // empty')
-          if [ -z "$pr" ]; then
-            title=$(gh api "repos/$GH_REPO/commits/$SHA" --jq '.commit.message' | head -n1)
-            url=$(gh pr create --head "$BRANCH" --base "$BASE" --title "$title" \
-              --body "Automatically created from branch \`$BRANCH\` after green tests and merged by the auto-merge workflow.")
-            pr=${url##*/}
-            echo "Created pull request #$pr"
-          else
-            echo "Found open pull request #$pr"
-          fi
-          echo "number=$pr" >> "$GITHUB_OUTPUT"
+  tests:
+    uses: ./.github/workflows/tests.yml
 
-      - name: Merge pull request
-        id: merge
-        if: steps.pr.outputs.number != ''
-        run: |
-          set -euo pipefail
-          gh pr merge "${{ steps.pr.outputs.number }}" --merge --match-head-commit "$SHA"
-          echo "Merged pull request #${{ steps.pr.outputs.number }} into $BASE"
-          echo "merged=true" >> "$GITHUB_OUTPUT"
-
-  release:
-    needs: auto-merge
-    if: needs.auto-merge.outputs.merged == 'true'
+  merge:
+    needs: tests
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      SHA: ${{ github.event.workflow_run.head_sha }}
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: main
 
-      - name: Tag the release from VERSION
+      - name: Merge branch into main
+        env:
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch --tags --force origin
-          # Tag the first commit on main's first-parent line that contains the merged branch head
-          # (the merge commit), even if main has moved on since.
-          commit=$(git rev-list --first-parent --reverse --ancestry-path "$SHA..HEAD" | head -n1)
-          [ -n "$commit" ] || commit=$(git rev-parse HEAD)
+          if ! git fetch origin "$BRANCH"; then
+            # An earlier run already merged and deleted the branch.
+            git merge-base --is-ancestor "$GITHUB_SHA" HEAD && exit 0
+            echo "Branch $BRANCH is gone and $GITHUB_SHA is not in main"; exit 1
+          fi
+          if [ "$(git rev-parse "origin/$BRANCH")" != "$GITHUB_SHA" ]; then
+            echo "Branch $BRANCH moved on, the run for the newer commit merges it"; exit 0
+          fi
+          git fetch origin main
+          if [ -n "$(git diff --name-only "origin/main...$GITHUB_SHA" -- .github/workflows)" ]; then
+            echo "Changes .github/workflows: merging via a pull request"
+            pr=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+            if [ -z "$pr" ]; then
+              url=$(gh pr create --head "$BRANCH" --base main --title "$(git log -1 --format=%s "$GITHUB_SHA")" \
+                --body "Created by auto-merge.yml: the branch changes workflow files, which GITHUB_TOKEN may not push.")
+              pr=${url##*/}
+            fi
+            gh pr merge "$pr" --merge --match-head-commit "$GITHUB_SHA"
+            echo "Merged pull request #$pr into main"; exit 0
+          fi
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git reset -q --hard origin/main
+            if git merge-base --is-ancestor "$GITHUB_SHA" HEAD; then
+              echo "Already in main"; exit 0
+            fi
+            subject=$(git log -1 --format=%s "$GITHUB_SHA")
+            git merge --no-ff --no-edit -m "Merge branch '$BRANCH' into main" -m "$subject" "$GITHUB_SHA"
+            if git push origin HEAD:main; then
+              echo "Merged $BRANCH into main"; exit 0
+            fi
+            echo "Push rejected (main changed), attempt $attempt"
+            sleep $((attempt * 20))
+          done
+          exit 1
+
+      - name: Tag the release from VERSION
+        run: |
+          set -euo pipefail
+          git fetch --tags --force origin main
+          # Tag the first commit on main's first-parent line that contains the pushed commit (the merge
+          # commit), even if main has moved on since.
+          commit=$(git rev-list --first-parent --reverse --ancestry-path "$GITHUB_SHA..origin/main" | head -n1)
+          [ -n "$commit" ] || commit=$(git rev-parse origin/main)
           version=$(git show "$commit:VERSION" | tr -d '[:space:]')
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "VERSION '$version' is not X.Y.Z, no tag"; exit 0
@@ -98,6 +98,8 @@ jobs:
           echo "Tagged $commit as $tag"
 
       - name: Publish GitHub releases (new tag and any tag without a release)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git fetch --tags --force origin
           .github/scripts/publish-releases.sh

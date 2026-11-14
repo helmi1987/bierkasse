@@ -51,6 +51,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.42.1 | Verbesserung | claude-Branches werden direkt per Git nach main gemergt (PR nur bei Workflow-Änderungen) |
 | 1.42.0 | Verbesserung | Gemergte claude-Branches werden nach dem Merge automatisch gelöscht |
 | 1.41.1 | Verbesserung | Komponenten aktualisiert: laravel/framework, laravel/tinker, laravel/pint, nunomaduro/collision (#113) |
 | 1.41.0 | Neue Funktion | Automatische Komponenten-Updates (Dependabot) mit Tests, Merge und Release; GitHub-Releases pro Version |

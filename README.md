@@ -51,6 +51,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.41.1 | Verbesserung | Komponenten aktualisiert: laravel/framework, laravel/tinker, laravel/pint, nunomaduro/collision (#113) |
 | 1.41.0 | Neue Funktion | Automatische Komponenten-Updates (Dependabot) mit Tests, Merge und Release; GitHub-Releases pro Version |
 | 1.40.3 | Bugfix | Notfallplan Seite 1: Text unter der Falzlinie (gefalzt nur das Sichtfenster sichtbar) und mit seitlichem Rand wie das Fenster |
 | 1.40.2 | Verbesserung | Lager: Reiter «Bestand» und «Entsorgung» wie bei Kasse und Benutzer (statt Entsorgung unter dem Lager) |

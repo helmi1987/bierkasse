@@ -1,0 +1,140 @@
+name: Dependabot auto-merge
+
+# Dependabot PR (security or version update) with patch/minor Composer changes only -> tests -> merge into
+# main -> patch bump of VERSION + README "Releases" row -> tag vX.Y.Z -> GitHub release. Plesk deploys main
+# via its Git webhook. Left open for a manual review: major updates and PRs that change .github/workflows
+# (GITHUB_TOKEN may not push workflow files). auto-merge.yml can push to main at the same time, so the push
+# is retried on a fresh main. Workflows started by Dependabot get a read-only token unless the permissions
+# are raised per job (below).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: dependabot-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      eligible: ${{ steps.decide.outputs.eligible }}
+      deps: ${{ steps.meta.outputs.dependency-names }}
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ github.token }}
+
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          DEPS: ${{ steps.meta.outputs.dependency-names }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "Dependencies: $DEPS, update type: ${UPDATE_TYPE:-unknown}"
+          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$NUMBER/files" --jq '.[].filename')
+          if grep -q '^\.github/workflows/' <<<"$files"; then
+            echo "Not merged automatically: changes .github/workflows (needs a manual merge)"
+            echo "eligible=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          case "$UPDATE_TYPE" in
+            version-update:semver-patch|version-update:semver-minor) echo "eligible=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Not merged automatically (major or unknown update type)"; echo "eligible=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  tests:
+    needs: check
+    if: needs.check.outputs.eligible == 'true'
+    uses: ./.github/workflows/tests.yml
+
+  merge:
+    needs: [check, tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.merge.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Merge, bump VERSION, README row, tag
+        id: merge
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          TITLE: ${{ github.event.pull_request.title }}
+          DEPS: ${{ needs.check.outputs.deps }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$HEAD_REF"
+          if [ "$(git rev-parse "origin/$HEAD_REF")" != "$HEAD_SHA" ]; then
+            echo "Branch $HEAD_REF moved on, the run for the newer commit merges it"; exit 0
+          fi
+          deps=$(tr -d '|' <<<"$DEPS" | sed 's/,/, /g; s/  */ /g')
+          for attempt in 1 2 3 4 5; do
+            git fetch --tags --force origin main
+            git reset -q --hard origin/main
+            if git merge-base --is-ancestor "$HEAD_SHA" HEAD; then
+              echo "Already in main"; exit 0
+            fi
+            git merge --no-ff --no-edit -m "Merge pull request #$NUMBER from $HEAD_REF" -m "$TITLE" "$HEAD_SHA"
+
+            version=$(tr -d '[:space:]' < VERSION)
+            if ! [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "VERSION '$version' is not X.Y.Z"; exit 1
+            fi
+            next="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+            tag="v$next"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              echo "Tag $tag exists already but VERSION in main is $version"; exit 1
+            fi
+            echo "$next" > VERSION
+            # New row on top of the README "Releases" table (below its header separator).
+            row="| $next | Verbesserung | Komponenten aktualisiert: $deps (#$NUMBER) |"
+            awk -v row="$row" '
+              /^## Releases/ { sec = 1 }
+              { print }
+              sec && !done && /^\|---/ { print row; done = 1 }
+              END { if (!done) exit 1 }' README.md > README.md.new
+            mv README.md.new README.md
+            git commit -q -m "Bump version to $next" -m "Dependency update #$NUMBER: $TITLE" VERSION README.md
+            git tag -a "$tag" -m "$tag" HEAD
+            if git push --atomic origin HEAD:main "refs/tags/$tag"; then
+              echo "tag=$tag" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            git tag -d "$tag"
+            echo "Push rejected (main or tag changed), attempt $attempt"
+            sleep $((attempt * 20))
+          done
+          exit 1
+
+      - name: Publish GitHub releases (new tag and any tag without a release)
+        if: steps.merge.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --tags --force origin
+          .github/scripts/publish-releases.sh
+
+      - name: Delete the Dependabot branch
+        if: steps.merge.outputs.tag != ''
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git push origin --delete --force-with-lease="refs/heads/$HEAD_REF:$HEAD_SHA" "$HEAD_REF" || echo "Kept $HEAD_REF"

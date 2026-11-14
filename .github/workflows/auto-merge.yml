@@ -1,5 +1,6 @@
 # Merges a claude/** branch into main once the Tests workflow succeeded on it, then tags vX.Y.Z from
-# VERSION (if new) and publishes the GitHub release. Plesk deploys main via its Git webhook.
+# VERSION (if new), publishes the GitHub release and deletes merged claude/** branches.
+# Plesk deploys main via its Git webhook.
 name: Auto-merge Claude branches
 
 on:
@@ -100,3 +101,17 @@ jobs:
         run: |
           git fetch --tags --force origin
           .github/scripts/publish-releases.sh
+
+      - name: Delete merged claude/** branches
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git fetch --prune origin '+refs/heads/claude/*:refs/remotes/origin/claude/*'
+          git for-each-ref --format='%(refname:strip=3) %(objectname)' 'refs/remotes/origin/claude/' |
+          while read -r branch sha; do
+            if git merge-base --is-ancestor "$sha" origin/main; then
+              # The lease keeps commits pushed after the fetch.
+              git push origin --delete --force-with-lease="refs/heads/$branch:$sha" "$branch" ||
+                echo "Kept $branch (changed or already gone)"
+            fi
+          done

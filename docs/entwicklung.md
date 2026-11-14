@@ -11,6 +11,7 @@
 - Releases: nach jedem Merge setzt `auto-merge.yml` den Tag `vX.Y.Z` aus `VERSION` (falls neu) und veröffentlicht das
   GitHub-Release; Text = neue Zeilen der README-Tabelle "Releases" (`.github/scripts/publish-releases.sh`).
   Fehlende Releases (Tag ohne Release) nachholen: Actions > "Releases" > Run workflow.
+- Danach löscht `auto-merge.yml` alle `claude/**`-Branches, die vollständig in `main` enthalten sind.
 - Komponenten-Updates: Dependabot (`.github/dependabot.yml`, montags, Composer + GitHub Actions, Minor/Patch gebündelt).
   `dependabot-auto-merge.yml`: Composer Patch/Minor -> Tests -> Merge nach `main` -> `VERSION` Patch +1, README-Zeile,
   Tag, Release -> Plesk deployt. Offen für manuellen Merge: Major-Updates und PRs, die `.github/workflows` ändern

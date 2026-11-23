@@ -51,6 +51,7 @@ Die Domain ist frei wählbar; nichts ist fest auf eine Domain eingestellt.
 
 | Version | Art | Änderung |
 |---|---|---|
+| 1.42.4 | Verbesserung | Komponenten aktualisiert: laravel/framework, laravel/tinker, phpunit/phpunit (#118) |
 | 1.42.3 | Verbesserung | Komponenten aktualisiert: phpunit/phpunit (#117) |
 | 1.42.2 | Bugfix | E-Mail-Adressen brauchen eine Domain mit Endung (`x@bluewin` wird abgelehnt) |
 | 1.42.1 | Verbesserung | claude-Branches werden direkt per Git nach main gemergt (PR nur bei Workflow-Änderungen) |
